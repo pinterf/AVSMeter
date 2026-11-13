@@ -58,6 +58,8 @@ private:
 	void                TestLoadPlugins();
 	void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
 	BOOL                IsRuntimeInstalled(string s_version);
+	void                CheckFFTW(string sdll, string &s_failed_deps);
+	__int64             FileSize(string s_file);
 	BOOL                Is64BitOS();
 	string              BrowseDirectory();
 	typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
@@ -782,6 +784,22 @@ void CAvisynthInfo::TestLoadPlugins()
 		sNote = "";
 		try
 		{
+			if (sFailedDependencies != "")
+			{
+				sTemp = sFailedDependencies;
+				utils.StrToLC(sTemp);
+				if (sTemp.find("fftw3") != string::npos)
+				{
+					sPlugLoadError = utils.StrFormat("\"%s\" requires the FFTW library for some functions.", sPlugin.c_str());
+					if (sHint != "")
+						sPlugLoadError += utils.StrFormat("\n\nNote: %s", sHint.c_str());
+
+					vPluginErrors.push_back(sPlugLoadError);
+					sPlugLoadError = "";
+					sNote = "";
+				}
+			}
+
 			AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
 		}
 		catch (AvisynthError err)
@@ -923,6 +941,8 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	if (hFile)
 		CloseHandle(hFile);
 
+	CheckFFTW(s_dll, s_failed_dependencies);
+
 	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
 	sTemp = s_failed_dependencies;
 	utils.StrToLC(sTemp);
@@ -965,6 +985,12 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			(sTemp.find("vcruntime140.dll") != string::npos) ||
 			(sTemp.find("api-ms-win-crt") != string::npos))
 				s_hint += "Visual Studio 2015/2017 Runtime doesn't seem to be installed\n";
+
+	if (sTemp.find("libfftw3f-3.dll") != string::npos)
+		s_hint += "libfftw3f-3.dll can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      libfftw3f-3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, e.g. \"System32\" and/or \"SysWoW64\"\n";
+
+	if (sTemp.find("fftw3.dll") != string::npos)
+		s_hint += "fftw3.dll (libfftw3f-3.dll) can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      fftw3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, e.g. \"System32\" and/or \"SysWoW64\"\n";
 
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
@@ -1042,6 +1068,64 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 
 	return bInstalled;
 }
+
+
+void CAvisynthInfo::CheckFFTW(string sdll, string &s_failed_deps)
+{
+	if ((FileSize(sdll) < (20 * 1024 * 1024)) && (FileSize(sdll) > 1024 ))
+	{
+		FILE *fp = fopen(sdll.c_str(), "rb");
+		if (fp)
+		{
+			string filedata;
+			fseek(fp, 0, SEEK_END);
+			filedata.resize(ftell(fp));
+			rewind(fp);
+			fread(&filedata[0], 1, filedata.size(), fp);
+			fclose(fp);
+
+			transform(filedata.begin(), filedata.end(), filedata.begin(), ::tolower);
+
+			if (filedata.find("libfftw3f-3.dll") != std::string::npos)
+			{
+				HINSTANCE hDLL = ::LoadLibrary("libfftw3f-3.dll");
+				if (!hDLL)
+					s_failed_deps += "  libfftw3f-3.dll\n";
+				else
+					::FreeLibrary(hDLL);
+
+				return;
+			}
+
+			if (filedata.find("fftw3.dll") != std::string::npos)
+			{
+				HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
+				if (!hDLL)
+					s_failed_deps += "  fftw3.dll\n";
+				else
+					::FreeLibrary(hDLL);
+			}
+		}
+	}
+
+	return;
+}
+
+
+__int64 CAvisynthInfo::FileSize(string s_file)
+{
+	WIN32_FIND_DATA fd;
+	__int64 iSize = -1;
+
+	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
+	if (hFind != INVALID_HANDLE_VALUE)
+		iSize =	(((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
+
+	FindClose(hFind);
+
+	return iSize;
+}
+
 
 
 BOOL CAvisynthInfo::Is64BitOS()

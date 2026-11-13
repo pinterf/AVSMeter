@@ -89,6 +89,12 @@ void CProcessInfo::CloseProcess()
 void CProcessInfo::Update()
 {
 	static unsigned __int64 uiLastTimeRun;
+	static unsigned __int64 uiLastTimeRunTH;
+
+	if (((GetSTDTimer() - uiLastTimeRun) < 500) && !bFirstRun)
+		return;
+
+	uiLastTimeRun = GetSTDTimer();
 
 	GetCPUUsage();
 	bFirstRun = FALSE;
@@ -101,11 +107,11 @@ void CProcessInfo::Update()
 	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
 
 	//Thread count should only be updated every few seconds to reduce overhead
-	if ((GetSTDTimer() - uiLastTimeRun) < 5000)
+	if ((GetSTDTimer() - uiLastTimeRunTH) < 5000)
 		return;
 
 	wThreadCount = GetCurrentThreadCount();
-	uiLastTimeRun = GetSTDTimer();
+	uiLastTimeRunTH = GetSTDTimer();
 
 	return;
 }

@@ -1,3 +1,6 @@
+v2.8.1
+- Various small fixes
+
 v2.8.0
 - Fixed a display bug
 - Further reduced memory overhead

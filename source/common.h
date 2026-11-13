@@ -29,6 +29,7 @@
 #include <math.h>
 #include <string>
 #include <algorithm>
+#include <mmsystem.h>
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <wintrust.h>

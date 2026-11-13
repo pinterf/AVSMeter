@@ -461,6 +461,7 @@ BOOL CUtils::IsNumeric(string s_string)
 			case '8':
 			case '9':
 			case '-':
+			case '.':
 				continue;
 			default:
 				return FALSE;
