@@ -29,12 +29,20 @@ public:
 	double           GetTimer();
 	double           GetSTDTimer();
 	unsigned __int64 GetSTDTimerMS();
-	BOOL             TestPerfCounter();
 	string           FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
+	LARGE_INTEGER    liPerfFreq;
+	double           dPerfFreq;
+	BOOL             supported;
 };
 
 CTimer::CTimer()
 {
+	liPerfFreq.QuadPart = 0;
+	supported = TRUE;
+	if (::QueryPerformanceFrequency(&liPerfFreq) == 0)
+		supported = FALSE;
+
+	dPerfFreq = (double)liPerfFreq.QuadPart;
 }
 
 CTimer::~CTimer()
@@ -42,31 +50,18 @@ CTimer::~CTimer()
 }
 
 
-BOOL CTimer::TestPerfCounter()
-{
-	LARGE_INTEGER liPerfCounter = {0,0};
-	LARGE_INTEGER liPerfFreq = {0,0};
-	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
-		return FALSE;
-
-	return TRUE;
-}
-
 
 double CTimer::GetTimer()
 {
 	LARGE_INTEGER liPerfCounter = {0,0};
-	LARGE_INTEGER liPerfFreq = {0,0};
-
 	DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x1);
-
-	::QueryPerformanceFrequency(&liPerfFreq);
+	Sleep(0);
 	::QueryPerformanceCounter(&liPerfCounter);
 
 	if (dwpOldMask != 0)
 		::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
 
-	return (double)liPerfCounter.QuadPart / (double)liPerfFreq.QuadPart;
+	return (double)liPerfCounter.QuadPart / dPerfFreq;
 }
 
 

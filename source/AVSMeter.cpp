@@ -33,7 +33,7 @@
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
 #define REFRESH_INTERVAL              0.35  //seconds
-#define MIN_TIME_PER_FRAMEINTERVAL   20.00  //milliseconds
+#define MIN_TIME_PER_FRAMEINTERVAL   10.00  //milliseconds
 #define MIN_RUNTIME                 500     //milliseconds
 
 struct stSettings
@@ -53,11 +53,9 @@ struct stSettings
 	BOOL      bAllowOnlyOneInstance;
 	BOOL      bUseColor;
 	BOOL      bGPUInfo;
-	BYTE      nProcessPriority;
 	BOOL      bConUseStdOut;
 	string    sSystemDateTime;
 	BOOL      bLogEstimatedTime;
-	BOOL      bDisplayEfficiencyIndex;
 	BOOL      bAutoCompleteExtension;
 	BOOL      bLogFileDateTimeSuffix;
 	BOOL      bSpecifyCustomPluginDir;
@@ -133,6 +131,7 @@ int main(int argc, char* argv[])
 	BOOL bInfoOnly = FALSE;
 	BOOL bOmitPreScan = FALSE;
 	BOOL bLogFunctions = FALSE;
+	BOOL bHighPriority = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 1;
 	string sErrorMsg = "";
@@ -141,7 +140,7 @@ int main(int argc, char* argv[])
 	Settings.sSystemDateTime = "";
 
 	BOOL CLSwitches_timelimit = FALSE;
-	BOOL CLSwitches_priority = FALSE;
+	BOOL CLSwitches_highpriority = FALSE;
 	BOOL CLSwitches_range = FALSE;
 	BOOL CLSwitches_csv = FALSE;
 	BOOL CLSwitches_info = FALSE;
@@ -284,27 +283,10 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if (sArgTest.substr(0, 10) == "-priority=")
+		if (sArgTest == "-hp")
 		{
-			CLSwitches_priority = TRUE;
-			sTemp = sArgTest.substr(10);
-			if (utils.IsNumeric(sTemp))
-			{
-				Settings.nProcessPriority = (BYTE)atol(sTemp.c_str());
-				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
-				{
-					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be 1, 2 or 3\n", sArg.c_str());
-					PollKeys();
-					return -1;
-				}
-			}
-			else
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-				PollKeys();
-				return -1;
-			}
-
+			CLSwitches_highpriority = TRUE;
+			bHighPriority = TRUE;
 			continue;
 		}
 
@@ -386,7 +368,15 @@ int main(int argc, char* argv[])
 	{
 		if (CLSwitches_info)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-info [-i]\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-info [-i]\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
+		if (CLSwitches_highpriority)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-hp\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -394,15 +384,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_timelimit)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-timelimit\"\n");
-			PrintUsage();
-			PollKeys();
-			return -1;
-		}
-
-		if (CLSwitches_priority)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-priority\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-timelimit\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -410,7 +392,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_range)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-range\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-range\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -418,7 +400,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_csv)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-csv\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-csv\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -426,7 +408,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_o)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-o\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-o\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -434,7 +416,7 @@ int main(int argc, char* argv[])
 
 		if (sAVSFile != "")
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"avsinfo\" is pointless\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Script specified together with \'avsinfo\'\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -459,12 +441,10 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (Settings.nProcessPriority == 1)
-		::SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
-	else if (Settings.nProcessPriority == 3)
+
+	if (bHighPriority)
 		::SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-	else
-		::SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
+
 
 	if (bCustomAVSDLLFromCL)
 	{
@@ -538,7 +518,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (!timer.TestPerfCounter())
+	if (!timer.supported)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
@@ -1480,13 +1460,6 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
-			if (Settings.bDisplayEfficiencyIndex)
-			{
-				sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / dCPUUsageAvg).c_str());
-				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
-				++uiCursorOffset;
-			}
-
 			if (Settings.bGPUInfo)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
@@ -1608,13 +1581,6 @@ int main(int argc, char* argv[])
 				sOutBuf = utils.StrFormat("CPU usage (average):            %.1f%%", dCPUUsageAvg);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
-
-				if (Settings.bDisplayEfficiencyIndex)
-				{
-					sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / dCPUUsageAvg).c_str());
-					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
-					sLogBuffer += sOutBuf + "\n";
-				}
 
 				if (Settings.bGPUInfo)
 				{
@@ -1819,10 +1785,8 @@ string ParseINIFile()
 	Settings.bAllowOnlyOneInstance = TRUE;
 	Settings.bUseColor = TRUE;
 	Settings.bGPUInfo = FALSE;
-	Settings.nProcessPriority = 2;
 	Settings.bConUseStdOut = FALSE;
 	Settings.iTimeLimit = -1;
-	Settings.bDisplayEfficiencyIndex = FALSE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
 	Settings.bLogUseFileSaveDialog = FALSE;
@@ -1879,26 +1843,6 @@ string ParseINIFile()
 			if ((!utils.FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
 			{
 				sRet = utils.StrFormat("\nThe file specified in AVSMeter.ini does not exist:\nAVSDLL=%s\n", Settings.sAVSDLL.c_str());
-				return sRet;
-			}
-			continue;
-		}
-
-		if (sCurrentLine.substr(0, 15) == "processpriority")
-		{
-			sTemp = sCurrentLine.substr(16);
-			if (utils.IsNumeric(sTemp))
-			{
-				Settings.nProcessPriority = (BYTE)atol(sTemp.c_str());
-				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
-				{
-					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
-					return sRet;
-				}
-			}
-			else
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
 				return sRet;
 			}
 			continue;
@@ -1993,9 +1937,6 @@ string ParseINIFile()
 			if (sCurrentLine.substr(0, 12) == "conusestdout")
 				Settings.bConUseStdOut = (iBoolValue == 0) ? FALSE : TRUE;
 
-			if (sCurrentLine.substr(0, 22) == "displayefficiencyindex")
-				Settings.bDisplayEfficiencyIndex = (iBoolValue == 0) ? FALSE : TRUE;
-
 			if (sCurrentLine.substr(0, 16) == "logestimatedtime")
 				Settings.bLogEstimatedTime = (iBoolValue == 0) ? FALSE : TRUE;
 
@@ -2038,7 +1979,6 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
 	sSettings += utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
 	sSettings += utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
-	sSettings += utils.StrFormat("DisplayEfficiencyIndex=%u\n\n", Settings.bDisplayEfficiencyIndex);
 
 	sSettings += utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
 	sSettings += utils.StrFormat("FrameRange=%I64d,%I64d\n\n", Settings.iStartFrame, Settings.iStopFrame);
@@ -2052,7 +1992,6 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings += utils.StrFormat("AVSDLL=%s\n\n", Settings.sAVSDLL.c_str());
 
 	sSettings += utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
-	sSettings += utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
 	sSettings += utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
 	sSettings += utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
 	sSettings += utils.StrFormat("PauseBeforeExit=%u\n\n", Settings.bPauseBeforeExit);
@@ -2603,7 +2542,7 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Display GPU/VPU usage (requires GPU-Z)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -hp                 Set process priority to high\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n\n\n");
 
 

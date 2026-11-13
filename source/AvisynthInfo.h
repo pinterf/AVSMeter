@@ -136,7 +136,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	{
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
+			s_ErrorMsg = utils.StrFormat("Cannot load avisynth.dll.\nWindows returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", s_ErrorMsg.c_str(), PROCESS_64 ? "x64" : "x86");
 		else
 			s_ErrorMsg = "Cannot load avisynth.dll";
 
