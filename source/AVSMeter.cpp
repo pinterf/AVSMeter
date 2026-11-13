@@ -364,7 +364,12 @@ int main(int argc, char* argv[])
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
-	BOOL bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg);
+	BOOL bRet = FALSE;
+	if (bPrintAVSInfo)
+		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg);
+	else
+		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, FALSE, sErrorMsg);
+
 	if (!bRet)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
@@ -1885,24 +1890,30 @@ BOOL WriteINIFile(string &s_inifile)
 
 	sSettings = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
 	sSettings += utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
-	sSettings += utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
+	sSettings += utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
+	sSettings += utils.StrFormat("DisplayEfficiencyIndex=%u\n\n", Settings.bDisplayEfficiencyIndex);
+
+	sSettings += utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
+	sSettings += utils.StrFormat("FrameRange=%I64d,%I64d\n\n", Settings.iStartFrame, Settings.iStopFrame);
+
 	sSettings += utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
 	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
-	sSettings += utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
-	sSettings += utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
-	sSettings += utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
-	sSettings += utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
+	sSettings += utils.StrFormat("LogUseFileSaveDialog=%u\n\n", Settings.bLogUseFileSaveDialog);
+
+	sSettings += utils.StrFormat("AVSDLL=%s\n\n", Settings.sAVSDLL.c_str());
+
 	sSettings += utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	sSettings += utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
-	sSettings += utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
 	sSettings += utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
 	sSettings += utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
-	sSettings += utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
+	sSettings += utils.StrFormat("PauseBeforeExit=%u\n\n", Settings.bPauseBeforeExit);
+
+	sSettings += utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
 	sSettings += utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
 	sSettings += utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
-	sSettings += utils.StrFormat("LogUseFileSaveDialog=%u\n", Settings.bLogUseFileSaveDialog);
+
 	hINIFile << sSettings;
 
 	hINIFile.flush();
@@ -1986,6 +1997,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	}
 	else
 	{
+		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 		if (ilen > 4)
 		{
 			if (Settings.bLogFileDateTimeSuffix)
@@ -2138,6 +2150,7 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 	}
 	else
 	{
+		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 		if (ilen > 4)
 		{
 			if (Settings.bLogFileDateTimeSuffix)
@@ -2173,7 +2186,6 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 			return sRet;
 		}
 	}
-
 
 	string sCSV = "";
 

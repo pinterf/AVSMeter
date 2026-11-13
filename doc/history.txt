@@ -1,3 +1,7 @@
+v2.7.5
+- Fixed a couple of bugs
+- Re-organised the ini settings in logical groups
+
 v2.7.4
 - Added ini option "LogUseFileSaveDialog". See manual for details.
 - Brought back ini options "LogDirectory" and "LogFileDateTimeSuffix". See manual for details.
