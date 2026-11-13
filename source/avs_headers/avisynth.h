@@ -407,7 +407,7 @@ Planar filter mask 1111.1111.1111.1111.1111.1111.1100.1111
     CS_Y8    = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_Sample_Bits_8,                                     // Y   4:0:0 planar
 
     //-------------------------
-    // AVS16: new planar constants go live! Experimental PF 160613 
+    // AVS16: new planar constants go live! Experimental PF 160613
     CS_YUV444P16 = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // YUV 4:4:4 16bit samples
     CS_YUV422P16 = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2, // YUV 4:2:2 16bit samples
     CS_YUV420P16 = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2, // YUV 4:2:0 16bit samples
@@ -420,7 +420,7 @@ Planar filter mask 1111.1111.1111.1111.1111.1111.1100.1111
     CS_YUV444PS = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // YUV 4:4:4 32bit samples
     CS_YUV422PS = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2, // YUV 4:2:2 32bit samples
     CS_YUV420PS = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2, // YUV 4:2:0 32bit samples
-    // CS_YV96  = CS_YUV444PS, 
+    // CS_YV96  = CS_YUV444PS,
 
     // grey 32
     CS_Y32 = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_Sample_Bits_32,                                      // Y   4:0:0 32bit samples
@@ -831,7 +831,7 @@ public:
   const char* AsString() const AVS_BakedCode( return AVS_LinkCall(AsString1)() )
   double AsFloat() const AVS_BakedCode( return AVS_LinkCall(AsFloat1)() )
   float AsFloatf() const AVS_BakedCode( return float( AVS_LinkCall(AsFloat1)() ) )
-  
+
   bool AsBool(bool def) const AVS_BakedCode( return AVS_LinkCall(AsBool2)(def) )
   int AsInt(int def) const AVS_BakedCode( return AVS_LinkCall(AsInt2)(def) )
   double AsDblDef(double def) const AVS_BakedCode( return AVS_LinkCall(AsDblDef)(def) ) // Value is still a float
@@ -1025,9 +1025,9 @@ enum AvsAllocType
 };
 
 /* -----------------------------------------------------------------------------
-   Note to plugin authors: The interface in IScriptEnvironment2 is 
+   Note to plugin authors: The interface in IScriptEnvironment2 is
       preliminary / under construction / only for testing / non-final etc.!
-      As long as you see this note here, IScriptEnvironment2 might still change, 
+      As long as you see this note here, IScriptEnvironment2 might still change,
       in which case your plugin WILL break. This also means that you are welcome
       to test it and give your feedback about any ideas, improvements, or issues
       you might have.

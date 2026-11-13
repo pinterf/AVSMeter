@@ -12,9 +12,9 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 
-	Windows part for CPU usage by (c) 2009 Ben Watson	taken from
+	Windows part for CPU usage by (c) 2009 Ben Watson	derived from
 	http://www.philosophicalgeek.com/2009/01/03/determine-cpu-usage-of-current-process-c-and-c/
 */
 
@@ -66,7 +66,7 @@ CProcessInfo::CProcessInfo()
 	::ZeroMemory(&ftPrevSysUser, sizeof(FILETIME));
 	::ZeroMemory(&ftPrevProcKernel, sizeof(FILETIME));
 	::ZeroMemory(&ftPrevProcUser, sizeof(FILETIME));
-	
+
 	btCPUUsage = 0;
 	wThreadCount = GetCurrentThreadCount();
 	bFirstRun = TRUE;
@@ -150,7 +150,7 @@ BYTE CProcessInfo::GetCPUUsage()
 			if ((uiSysKernelDiff + uiSysUserDiff) > 0)
 				btCPUUsage = (BYTE)((100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff));
 		}
-	
+
 		ftPrevSysKernel = ftSysKernel;
 		ftPrevSysUser = ftSysUser;
 		ftPrevProcKernel = ftProcKernel;
@@ -177,16 +177,16 @@ unsigned __int64 CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME
 WORD CProcessInfo::GetCurrentThreadCount()
 {
 	DWORD dwPID = ::GetCurrentProcessId();
-	HANDLE hThreadSnapshot = INVALID_HANDLE_VALUE; 
-	THREADENTRY32 te32; 
+	HANDLE hThreadSnapshot = INVALID_HANDLE_VALUE;
+	THREADENTRY32 te32;
 
-	hThreadSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0); 
-	if (hThreadSnapshot == INVALID_HANDLE_VALUE) 
-		return 0; 
+	hThreadSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	if (hThreadSnapshot == INVALID_HANDLE_VALUE)
+		return 0;
 
-	te32.dwSize = sizeof(THREADENTRY32); 
+	te32.dwSize = sizeof(THREADENTRY32);
 
-	if (!::Thread32First(hThreadSnapshot, &te32)) 
+	if (!::Thread32First(hThreadSnapshot, &te32))
 	{
 		::CloseHandle(hThreadSnapshot);
 		return 0;

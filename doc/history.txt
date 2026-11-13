@@ -1,3 +1,13 @@
+v2.3.5
+- Minor restructuring of the log files
+- Added GPU hardware info to the avsinfo log if the "-gpu" switch is used
+- Updated libcpuid
+- For classic Avisynth 2.6.x, auto-load directory references exclusive to Avisynth+
+  (i.e. "PluginDir+" entries in the registry) are now excluded from the enumeration
+  of plugins/plugin directories
+- Minor fixes
+- Refactoring
+
 v2.3.4
 - Fixed a silly bug that prevented correct detection of GPU capabiltities
 

@@ -12,7 +12,7 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -51,7 +51,7 @@ BOOL CTimer::TestTimer()
 	double start = GetTimer();
 	::Sleep(500);
 	double dtesttime = GetTimer() - start;
-		
+
 	if ((dtesttime > 0.4) && (dtesttime < 0.6))
 		return TRUE;
 

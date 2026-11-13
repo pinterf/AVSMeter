@@ -12,7 +12,7 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -77,11 +77,11 @@ public:
 	BOOL           bCPUIDSuccess;
 	struct CPUData
 	{
-		string CPUBrandString;
-		string CPUCodeName;
-		BYTE   CPUCores;
-		BYTE   CPULogicalCores;
-		double CPURealClock;   
+		string       CPUBrandString;
+		string       CPUCodeName;
+		BYTE         CPUCores;
+		BYTE         CPULogicalCores;
+		unsigned int CPURealClock; //MHz
 	} cpudata;
 
 	//string functions
@@ -108,8 +108,8 @@ CUtils::CUtils()
 	hConsole = ::GetStdHandle(STD_OUTPUT_HANDLE);
 
 	//save attributes
-	CONSOLE_SCREEN_BUFFER_INFO csbi; 
-	GetConsoleScreenBufferInfo(hConsole, &csbi); 
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(hConsole, &csbi);
 	wSaveAttributes = csbi.wAttributes;
 	bCPUIDSuccess = FALSE;
 }
@@ -123,8 +123,8 @@ CUtils::~CUtils()
 
 int CUtils::GetConsoleWidth()
 {
-	CONSOLE_SCREEN_BUFFER_INFO csbi; 
-	GetConsoleScreenBufferInfo(hConsole, &csbi); 
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(hConsole, &csbi);
 
 	return (int)csbi.dwSize.X;
 }
@@ -169,7 +169,7 @@ BOOL CUtils::FileExists(string s_file)
 		return FALSE;
 
 	if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
-		return FALSE;	
+		return FALSE;
 
 	return TRUE;
 }
@@ -211,7 +211,7 @@ string CUtils::StrFormat(const char* fmt, ...)
 	{
 		va_end(args);
 		return "\nvsprintf buffer overflow\n";
-	}		
+	}
 
 	string str(FMT_BUFFER);
 	va_end(args);
@@ -502,11 +502,11 @@ void CUtils::GetCPUID()
 	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
 	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
 
-	int clk = cpu_clock_by_ic(100, 5);
+	int clk = cpu_clock_by_ic(100, 15);
 	if (clk > 100)
-		cpudata.CPURealClock = (double)clk / 1000.0;
+		cpudata.CPURealClock = (unsigned int)clk;
 	else
-		cpudata.CPURealClock = 0.0;
+		cpudata.CPURealClock = 0;
 
 	bCPUIDSuccess = TRUE;
 

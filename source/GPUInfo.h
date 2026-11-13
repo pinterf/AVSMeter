@@ -12,7 +12,8 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
+	GPU-Z shared memory interface by W1zzard from techpowerup
 */
 
 #pragma once
@@ -72,7 +73,7 @@ private:
 	BOOL IsValidVersionNumber(string s_string);
 
 	#pragma pack(push, 1)
-		typedef struct GPUZ_RECORD 
+		typedef struct GPUZ_RECORD
 		{
 			WCHAR key[256];
 			WCHAR value[256];
@@ -98,6 +99,7 @@ private:
 
 	HANDLE hMapFile;
 	LPVOID pMapAddr;
+	map <string, string> mVPUNames;
 };
 
 CGPUInfo::CGPUInfo()
@@ -109,6 +111,45 @@ CGPUInfo::CGPUInfo()
 	sensors.GPULoad = 0;
 	sError = "";
 	pMapAddr = NULL;
+
+	mVPUNames.clear();
+	mVPUNames["G86"]   = "VP2";
+	mVPUNames["G84"]   = "VP2";
+	mVPUNames["G92"]   = "VP2";
+	mVPUNames["G94"]   = "VP2";
+	mVPUNames["GT200"] = "VP2";
+	mVPUNames["G96"]   = "VP2";
+	mVPUNames["G98"]   = "VP3";
+	mVPUNames["C77"]   = "VP3";
+	mVPUNames["G96"]   = "VP3";
+	mVPUNames["G98"]   = "VP3";
+	mVPUNames["C79"]   = "VP3";
+	mVPUNames["GT218"] = "VP4";
+	mVPUNames["GT216"] = "VP4";
+	mVPUNames["GT215"] = "VP4";
+	mVPUNames["GF100"] = "VP4";
+	mVPUNames["GF104"] = "VP4";
+	mVPUNames["GF108"] = "VP4";
+	mVPUNames["GF106"] = "VP4";
+	mVPUNames["GF110"] = "VP4";
+	mVPUNames["GF114"] = "VP4";
+	mVPUNames["GF116"] = "VP4";
+	mVPUNames["GT218"] = "VP4";
+	mVPUNames["GF119"] = "VP5";
+	mVPUNames["GF117"] = "VP5";
+	mVPUNames["GK107"] = "VP5";
+	mVPUNames["GK104"] = "VP5";
+	mVPUNames["GK106"] = "VP5";
+	mVPUNames["GK110"] = "VP5";
+	mVPUNames["GK208"] = "VP5";
+	mVPUNames["GM107"] = "VP6";
+	mVPUNames["GM108"] = "VP6";
+	mVPUNames["GM204"] = "VP6";
+	mVPUNames["GM200"] = "VP6";
+	mVPUNames["GM206"] = "VP7";
+	mVPUNames["GP104"] = "VP8";
+	mVPUNames["GP106"] = "VP8";
+	mVPUNames["GP102"] = "VP8";
 }
 
 CGPUInfo::~CGPUInfo()
@@ -194,101 +235,22 @@ void CGPUInfo::ReadData()
 		if (sValue == "")
 			continue;
 
-		if (sKey == "CARDNAME")
-			data.CardName = sValue;
-		if (sKey == "GPUNAME")
-			data.GPUName = sValue;
-		if (sKey == "MEMSIZE")
-			data.MemSize = sValue;
-		if (sKey == "DRIVERVERSION")
-			data.DriverVersion = sValue;
-		if (sKey == "OPENCL_VERSION")
-			data.OpenCLVersion = sValue;
-		if (sKey == "CUDA")
-			nCUDA = (BYTE)atol(sValue.c_str());		
-		if (sKey == "CUDA_CAPABILITY")
-			dCUDACaps = atof(sValue.c_str());		
+		if (sKey == "CARDNAME")	       data.CardName = sValue;
+		if (sKey == "GPUNAME")         data.GPUName = sValue;
+		if (sKey == "MEMSIZE")         data.MemSize = sValue;
+		if (sKey == "DRIVERVERSION")   data.DriverVersion = sValue;
+		if (sKey == "OPENCL_VERSION")  data.OpenCLVersion = sValue;
+		if (sKey == "CUDA")	           nCUDA = (BYTE)atol(sValue.c_str());
+		if (sKey == "CUDA_CAPABILITY") dCUDACaps = atof(sValue.c_str());
 	}
-	
+
 	if ((nCUDA != 0) && (dCUDACaps >= 1.0))
 		data.NVVPU = TRUE;
 
-	if (data.GPUName == "G86")
-		data.VPEngineName = "VP2";
-	else if (data.GPUName == "G84")
-		data.VPEngineName = "VP2";
-	else if (data.GPUName == "G92")
-		data.VPEngineName = "VP2";
-	else if (data.GPUName == "G94")
-		data.VPEngineName = "VP2";
-	else if (data.GPUName == "GT200")
-		data.VPEngineName = "VP2";
-	else if (data.GPUName == "G96")
-		data.VPEngineName = "VP2";
-	else if (data.GPUName == "G98")
-		data.VPEngineName = "VP3";
-	else if (data.GPUName == "C77")
-		data.VPEngineName = "VP3";
-	else if (data.GPUName == "G96")
-		data.VPEngineName = "VP3";
-	else if (data.GPUName == "G98")
-		data.VPEngineName = "VP3";
-	else if (data.GPUName == "C79")
-		data.VPEngineName = "VP3";
-	else if (data.GPUName == "GT218")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GT216")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GT215")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF100")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF104")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF108")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF106")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF110")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF114")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF116")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GT218")
-		data.VPEngineName = "VP4";
-	else if (data.GPUName == "GF119")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GF117")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GK107")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GK104")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GK106")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GK110")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GK208")
-		data.VPEngineName = "VP5";
-	else if (data.GPUName == "GM107")
-		data.VPEngineName = "VP6";
-	else if (data.GPUName == "GM108")
-		data.VPEngineName = "VP6";
-	else if (data.GPUName == "GM204")
-		data.VPEngineName = "VP6";
-	else if (data.GPUName == "GM200")
-		data.VPEngineName = "VP6";
-	else if (data.GPUName == "GM206")
-		data.VPEngineName = "VP7";
-	else if (data.GPUName == "GP104")
-		data.VPEngineName = "VP8";
-	else if (data.GPUName == "GP106")
-		data.VPEngineName = "VP8";
-	else if (data.GPUName == "GP102")
-		data.VPEngineName = "VP8";
-	else
+	if (mVPUNames.find(data.GPUName) == mVPUNames.end())
 		data.VPEngineName = "";
+	else
+		data.VPEngineName = mVPUNames.find(data.GPUName)->second;
 
 	return;
 }
@@ -334,12 +296,12 @@ void CGPUInfo::ReadSensors()
 		if (sSensor == "MEMORY USAGE (DEDICATED)")
 		{
 			data.DedicatedMem = TRUE;
-			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);	
+			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);
 		}
 		if (sSensor == "MEMORY USAGE (DYNAMIC)")
 		{
 			data.DynamicMem = TRUE;
-			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);	
+			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);
 		}
 	}
 
@@ -352,14 +314,14 @@ void CGPUInfo::ReadSensors()
 static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
 {
 	char szAppTitle[64];
-	GetWindowText(hwnd, szAppTitle, sizeof(szAppTitle));	
+	GetWindowText(hwnd, szAppTitle, sizeof(szAppTitle));
 	string sAppTitle(szAppTitle);
 
 	for (unsigned int i = 0; i < sAppTitle.length(); i++)
 		sAppTitle[i] = tolower(sAppTitle[i]);
 
 	int iPos = (int)sAppTitle.find("gpu-z");
-	
+
 	if (iPos >= 0)
 	{
 		bGPUZRunning = TRUE;

@@ -12,7 +12,7 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -30,7 +30,6 @@ public:
 	BOOL    GetInfo(string &s_ErrorMsg);
 	void    EnumPluginDLLs();
 	void    StrTokenize(string s_string, set<string, StrCaseInsensitiveCompare> &Tokens);
-	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	set     <string, StrCaseInsensitiveCompare> mPluginDirs;
@@ -50,6 +49,8 @@ public:
 	string  sTimeStamp;
 	BOOL    bIs64BitVersion;
 	BOOL    bLoadError;
+	BOOL    bIsAVSPlus;
+	BOOL    bIsMTVersion;	
 	virtual ~CAvisynthInfo();
 
 private:
@@ -190,6 +191,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	sDLLPath = "";
 	bIs64BitVersion = FALSE;
 	bIsMTVersion = FALSE;
+	bIsAVSPlus = FALSE;
 	iInterfaceVersion = 0;
 	sVersionNumber = "";
 	sVersionString = "Unknown Avisynth Version";
@@ -206,7 +208,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
 	else
 		bLoaded = MapAndLoad((LPSTR)sAVSDLL.c_str(), NULL, &li,	TRUE,	TRUE);
-	
+
 	if (!bLoaded)
 	{
 		bLoadError = TRUE;
@@ -391,9 +393,12 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			sVersionString = "Unknown Avisynth Version";
 		}
 
+		if (AVS_env->FunctionExists("AutoloadPlugins"))
+			bIsAVSPlus = TRUE;
+
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
-
+	
 
 		string sInternalFunctions = "";
 		try
@@ -490,7 +495,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTempLower = sTemp;
 				StrToLC(sTempLower);
 
-				if (sTemp != "")
+				if ((sTemp != "") && (bIsAVSPlus))
 				{
 					saPluginDirRefs[0] = "PluginDir+    (HKCU, x86):\t" + sTemp;
 
@@ -504,7 +509,7 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
-	
+
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
 		if (lRes == ERROR_SUCCESS)
@@ -519,7 +524,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTempLower = sTemp;
 				StrToLC(sTempLower);
 
-				if (sTemp != "")
+				if ((sTemp != "") && (bIsAVSPlus))
 				{
 					saPluginDirRefs[1] = "PluginDir+    (HKLM, x86):\t" + sTemp;
 
@@ -533,7 +538,7 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
-	
+
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
 		if (lRes == ERROR_SUCCESS)
@@ -562,7 +567,7 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
-	
+
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
 		if (lRes == ERROR_SUCCESS)
@@ -591,7 +596,7 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
-	}	
+	}
 	else //64 Bit
 	{
 		hKeyResult = 0;
@@ -608,7 +613,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTempLower = sTemp;
 				StrToLC(sTempLower);
 
-				if (sTemp != "")
+				if ((sTemp != "") && (bIsAVSPlus))
 				{
 					saPluginDirRefs[4] = "PluginDir+    (HKCU, x64):\t" + sTemp;
 
@@ -622,7 +627,7 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
-	
+
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
 		if (lRes == ERROR_SUCCESS)
@@ -637,7 +642,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTempLower = sTemp;
 				StrToLC(sTempLower);
 
-				if (sTemp != "")
+				if ((sTemp != "") && (bIsAVSPlus))
 				{
 					saPluginDirRefs[5] = "PluginDir+    (HKLM, x64):\t" + sTemp;
 
@@ -680,7 +685,7 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
-	
+
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
 		if (lRes == ERROR_SUCCESS)
@@ -723,10 +728,10 @@ BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 
 	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
 
-	if (hFileMap) 
+	if (hFileMap)
 	{
 		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-		if (pMem) 
+		if (pMem)
 		{
 			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
 			{
@@ -739,7 +744,7 @@ BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 					BOOL bFound = FALSE;
 					char* p = szTemp;
 
-					do 
+					do
 					{
 						*szDrive = *p;
 						if (QueryDosDevice(szDrive, szName, MAX_PATH))
@@ -761,7 +766,7 @@ BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 			}
 			bSuccess = TRUE;
 			UnmapViewOfFile(pMem);
-		} 
+		}
 		CloseHandle(hFileMap);
 	}
 	else
@@ -833,7 +838,7 @@ string CAvisynthInfo::GetTimeStamp(string s_file)
 	}
 
 	CloseHandle(hFile);
-	
+
 	return StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
 }
 
@@ -850,7 +855,7 @@ string CAvisynthInfo::StrFormat(const char* fmt, ...)
 	{
 		va_end(args);
 		return "\nvsprintf buffer overflow\n";
-	}		
+	}
 
 	string str(FMT_BUFFER);
 	va_end(args);
@@ -1365,14 +1370,14 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 		hFile = CreateFile(s_dll.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 			return;
-		
+
 		hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
 		if (hFileMapping == NULL || hFileMapping == INVALID_HANDLE_VALUE)
 		{
 			CloseHandle(hFile);
 			return;
 		}
-		
+
 		lpbaseAddress = (LPBYTE)MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
 		if (lpbaseAddress == NULL)
 		{
@@ -1380,7 +1385,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 			CloseHandle(hFile);
 			return;
 		}
-		
+
 		PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)lpbaseAddress;
 		PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(lpbaseAddress + pDosHeader->e_lfanew);
 		DWORD rva_import_table = pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
@@ -1391,7 +1396,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 			CloseHandle(hFile);
 			return;
 		}
-		
+
 		string sDepDLL = "";
 		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
 		IMAGE_IMPORT_DESCRIPTOR null_iid;
@@ -1405,7 +1410,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 			sTemp = StrFormat("%s", szDepName);
 			StrToLC(sTemp);
 			StrTrim(sTemp);
-			if ((sTemp == "msvcm80.dll") || (sTemp == "msvcp80.dll") || (sTemp == "msvcr80.dll")) 
+			if ((sTemp == "msvcm80.dll") || (sTemp == "msvcp80.dll") || (sTemp == "msvcr80.dll"))
 				continue;
 
 			sDepDLL = StrFormat("  %s\n", szDepName);
@@ -1420,7 +1425,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 	catch (...)
 	{
 	}
-	
+
 	if (lpbaseAddress)
 		UnmapViewOfFile(lpbaseAddress);
 	if (hFileMapping)
@@ -1508,14 +1513,14 @@ void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_dependencies, str
 
 __int64 CAvisynthInfo::FileSize(string s_file)
 {
-	WIN32_FIND_DATA fd; 
+	WIN32_FIND_DATA fd;
 	__int64 iSize = -1;
 
-	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd); 
+	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
 	if (hFind != INVALID_HANDLE_VALUE)
 		iSize =	(((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
 
-	FindClose(hFind); 
+	FindClose(hFind);
 
 	return iSize;
 }

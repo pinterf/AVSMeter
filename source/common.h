@@ -12,7 +12,7 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -36,6 +36,7 @@
 #include <fstream>
 #include <algorithm>
 #include <set>
+#include <map>
 #include <eh.h>
 
 using namespace std;
@@ -44,7 +45,7 @@ HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName);
 BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 
 struct StrCaseInsensitiveCompare
-{ 
+{
 	bool operator() (const string& a, const string& b) const
 	{
 		return _stricmp(a.c_str(), b.c_str()) < 0;
@@ -173,36 +174,36 @@ static void SE_Translator(unsigned int u, EXCEPTION_POINTERS* pExcept)
 }
 
 
-HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName)  
-{  
-	HMODULE moduleList[1024];  
-	DWORD sizeNeeded = 0;  
-	if(FALSE == EnumProcessModules(GetCurrentProcess(), moduleList, 1024, &sizeNeeded) || sizeNeeded < sizeof(HMODULE))  
-		return NULL;  
-  
-	int curModule = -1;  
-	for (unsigned int i = 0; i < (sizeNeeded / sizeof(HMODULE)); ++i)  
-	{  
-		if ((DWORD)moduleList[i] < (DWORD)address)  
-		{  
-			if (curModule == -1)  
-				curModule = i;  
-			else  
-			{  
-				if ((DWORD)moduleList[curModule] < (DWORD)moduleList[i])  
-					curModule = i;  
-			}  
-		}  
+HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName)
+{
+	HMODULE moduleList[1024];
+	DWORD sizeNeeded = 0;
+	if(FALSE == EnumProcessModules(GetCurrentProcess(), moduleList, 1024, &sizeNeeded) || sizeNeeded < sizeof(HMODULE))
+		return NULL;
+
+	int curModule = -1;
+	for (unsigned int i = 0; i < (sizeNeeded / sizeof(HMODULE)); ++i)
+	{
+		if ((DWORD)moduleList[i] < (DWORD)address)
+		{
+			if (curModule == -1)
+				curModule = i;
+			else
+			{
+				if ((DWORD)moduleList[curModule] < (DWORD)moduleList[i])
+					curModule = i;
+			}
+		}
 	}
-  
+
 	if (curModule == -1)
-		return NULL;  
-  
+		return NULL;
+
 	if (!GetModuleFileName(moduleList[curModule], moduleName, MAX_PATH))
-		return NULL;  
-  
- return moduleList[curModule];  
-}  
+		return NULL;
+
+ return moduleList[curModule];
+}
 
 
 BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
@@ -214,10 +215,10 @@ BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 
 	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
 
-	if (hFileMap) 
+	if (hFileMap)
 	{
 		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-		if (pMem) 
+		if (pMem)
 		{
 			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
 			{
@@ -230,7 +231,7 @@ BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 					BOOL bFound = FALSE;
 					char* p = szTemp;
 
-					do 
+					do
 					{
 						*szDrive = *p;
 						if (QueryDosDevice(szDrive, szName, MAX_PATH))
@@ -253,7 +254,7 @@ BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 			}
 			bSuccess = TRUE;
 			UnmapViewOfFile(pMem);
-		} 
+		}
 		CloseHandle(hFileMap);
 	}
 	else
@@ -270,7 +271,7 @@ static string SysErrorMessage()
 
 	if (dwLastError == ERROR_SUCCESS)
 		return "";
-		
+
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
 								NULL,
 								dwLastError,

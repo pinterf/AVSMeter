@@ -12,7 +12,7 @@
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "common.h"
@@ -81,12 +81,12 @@ CTimer timer;
 CSettings Settings;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
-string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP);
-string ParseINIFile();
-void PrintUsage();
-void Pause();
-void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
+string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
+string       CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP);
+string       ParseINIFile();
+void         PrintUsage();
+void         Pause();
+void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 
 
 int main(int argc, char* argv[])
@@ -139,19 +139,18 @@ int main(int argc, char* argv[])
 
 	if (!timer.TestTimer())
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
 		Pause();
 		return -1;
 	}
 
-	utils.GetCPUID();
-
 	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
-	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 	if (!bRet)
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		if (AvisynthInfo.bLoadError)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
@@ -183,7 +182,6 @@ int main(int argc, char* argv[])
 		Pause();
 		return -1;
 	}
-
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVISYNTH_VERSION, "\r%s", AvisynthInfo.sVersionString.c_str());
 	PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sVersionNumber.c_str());
@@ -403,14 +401,70 @@ int main(int argc, char* argv[])
 		::SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 
 
+	CGPUInfo gpuinfo;
+	if (Settings.bMonitorGPULoad)
+	{
+		if (!gpuinfo.bGPUZIsRunning)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to use GPU monitoring, GPU-Z must be running.\n\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "Continue without GPU monitoring? [y/n]");
+
+			for (;;)
+			{
+				Sleep(10);
+				if (_kbhit())
+				{
+					int iKey = _getch();
+					if ((iKey == 0x59) || (iKey == 0x79)) //y
+					{
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						Settings.bMonitorGPULoad = FALSE;
+						break;
+					}
+					else if ((iKey == 0x4E) || (iKey == 0x6E)) //n
+					{
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
+						Pause();
+						return -1;
+					}
+					else
+						continue;
+				}
+			}
+		}
+		else
+		{
+			if (!gpuinfo.MemInit())
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory:\n%s", gpuinfo.sError.c_str());
+				Pause();
+				return -1;
+			}
+		}
+	}
+
+	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query system info...").c_str());
+	utils.GetCPUID();
+	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+
 	if (bPrintAVSInfo)
 	{
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
-		sOutBuf = utils.StrFormat("Log created with:                 AVSMeter %s\n\n", sAVSMVersion.c_str());
+		sOutBuf = utils.StrFormat("Log created with:                 AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
 
+		sLogBuffer += "\n[OS/Hardware info]\n";
 		sOutBuf = utils.StrFormat("OS version:                       %s\n", utils.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
@@ -420,20 +474,42 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("CPU (code name):                  %s\n", utils.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			if (utils.cpudata.CPURealClock > 0.5)
+			if (utils.cpudata.CPURealClock > 500)
 			{
-				sOutBuf = utils.StrFormat("CPU clock (measured):             %.2f GHz\n", utils.cpudata.CPURealClock);
+				sOutBuf = utils.StrFormat("CPU clock (measured):             %u MHz\n", utils.cpudata.CPURealClock);
 				sLogBuffer += sOutBuf;
 			}
 			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:   %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
 
+
+		if (Settings.bMonitorGPULoad)
+		{
+			sOutBuf = utils.StrFormat("Video card:                       %s", gpuinfo.data.CardName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("GPU name:                         %s", gpuinfo.data.GPUName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			if (gpuinfo.data.VPEngineName != "")
+			{
+				sOutBuf = utils.StrFormat("NVIDIA VPU version:               %s", gpuinfo.data.VPEngineName.c_str());
+				sLogBuffer += sOutBuf + "\n";
+			}
+			sOutBuf = utils.StrFormat("Video memory size:                %s", gpuinfo.data.MemSize.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("OpenCL version:                   %s", gpuinfo.data.OpenCLVersion.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Graphics driver version:          %s\n", gpuinfo.data.DriverVersion.c_str());
+			sLogBuffer += sOutBuf;
+		}
+
+
+		sLogBuffer += "\n\n[Avisynth info]";
 		sOutBuf = utils.StrFormat("\nAvisynth version string:          %s\n", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("File version:                     %s\n", AvisynthInfo.sVersionNumber.c_str());		
+		sOutBuf = utils.StrFormat("File version:                     %s\n", AvisynthInfo.sVersionNumber.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -482,7 +558,7 @@ int main(int argc, char* argv[])
 		//CPP26 plugs
 		if (AvisynthInfo.mPluginDLLsCPP26.size() > 0)
 		{
-			sOutBuf = "\n[Avisynth CPP 2.6 plugins]\n";
+			sOutBuf = "\n\n[Avisynth CPP 2.6 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -502,7 +578,7 @@ int main(int argc, char* argv[])
 		//CPP25 plugs
 		if (AvisynthInfo.mPluginDLLsCPP25.size() > 0)
 		{
-			sOutBuf = "\n[Avisynth CPP 2.5 plugins]\n";
+			sOutBuf = "\n\n[Avisynth CPP 2.5 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -522,7 +598,7 @@ int main(int argc, char* argv[])
 		//CPP20 plugs
 		if (AvisynthInfo.mPluginDLLsCPP20.size() > 0)
 		{
-			sOutBuf = "\n[Avisynth CPP 2.0 plugins]\n";
+			sOutBuf = "\n\n[Avisynth CPP 2.0 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -542,7 +618,7 @@ int main(int argc, char* argv[])
 		//C25 plugs
 		if (AvisynthInfo.mPluginDLLsC25.size() > 0)
 		{
-			sOutBuf = "\n[Avisynth C 2.5 plugins]\n";
+			sOutBuf = "\n\n[Avisynth C 2.5 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -562,7 +638,7 @@ int main(int argc, char* argv[])
 		//C20 plugs
 		if (AvisynthInfo.mPluginDLLsC20.size() > 0)
 		{
-			sOutBuf = "\n[Avisynth C 2.0 plugins]\n";
+			sOutBuf = "\n\n[Avisynth C 2.0 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -596,7 +672,7 @@ int main(int argc, char* argv[])
 		for (set<string, StrCaseInsensitiveCompare>::iterator ppfunc = AvisynthInfo.mPluginFunctions.begin(); ppfunc != AvisynthInfo.mPluginFunctions.end(); ++ppfunc)
 		{
 			sFunction = *ppfunc;
-			sOutBuf = utils.StrFormat("  %s\n", sFunction.c_str());
+			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
 			sLogBuffer += sOutBuf;
 		}
 
@@ -612,7 +688,7 @@ int main(int argc, char* argv[])
 		for (set<string, StrCaseInsensitiveCompare>::iterator pifunc = AvisynthInfo.mInternalFunctions.begin(); pifunc != AvisynthInfo.mInternalFunctions.end(); ++pifunc)
 		{
 			sFunction = *pifunc;
-			sOutBuf = utils.StrFormat("  %s\n", sFunction.c_str());
+			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
 			sLogBuffer += sOutBuf;
 		}
 
@@ -682,58 +758,6 @@ int main(int argc, char* argv[])
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
 		Pause();
 		return -1;
-	}
-
-
-	CGPUInfo gpuinfo;
-	if (Settings.bMonitorGPULoad)
-	{
-		if (!gpuinfo.bGPUZIsRunning)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\n\n");
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "Continue without GPU monitoring? [y/n]");
-
-			for (;;)
-			{
-				Sleep(10);
-				if (_kbhit())
-				{
-					int iKey = _getch();
-					if ((iKey == 0x59) || (iKey == 0x79)) //y
-					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						Settings.bMonitorGPULoad = FALSE;
-						break;
-					}
-					else if ((iKey == 0x4E) || (iKey == 0x6E)) //n
-					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
-						Pause();
-						return -1;
-					}
-					else
-						continue;
-				}
-			}
-		}
-		else
-		{
-			if (!gpuinfo.MemInit())
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory:\n%s", gpuinfo.sError.c_str());
-				Pause();
-				return -1;
-			}
-		}
 	}
 
 
@@ -847,8 +871,10 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-		sOutBuf = utils.StrFormat("\nOS version:                            %s", utils.GetOSVersion().c_str());
-		sLogBuffer += sOutBuf + "\n";
+
+		sLogBuffer += "\n\n[OS/Hardware info]\n";
+		sOutBuf = utils.StrFormat("OS version:                            %s\n", utils.GetOSVersion().c_str());
+		sLogBuffer += sOutBuf;
 
 		if (utils.bCPUIDSuccess)
 		{
@@ -856,16 +882,38 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("CPU (code name):                       %s\n", utils.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			if (utils.cpudata.CPURealClock > 0.5)
+			if (utils.cpudata.CPURealClock > 500)
 			{
-				sOutBuf = utils.StrFormat("CPU clock (measured):                  %.2f GHz\n", utils.cpudata.CPURealClock);
+				sOutBuf = utils.StrFormat("CPU clock (measured):                  %u MHz\n", utils.cpudata.CPURealClock);
 				sLogBuffer += sOutBuf;
 			}
-			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:        %u / %u\n\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
+			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:        %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
 
-		sOutBuf = utils.StrFormat("Avisynth version string:               %s", AvisynthInfo.sVersionString.c_str());
+
+		if (Settings.bMonitorGPULoad)
+		{
+			sOutBuf = utils.StrFormat("Video card:                            %s", gpuinfo.data.CardName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("GPU name:                              %s", gpuinfo.data.GPUName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			if (gpuinfo.data.VPEngineName != "")
+			{
+				sOutBuf = utils.StrFormat("NVIDIA VPU version:                    %s", gpuinfo.data.VPEngineName.c_str());
+				sLogBuffer += sOutBuf + "\n";
+			}
+			sOutBuf = utils.StrFormat("Video memory size:                     %s", gpuinfo.data.MemSize.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("OpenCL version:                        %s", gpuinfo.data.OpenCLVersion.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Graphics driver version:               %s\n", gpuinfo.data.DriverVersion.c_str());
+			sLogBuffer += sOutBuf;
+		}
+
+
+		sLogBuffer += "\n\n[Avisynth info]";
+		sOutBuf = utils.StrFormat("\nAvisynth version string:               %s", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Avisynth file version:                 %s", AvisynthInfo.sVersionNumber.c_str());
@@ -900,29 +948,6 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-
-		if (Settings.bMonitorGPULoad)
-		{
-			sGPUInfo += "\n\n[Graphics card info]\n";
-
-			sOutBuf = utils.StrFormat("Card name:               %s", gpuinfo.data.CardName.c_str());
-			sGPUInfo += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("GPU name:                %s", gpuinfo.data.GPUName.c_str());
-			sGPUInfo += sOutBuf + "\n";
-			if (gpuinfo.data.VPEngineName != "")
-			{
-				sOutBuf = utils.StrFormat("VPU version:             %s", gpuinfo.data.VPEngineName.c_str());
-				sGPUInfo += sOutBuf + "\n";
-			}
-			sOutBuf = utils.StrFormat("Memory size:             %s", gpuinfo.data.MemSize.c_str());
-			sGPUInfo += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("OpenCL version:          %s", gpuinfo.data.OpenCLVersion.c_str());
-			sGPUInfo += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Driver version:          %s", gpuinfo.data.DriverVersion.c_str());
-			sGPUInfo += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Info collected with:     GPU-Z %s", gpuinfo.data.GPUZVersion.c_str());
-			sGPUInfo += sOutBuf + "\n\n";
-		}
 
 		sLogBuffer += "\n\n[Clip info]\n";
 
@@ -1138,20 +1163,20 @@ int main(int argc, char* argv[])
 						AVS_temp = 0;
 						AVS_env->DeleteScriptEnvironment();
 						AVS_env = 0;
-			
+
 						if (Settings.bCreateLog)
 						{
 							perfdata = new CPerformanceData[1];
 							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, FALSE);
 							if (sLogRet != "")
 								PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, sLogRet.c_str());
-			
+
 							delete [] perfdata;
 						}
-			
+
 						AVS_linkage = 0;
 						::FreeLibrary(hDLL);
-			
+
 						Pause();
 						return 0;
 					}
@@ -1357,7 +1382,7 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				++uiCursorOffset;
 
-				sOutBuf = utils.StrFormat("GPU core clock / Memory clock:  %u / %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
+				sOutBuf = utils.StrFormat("GPU core clock / memory clock:  %u / %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 
@@ -1495,7 +1520,7 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				sLogBuffer += "\n";
 
-				sOutBuf = utils.StrFormat("GPU core clock / Memory clock:  %u / %u", dwMaxGPUClock, dwMaxGPUMemClock);
+				sOutBuf = utils.StrFormat("GPU core clock / memory clock:  %u / %u", dwMaxGPUClock, dwMaxGPUMemClock);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
@@ -2289,7 +2314,7 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 		utils.ResetRGB(Settings.bUseColor);
 
 	va_end(args);
-	
+
 	return;
 }
 
@@ -2382,26 +2407,16 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			AVS_env->ThrowError("Script runtime is too short for meaningful measurements");
 
 		uiFrameInterval = 10000;
-		if (dAverageFrameTime >   0.010)
-			uiFrameInterval = 5000;
-		if (dAverageFrameTime >   0.025)
-			uiFrameInterval = 2000;
-		if (dAverageFrameTime >   0.050)
-			uiFrameInterval = 1000;
-		if (dAverageFrameTime >   0.100)
-			uiFrameInterval = 500;
-		if (dAverageFrameTime >   0.250)
-			uiFrameInterval = 200;
-		if (dAverageFrameTime >   0.500)
-			uiFrameInterval = 100;
-		if (dAverageFrameTime >   1.000)
-			uiFrameInterval = 50;
-		if (dAverageFrameTime >   2.500)
-			uiFrameInterval = 20;
-		if (dAverageFrameTime >   5.000)
-			uiFrameInterval = 10;
-		if (dAverageFrameTime >  50.000)
-			uiFrameInterval = 1;
+		if (dAverageFrameTime >  0.004) uiFrameInterval = 5000;
+		if (dAverageFrameTime >  0.010) uiFrameInterval = 2000;
+		if (dAverageFrameTime >  0.020) uiFrameInterval = 1000;
+		if (dAverageFrameTime >  0.040) uiFrameInterval =  500;
+		if (dAverageFrameTime >  0.100) uiFrameInterval =  200;
+		if (dAverageFrameTime >  0.200) uiFrameInterval =  100;
+		if (dAverageFrameTime >  0.400) uiFrameInterval =   50;
+		if (dAverageFrameTime >  1.000) uiFrameInterval =   20;
+		if (dAverageFrameTime >  2.000) uiFrameInterval =   10;
+		if (dAverageFrameTime > 20.000) uiFrameInterval =    1;
 
 		AVS_clip = 0;
 		AVS_main = 0;
