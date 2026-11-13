@@ -30,6 +30,7 @@
 #define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
+#define COLOR_WARNING           FG_GREY | BG_BLACK
 
 #define REFRESH_INTERVAL              0.333333 //seconds
 #define MIN_TIME_PER_FRAMEINTERVAL   20.0      //milliseconds
@@ -527,7 +528,7 @@ int main(int argc, char* argv[])
 		{
 			string sPluginError = "";
 			string sLineSep(utils.GetConsoleWidth() - 2, '_');
-			sOutBuf = "\n\n\n[Plugin errors/warnings]\n";
+			sOutBuf = "\n\n\n[Plugin errors]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 			sOutBuf = sLineSep + "\n";
@@ -544,11 +545,34 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		//Plugin warnings
+		if (AvisynthInfo.vPluginWarnings.size() > 0)
+		{
+			string sPluginWarning = "";
+			string sLineSep(utils.GetConsoleWidth() - 2, '_');
+			sOutBuf = "\n\n\n[Plugin warnings]\n";
+			sLogBuffer += sOutBuf;
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+			sOutBuf = sLineSep + "\n";
+			sLogBuffer += sOutBuf;
+			PrintConsole(TRUE, COLOR_WARNING, sOutBuf.c_str());
+
+			for (unsigned int err = 0; err < AvisynthInfo.vPluginWarnings.size(); err++)
+			{
+				sPluginWarning = AvisynthInfo.vPluginWarnings[err];
+				sOutBuf = utils.StrFormat("\n%s\n", sPluginWarning.c_str());
+				sOutBuf += sLineSep + "\n";
+				sLogBuffer += sOutBuf;
+				PrintConsole(TRUE, COLOR_WARNING, utils.StrAnsiToOEM(sOutBuf).c_str());
+			}
+		}
+
+
 		//Internal Functions
 		if (AvisynthInfo.vInternalFunctions.size() > 0)
 		{
 			string sFunction = "";
-			sOutBuf = "\n\n[Internal (core) functions]\n";
+			sOutBuf = "\n\n\n[Internal (core) functions]\n";
 			sLogBuffer += sOutBuf;
 	
 			for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
@@ -1061,10 +1085,9 @@ int main(int argc, char* argv[])
 			uiFirstFrame = (unsigned int)Settings.iStartFrame;
 			uiLastFrame = (unsigned int)Settings.iStopFrame;
 			uiFramesToProcess = uiLastFrame - uiFirstFrame + 1;
-			if (uiFramesToProcess > 1)
-				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Reading frames...").c_str());
-			else
-				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Reading frame...").c_str());
+
+			sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", uiFirstFrame, uiLastFrame);
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\r", Pad(sOutBuf).c_str());
 		}
 		else
 		{
@@ -1216,7 +1239,7 @@ int main(int argc, char* argv[])
 			bFirstScr = FALSE;
 			bEarlyExit = FALSE;
 
-			sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame, uiLastFrame);
+			sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame + 1, uiLastFrame);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 

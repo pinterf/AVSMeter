@@ -66,6 +66,7 @@ public:
 
 private:
 	#pragma pack(push, 1)
+
 	typedef struct GPUZ_RECORD
 	{
 		WCHAR key[256];
@@ -88,6 +89,7 @@ private:
 		GPUZ_RECORD data[MAX_RECORDS];
 		GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
 	} GPUZ_SH_MEM, *LPGPUZ_SH_MEM;
+
 	#pragma pack(pop)
 
 	HANDLE hMapFile;

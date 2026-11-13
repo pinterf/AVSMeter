@@ -1,3 +1,8 @@
+v2.7.0
+- Warnings and errors are reported in separate sections
+- Updated list of exception messages
+- Cosmetics
+
 v2.6.9
 - avsinfo: If the version info is missing in (auto-load) plugins/files, the UTC timestamp is printed instead
 - Simplified "ESC" key handling

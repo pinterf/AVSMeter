@@ -15,13 +15,16 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define VERSION_NUM  2,7,0,0
+#define VERSION_STR  "2.7.0\0"
+
 #include <winres.h>
 #define IDI_MAINFRAME 101
 IDI_MAINFRAME ICON DISCARDABLE "AVSMeter.ico"
 
 VS_VERSION_INFO VERSIONINFO
-	FILEVERSION      2,6,9,0
-	PRODUCTVERSION   2,6,9,0
+	FILEVERSION      VERSION_NUM
+	PRODUCTVERSION   VERSION_NUM
 	FILEOS           VOS_NT
 	FILETYPE         VFT_APP
 BEGIN
@@ -31,10 +34,10 @@ BEGIN
 		BEGIN
 			VALUE "Comments", "AVSMeter - Avisynth Script Testing\0"
 			VALUE "FileDescription", "AVSMeter\0"
-			VALUE "FileVersion", "2.6.9\0"
+			VALUE "FileVersion", VERSION_STR
 			VALUE "LegalCopyright", "Copyright (c) 2012-2017, Groucho2004\0"
 			VALUE "ProductName", "AVSMeter\0"
-			VALUE "ProductVersion", "2.6.9\0"
+			VALUE "ProductVersion", VERSION_STR
 		END
 	END
 	BLOCK "VarFileInfo"
