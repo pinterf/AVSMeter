@@ -35,13 +35,18 @@
     testing filters/plugins to evaluate their performance and memory
     requirements.<br>
     <b><br>
-      <img alt="" src="avsmeter.png" width="652" height="543"><br>
+      <img alt="" src="avsmeter.png" width="652" height="511"><br>
       <br>
     </b><br>
     <font face="Fixedsys"><big>Usage:&nbsp; AVSMeter script.avs
         [switches]<br>
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
 
 
 
@@ -77,12 +82,22 @@
 
 
 
+
+
+
+
+
           Monitor GPU/VPU usage (<font color="#ff0000">4</font>)<br>
           &nbsp;-range=first,last&nbsp;&nbsp; Set frame range (<font
             color="#ff0000">5</font>)<br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Set time limit (seconds) (<font color="#ff0000">6</font>)<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
 
 
 
@@ -164,6 +179,20 @@
           "DisplayTPF" (<font color="Red">0</font> or 1):</b></b><br>
     </b>If set to "1", time/frame (in milliseconds) is printed to the
     console.<br>
+    <br>
+    <b><b><b>"DisplayEfficiencyIndex" </b></b></b><b><b><b><b><b><b>(0
+                or <font color="Red">1</font>)</b></b></b>:</b></b><br>
+    </b>If set to "1", the result of (FPS / CPU usage) is printed to the
+    console. This ratio indicates the efficiency of a script (higher =
+    better) and is useful for comparing different versions of a script
+    or scripts that are supposed to do the same thing.<br>
+    For example, using the QTGMC de-interlacer with multi-threaded
+    Avisynth involves plugins that themselves have built-in
+    multi-threading. Optimizing the number of threads these plugins use
+    in this scenario improves performance and efficiency and ultimately
+    helps save precious CPU cycles for the encoder and/or other tasks.
+    All you have to do to is change (for example) the QTGMC parameter
+    "EdiThreads" and check the Efficiency index that AVSMeter displays.<br>
     <b><br>
       "CreateLog" (<font color="Red">0</font> or 1):</b><br>
     Creates a log file with various details about the installed Avisynth

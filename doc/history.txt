@@ -1,3 +1,6 @@
+v2.1.5
+- Added "Efficiency index" display (FPS / CPU usage)
+
 v2.1.4
 - Fixed a problem with the time stamp determination of avisynth.dll
 - Fixed a minor timing issue

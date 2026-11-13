@@ -36,6 +36,7 @@ public:
 	string    sAVSDLL;
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
+	BOOL      bDisplayEfficiencyIndex;
 	BOOL      bCreateLog;
 	BOOL      bCreateCSV;
 	BOOL      bPauseBeforeExit;
@@ -1043,6 +1044,13 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			++uiCursorOffset;
 
+			if (Settings.bDisplayEfficiencyIndex)
+			{
+				sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatFrameTime(dFPSAverage / (double)uiCPUUsageAvg).c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				++uiCursorOffset;
+			}
+
 			if (Settings.bMonitorGPULoad)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
@@ -1169,6 +1177,13 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("CPU usage (average):            %u%%", uiCPUUsageAvg);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf + "\n";
+
+			if (Settings.bDisplayEfficiencyIndex)
+			{
+				sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatFrameTime(dFPSAverage / (double)uiCPUUsageAvg).c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				sLogBuffer += sOutBuf + "\n";
+			}
 
 			if (Settings.bMonitorGPULoad)
 			{
@@ -1352,6 +1367,7 @@ string ParseINIFile()
 	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
+	Settings.bDisplayEfficiencyIndex = TRUE;
 	Settings.bCreateLog = FALSE;
 	Settings.bCreateCSV = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
@@ -1417,6 +1433,7 @@ string ParseINIFile()
 		hINIFile << "AVSDLL=\n";
 		hINIFile << "DisplayFPS=1\n";
 		hINIFile << "DisplayTPF=0\n";
+		hINIFile << "DisplayEfficiencyIndex=1\n";
 		hINIFile << "CreateLog=0\n";
 		hINIFile << "CreateCSV=0\n";
 		hINIFile << "PauseBeforeExit=0\n";
@@ -1473,6 +1490,12 @@ string ParseINIFile()
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
 				Settings.bDisplayTPF = TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 22) == "displayefficiencyindex")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
+				Settings.bDisplayEfficiencyIndex = FALSE;
 		}
 
 		if (sCurrentLine.substr(0, 9) == "createlog")
