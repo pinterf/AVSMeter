@@ -31,9 +31,9 @@
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
-#define REFRESH_INTERVAL              0.333333 //seconds
-#define MIN_TIME_PER_FRAMEINTERVAL   20.0      //milliseconds
-#define MIN_RUNTIME                 500        //milliseconds
+#define REFRESH_INTERVAL              0.35  //seconds
+#define MIN_TIME_PER_FRAMEINTERVAL   20.00  //milliseconds
+#define MIN_RUNTIME                 500     //milliseconds
 
 struct stSettings
 {
@@ -66,14 +66,13 @@ struct stSettings
 
 struct stPerfData
 {
-	unsigned int  current_frame;
+	unsigned int  frame;
 	float         fps_current;
 	float         fps_average;
-	BYTE          cpu_usage;
+	double        cpu_usage;
 	BYTE          gpu_usage;
 	BYTE          vpu_usage;
-	DWORD         phys_mem;
-	DWORD         virt_mem;
+	DWORD         process_memory;
 	WORD          num_threads;
 };
 
@@ -94,6 +93,7 @@ void         PrintUsage();
 void         PollKeys();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 string       Pad(string s_line);
+
 
 
 int main(int argc, char* argv[])
@@ -132,11 +132,19 @@ int main(int argc, char* argv[])
 	BOOL bInfoOnly = FALSE;
 	BOOL bOmitPreScan = FALSE;
 	string sAVSError = "";
-	unsigned int uiFrameInterval = 10;
+	unsigned int uiFrameInterval = 1;
 	string sErrorMsg = "";
-	BOOL bPrintAVSInfo = FALSE;
+	BOOL bModeAVSInfo = FALSE;
 	BOOL bCustomAVSDLLFromCL = FALSE;
 	Settings.sSystemDateTime = "";
+
+	BOOL CLSwitches_timelimit = FALSE;
+	BOOL CLSwitches_priority = FALSE;
+	BOOL CLSwitches_range = FALSE;
+	BOOL CLSwitches_csv = FALSE;
+	BOOL CLSwitches_info = FALSE;
+	BOOL CLSwitches_o = FALSE;
+	BOOL CLSwitches_c = FALSE;
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -174,7 +182,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "avsinfo")
 		{
-			bPrintAVSInfo = TRUE;
+			bModeAVSInfo = TRUE;
 			continue;
 		}
 
@@ -186,18 +194,21 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "-c")
 		{
+			CLSwitches_c = TRUE;
 			Settings.bSpecifyCustomPluginDir = TRUE;
 			continue;
 		}
 
 		if (sArgTest == "-o")
 		{
+			CLSwitches_o = TRUE;
 			bOmitPreScan = TRUE;
 			continue;
 		}
 
 		if ((sArgTest == "-i") || (sArgTest == "-info"))
 		{
+			CLSwitches_info = TRUE;
 			bInfoOnly = TRUE;
 			continue;
 		}
@@ -210,6 +221,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "-csv")
 		{
+			CLSwitches_csv = TRUE;
 			Settings.bCreateCSV = TRUE;
 			continue;
 		}
@@ -222,6 +234,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest.substr(0, 7) == "-range=")
 		{
+			CLSwitches_range = TRUE;
 			Settings.iStartFrame = 0xFFFFFFFFFF;
 			Settings.iStopFrame = 0xFFFFFFFFFF;
 
@@ -229,6 +242,7 @@ int main(int argc, char* argv[])
 			if (sTemp.length() < 3)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
+				PrintUsage();
 				PollKeys();
 				return -1;
 			}
@@ -237,6 +251,7 @@ int main(int argc, char* argv[])
 			if ((spos < 1) || (spos > 27))
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
+				PrintUsage();
 				PollKeys();
 				return -1;
 			}
@@ -251,6 +266,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
+				PrintUsage();
 				PollKeys();
 				return -1;
 			}
@@ -259,13 +275,14 @@ int main(int argc, char* argv[])
 
 		if (sArgTest.substr(0, 10) == "-priority=")
 		{
+			CLSwitches_priority = TRUE;
 			sTemp = sArgTest.substr(10);
 			if (utils.IsNumeric(sTemp))
 			{
 				Settings.nProcessPriority = (BYTE)atol(sTemp.c_str());
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
-					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
+					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be 1, 2 or 3\n", sArg.c_str());
 					PollKeys();
 					return -1;
 				}
@@ -282,13 +299,14 @@ int main(int argc, char* argv[])
 
 		if (sArgTest.substr(0, 11) == "-timelimit=")
 		{
+			CLSwitches_timelimit = TRUE;
 			sTemp = sArgTest.substr(11);
 			if (utils.IsNumeric(sTemp))
 			{
 				Settings.iTimeLimit = atoi(sTemp.c_str());
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
-					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
+					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between \'1\' and \'999999\'\n", sArg.c_str());
 					PollKeys();
 					return -1;
 				}
@@ -347,27 +365,80 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
+		PrintUsage();
 		PollKeys();
 		return -1;
 	}
 
 
-	if (bPrintAVSInfo)
+	if (bModeAVSInfo)
 	{
-		if (bInfoOnly)
+		if (CLSwitches_info)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-info [-i]\"\n");
+			PrintUsage();
 			PollKeys();
 			return -1;
 		}
+
+		if (CLSwitches_timelimit)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-timelimit\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
+		if (CLSwitches_priority)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-priority\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
+		if (CLSwitches_range)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-range\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
+		if (CLSwitches_csv)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-csv\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
+		if (CLSwitches_o)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-o\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
 		if (sAVSFile != "")
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"avsinfo\" is pointless\n");
+			PrintUsage();
 			PollKeys();
 			return -1;
 		}
 	}
-
+	else
+	{
+		if (CLSwitches_c)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-c\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+	}
 
 	if (Settings.nProcessPriority == 1)
 		::SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
@@ -382,7 +453,7 @@ int main(int argc, char* argv[])
 
 		OPENFILENAME ofn;
 		ofn.lStructSize       = sizeof(OPENFILENAME);
-		ofn.hwndOwner         = GetForegroundWindow();
+		ofn.hwndOwner         = ConsoleHWND;
 		ofn.hInstance         = NULL;
 		ofn.lpstrFilter       = "*.dll";
 		ofn.lpstrCustomFilter = NULL;
@@ -400,7 +471,7 @@ int main(int argc, char* argv[])
 		ofn.lCustData         = 0;
 		ofn.lpfnHook          = NULL;
 		ofn.lpTemplateName    = NULL;
-		ofn.Flags             = OFN_HIDEREADONLY;
+		ofn.Flags             = OFN_HIDEREADONLY | OFN_EXPLORER;
 			
 		if (GetOpenFileName(&ofn) == 0)
 		{
@@ -416,7 +487,7 @@ int main(int argc, char* argv[])
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
 	BOOL bRet = FALSE;
-	if (bPrintAVSInfo)
+	if (bModeAVSInfo)
 		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg);
 	else
 		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, FALSE, sErrorMsg);
@@ -429,7 +500,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	if (!bPrintAVSInfo)
+	if (!bModeAVSInfo)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_AVISYNTH_VERSION, "\r%s", AvisynthInfo.sVersionString.c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sFileVersion.c_str());
@@ -448,7 +519,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (!timer.TestTimer())
+	if (!timer.TestPerfCounter())
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
@@ -458,7 +529,7 @@ int main(int argc, char* argv[])
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 
-	if (bPrintAVSInfo)
+	if (bModeAVSInfo)
 	{
 		sOutBuf = utils.StrFormat("Log file created with:      AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
@@ -560,12 +631,20 @@ int main(int argc, char* argv[])
 				spos = sPluginDLL.find("|");
 				sPluginType = sPluginDLL.substr(0, spos);
 				utils.StrTrim(sPluginType);
+				BYTE HColor = COLOR_AVSM_VERSION;
 
 				if (sPluginType != sOldPluginType)
 				{
+					if ((sPluginType.find("32 Bit") != std::string::npos) && (PROCESS_64))
+						HColor = BG_BLACK | FG_HMAGENTA;
+					else if ((sPluginType.find("64 Bit") != std::string::npos) && (!PROCESS_64))
+						HColor = BG_BLACK | FG_HMAGENTA;
+					else
+						HColor = COLOR_AVSM_VERSION;
+
 					sOutBuf = utils.StrFormat("\n[%s]\n", sPluginType.c_str());
 					sLogBuffer += sOutBuf;
-					PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+					PrintConsole(TRUE, HColor, sOutBuf.c_str());
 					sOldPluginType = sPluginType;
 				}
 
@@ -596,7 +675,24 @@ int main(int argc, char* argv[])
 		if (AvisynthInfo.vPluginErrors.size() > 0)
 		{
 			string sPluginError = "";
-			string sLineSep(utils.GetConsoleWidth() - 2, '_');
+			unsigned int err = 0;
+			unsigned int errmaxlen = 0;
+			unsigned int cpos = 0;
+
+			for (err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
+			{
+				sPluginError = AvisynthInfo.vPluginErrors[err];
+				for (cpos = 0; cpos < sPluginError.length(); cpos++)
+				{
+					if (sPluginError[cpos] == '\n')
+						break;
+				}
+				if (cpos > errmaxlen)
+					errmaxlen = cpos;
+			}
+
+			string sLineSep(errmaxlen, '_');
+
 			sOutBuf = "\n\n\n[Plugin errors/warnings]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
@@ -604,7 +700,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 
-			for (unsigned int err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
+			for (err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
 			{
 				sPluginError = AvisynthInfo.vPluginErrors[err];
 				sOutBuf = utils.StrFormat("\n%s\n", sPluginError.c_str());
@@ -676,7 +772,7 @@ int main(int argc, char* argv[])
 
 				OPENFILENAME ofn;
 				ofn.lStructSize       = sizeof(OPENFILENAME);
-				ofn.hwndOwner         = GetForegroundWindow();
+				ofn.hwndOwner         = ConsoleHWND;
 				ofn.hInstance         = NULL;
 				ofn.lpstrFilter       = "*.log";
 				ofn.lpstrCustomFilter = NULL;
@@ -694,11 +790,11 @@ int main(int argc, char* argv[])
 				ofn.lCustData         = 0;
 				ofn.lpfnHook          = NULL;
 				ofn.lpTemplateName    = NULL;
-				ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+				ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
 			
 				if (GetSaveFileName(&ofn) == 0)
 				{
-					MessageBox(GetForegroundWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
+					MessageBox(GetConsoleWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
 				}
 				else
 				{
@@ -783,8 +879,6 @@ int main(int argc, char* argv[])
 				return -1;
 			}
 		}
-		else
-			uiFrameInterval = 1;
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 	}
@@ -1197,6 +1291,9 @@ int main(int argc, char* argv[])
 		while ((uiFramesToProcess / uiFrameInterval) > 100000)
 			uiFrameInterval *= 10;
 
+		while ((uiFrameInterval * 10) > uiFramesToProcess)
+			uiFrameInterval /= 10;
+
 		perfdata.reserve((2 * uiFramesToProcess) / uiFrameInterval);
 
 		unsigned int uiFramesRead = 0;
@@ -1205,13 +1302,13 @@ int main(int argc, char* argv[])
 		__int64 iEstimatedMS = 0;
 
 		CProcessInfo processinfo;
-		DWORD dwPhysicalMemPeakMB = 0;
-		DWORD dwVirtualMemPeakMB = 0;
-		DWORD dwPhysicalMemCurrentMB = 0;
-		DWORD dwVirtualMemCurrentMB = 0;
-		unsigned int uiCPUUsageCur = 0;
-		unsigned int uiCPUUsageAcc = 0;
-		unsigned int uiCPUUsageAvg = 0;
+
+		DWORD dwMemPeakMB = 0;
+		DWORD dwMemCurrentMB = 0;
+
+		double dCPUUsageCur = 0;
+		double dCPUUsageAcc = 0;
+		double dCPUUsageAvg = 0;
 		unsigned int uiGPUUsageCur = 0;
 		unsigned int uiGPUUsageAcc = 0;
 		unsigned int uiGPUUsageAvg = 0;
@@ -1273,17 +1370,14 @@ int main(int argc, char* argv[])
 			iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
 			iEstimatedMS = (__int64)((double)uiFramesToProcess * (double)iElapsedMS / (double)uiFramesRead);
 
-			uiCPUUsageCur = (unsigned int)processinfo.btCPUUsage;
-			uiCPUUsageAcc += uiCPUUsageCur;
-			uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiIntervalCounter) + 0.5);
+			dCPUUsageCur = processinfo.dCPUUsage;
+			dCPUUsageAcc += dCPUUsageCur;
+			dCPUUsageAvg = dCPUUsageAcc / (double)uiIntervalCounter;
 
-			dwPhysicalMemCurrentMB = processinfo.dwPhysicalMemMB;
-			dwVirtualMemCurrentMB = processinfo.dwVirtualMemMB;
+			dwMemCurrentMB = processinfo.dwMemMB;
 
-			if (dwPhysicalMemCurrentMB > dwPhysicalMemPeakMB)
-				dwPhysicalMemPeakMB = dwPhysicalMemCurrentMB;
-			if (dwVirtualMemCurrentMB > dwVirtualMemPeakMB)
-				dwVirtualMemPeakMB = dwVirtualMemCurrentMB;
+			if (dwMemCurrentMB > dwMemPeakMB)
+				dwMemPeakMB = dwMemCurrentMB;
 
 			dFPSAverage = (double)uiFramesRead / (dCurrentTime - dStartTime);
 
@@ -1301,10 +1395,10 @@ int main(int argc, char* argv[])
 				dFPSMin = dFPSCurrent;
 
 			stPerfData pdata;
-			pdata.current_frame = uiCurrentFrame;
+			pdata.frame = uiCurrentFrame;
 			pdata.fps_current = (float)dFPSCurrent;
 			pdata.fps_average = (float)dFPSAverage;
-			pdata.cpu_usage = processinfo.btCPUUsage;
+			pdata.cpu_usage = processinfo.dCPUUsage;
 
 			if (Settings.bGPUInfo)
 			{
@@ -1318,8 +1412,7 @@ int main(int argc, char* argv[])
 			}
 
 			pdata.num_threads = processinfo.wThreadCount;
-			pdata.phys_mem = dwPhysicalMemCurrentMB;
-			pdata.virt_mem = dwVirtualMemCurrentMB;
+			pdata.process_memory = dwMemCurrentMB;
 			perfdata.push_back(pdata);
 
 			dLastIntervalTime = dCurrentTime;
@@ -1356,7 +1449,7 @@ int main(int argc, char* argv[])
 				++uiCursorOffset;
 			}
 
-			sOutBuf = utils.StrFormat("Memory usage (phys | virt):     %u | %u MiB", dwPhysicalMemCurrentMB, dwVirtualMemCurrentMB);
+			sOutBuf = utils.StrFormat("Process memory usage:           %u MiB", dwMemCurrentMB);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
@@ -1364,13 +1457,13 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
-			sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", uiCPUUsageCur, uiCPUUsageAvg);
+			sOutBuf = utils.StrFormat("CPU usage (current | average):  %.1f%% | %.1f%%", dCPUUsageCur, dCPUUsageAvg);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
 			if (Settings.bDisplayEfficiencyIndex)
 			{
-				sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / (double)uiCPUUsageAvg).c_str());
+				sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / dCPUUsageAvg).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				++uiCursorOffset;
 			}
@@ -1485,7 +1578,7 @@ int main(int argc, char* argv[])
 					sLogBuffer += sOutBuf + "\n";
 				}
 
-				sOutBuf = utils.StrFormat("Memory usage (phys | virt):     %u | %u MiB", dwPhysicalMemPeakMB, dwVirtualMemPeakMB);
+				sOutBuf = utils.StrFormat("Process memory usage (max):     %u MiB", dwMemPeakMB);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
@@ -1493,13 +1586,13 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
-				sOutBuf = utils.StrFormat("CPU usage (average):            %u%%", uiCPUUsageAvg);
+				sOutBuf = utils.StrFormat("CPU usage (average):            %.1f%%", dCPUUsageAvg);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
 				if (Settings.bDisplayEfficiencyIndex)
 				{
-					sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / (double)uiCPUUsageAvg).c_str());
+					sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / dCPUUsageAvg).c_str());
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					sLogBuffer += sOutBuf + "\n";
 				}
@@ -1711,7 +1804,7 @@ string ParseINIFile()
 	Settings.bDisplayEfficiencyIndex = FALSE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
-	Settings.bLogUseFileSaveDialog = TRUE;
+	Settings.bLogUseFileSaveDialog = FALSE;
 
 	if (!utils.FileExists(sINIFile)) //No ini file present, create the file with defaults
 	{
@@ -1778,7 +1871,7 @@ string ParseINIFile()
 				Settings.nProcessPriority = (BYTE)atol(sTemp.c_str());
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
-					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
+					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
 					return sRet;
 				}
 			}
@@ -1995,7 +2088,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 
 		OPENFILENAME ofn;
 		ofn.lStructSize       = sizeof(OPENFILENAME);
-		ofn.hwndOwner         = GetForegroundWindow();
+		ofn.hwndOwner         = ConsoleHWND;
 		ofn.hInstance         = NULL;
 		ofn.lpstrFilter       = "*.log";
 		ofn.lpstrCustomFilter = NULL;
@@ -2013,11 +2106,11 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 		ofn.lCustData         = 0;
 		ofn.lpfnHook          = NULL;
 		ofn.lpTemplateName    = NULL;
-		ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-			
+		ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
+
 		if (GetSaveFileName(&ofn) == 0)
 		{
-			MessageBox(GetForegroundWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
+			MessageBox(GetConsoleWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
 			return "";
 		}
 
@@ -2085,12 +2178,12 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 		if (Settings.bGPUInfo)
 		{
 			if (bNVVP)
-				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads  PhysMEM(MiB)  VirtMEM(MiB)\n";
+				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads   Memory(MiB)\n";
 			else
-				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads  PhysMEM(MiB)  VirtMEM(MiB)\n";
+				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads   Memory(MiB)\n";
 		}
 		else
-			sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads  PhysMEM(MiB)  VirtMEM(MiB)\n";
+			sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   Memory(MiB)\n";
 
 
 		hLogFile << sLog;
@@ -2100,18 +2193,18 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 		unsigned int uiFrame = 0;
 		for (unsigned int i = 0; i < cs_pdata.size(); i++)
 		{
-			uiFrame = cs_pdata[i].current_frame + 1;
+			uiFrame = cs_pdata[i].frame + 1;
 			stemp1 = utils.StrFormat("%u", uiFrame);
 			string spad((12 - stemp1.length()), ' ');
 			if (Settings.bGPUInfo)
 			{
 				if (bNVVP)
-					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8.1f %8u %8u %9u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].process_memory);
 				else
-					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8.1f %8u %9u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].process_memory);
 			}
 			else
-				stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+				stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8.1f %9u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].process_memory);
 
 			hLogFile << stemp2 + "\n";
 		}
@@ -2148,7 +2241,7 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 
 		OPENFILENAME ofn;
 		ofn.lStructSize       = sizeof(OPENFILENAME);
-		ofn.hwndOwner         = GetForegroundWindow();
+		ofn.hwndOwner         = ConsoleHWND;
 		ofn.hInstance         = NULL;
 		ofn.lpstrFilter       = "*.csv";
 		ofn.lpstrCustomFilter = NULL;
@@ -2166,11 +2259,11 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 		ofn.lCustData         = 0;
 		ofn.lpfnHook          = NULL;
 		ofn.lpTemplateName    = NULL;
-		ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+		ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
 			
 		if (GetSaveFileName(&ofn) == 0)
 		{
-			MessageBox(GetForegroundWindow(), "\rCSV file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
+			MessageBox(GetConsoleWindow(), "\rCSV file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
 			return "";
 		}
 
@@ -2222,17 +2315,17 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 
 	string sCSV = "";
 
-	if (cs_pdata.size() > 0)
+	if (cs_pdata.size() > 1)
 	{
 		if (Settings.bGPUInfo)
 		{
 			if (bNVVP)
-				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),VPU(%),Threads,PhysMEM(MiB),VirtMEM(MiB)\n";
+				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),VPU(%),Threads,Memory(MiB)\n";
 			else
-				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),Threads,PhysMEM(MiB),VirtMEM(MiB)\n";
+				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),Threads,Memory(MiB)\n";
 		}
 		else
-			sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),Threads,PhysMEM(MiB),VirtMEM(MiB)\n";
+			sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),Threads,Memory(MiB)\n";
 
 		hCSVFile << sCSV;
 
@@ -2240,16 +2333,16 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 		unsigned int uiFrame = 0;
 		for (unsigned int i = 0; i < cs_pdata.size(); i++)
 		{
-			uiFrame = cs_pdata[i].current_frame + 1;
+			uiFrame = cs_pdata[i].frame + 1;
 			if (Settings.bGPUInfo)
 			{
 				if (bNVVP)
-					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%.1f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].process_memory);
 				else
-					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%.1f,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].process_memory);
 			}
 			else
-				stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+				stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%.1f,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].process_memory);
 
 			hCSVFile << stemp + "\n";
 		}
@@ -2424,10 +2517,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		else
 			AVS_env->ThrowError("Script runtime is too short for meaningful measurements");
 
-		uiFrameInterval = 10000;
-		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL / 5000.0)) uiFrameInterval = 5000;
-		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL / 2000.0)) uiFrameInterval = 2000;
-		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL / 1000.0)) uiFrameInterval = 1000;
+		uiFrameInterval = 1000;
 		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL /  500.0)) uiFrameInterval =  500;
 		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL /  200.0)) uiFrameInterval =  200;
 		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL /  100.0)) uiFrameInterval =  100;
@@ -2460,7 +2550,10 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	}
 
 	if (!::FreeLibrary(hDLL))
+	{
+		s_error = "Cannot unload avisynth.dll";
 		uiFrameInterval = 10;
+	}
 
 	return uiFrameInterval;
 }
@@ -2482,6 +2575,7 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n\n\n");
 
+
 	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 2:  AVSMeter avsinfo [switches]\n\n");
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
@@ -2498,5 +2592,4 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_DEFAULT, "\n");
 	return;
 }
-
 

@@ -29,12 +29,11 @@ public:
 	CProcessInfo();
 	virtual ~CProcessInfo();
 
-	void Update();
-	void CloseProcess();
-	BYTE  btCPUUsage;
-	WORD  wThreadCount;
-	DWORD dwPhysicalMemMB;
-	DWORD dwVirtualMemMB;
+	void   Update();
+	void   CloseProcess();
+	double dCPUUsage;
+	WORD   wThreadCount;
+	DWORD  dwMemMB;
 
 private:
 	WORD GetCurrentThreadCount();
@@ -58,15 +57,14 @@ CProcessInfo::CProcessInfo()
 {
 	hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ::GetCurrentProcessId());
 
-	dwPhysicalMemMB = 0;
-	dwVirtualMemMB = 0;
+	dwMemMB = 0;
 
 	::ZeroMemory(&ftPrevSysKernel, sizeof(FILETIME));
 	::ZeroMemory(&ftPrevSysUser, sizeof(FILETIME));
 	::ZeroMemory(&ftPrevProcKernel, sizeof(FILETIME));
 	::ZeroMemory(&ftPrevProcUser, sizeof(FILETIME));
 
-	btCPUUsage = 0;
+	dCPUUsage = 0.0;
 	wThreadCount = GetCurrentThreadCount();
 	bFirstRun = TRUE;
 	lRunCount = 0;
@@ -99,12 +97,11 @@ void CProcessInfo::Update()
 	GetCPUUsage();
 	bFirstRun = FALSE;
 
-	if (btCPUUsage > 100)
-		btCPUUsage = 100;
+	if (dCPUUsage >= 100.0)
+		dCPUUsage = 99.99999999;
 
 	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
-	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
-	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
+	dwMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
 
 	//Thread count should only be updated every few seconds to reduce overhead
 	if ((GetSTDTimer() - uiLastTimeRunTH) < 5000)
@@ -141,7 +138,7 @@ void CProcessInfo::GetCPUUsage()
 			unsigned __int64 uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
 
 			if ((uiSysKernelDiff + uiSysUserDiff) > 0)
-				btCPUUsage = (BYTE)((100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff));
+				dCPUUsage = (100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff);
 		}
 
 		ftPrevSysKernel = ftSysKernel;

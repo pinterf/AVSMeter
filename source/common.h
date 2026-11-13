@@ -54,6 +54,7 @@ using std::remove;
 using std::exception;
 
 const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
+const HWND ConsoleHWND = GetConsoleWindow();
 
 static BOOL CompareNoCase(string first, string second)
 {

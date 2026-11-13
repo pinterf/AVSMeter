@@ -1,3 +1,12 @@
+v2.8.2
+- Improved command line switch logic/verification
+- Changed ini file default for "LogUseFileSaveDialog" to "0"
+- CPU usage now displayed as rational number
+- Memory usage now only displays the "Working Set" which represents the
+  amount of memory physically mapped to the process context.
+- Various fixes and tweaks
+- Cosmetics
+
 v2.8.1
 - Various small fixes
 
@@ -6,8 +15,8 @@ v2.8.0
 - Further reduced memory overhead
 
 v2.7.9
-- Reorganised command line usage (See documentation for details).
-- Added switch "-o" which disables the script pre-scan (See documentation for details).
+- Reorganised command line usage (See documentation for details)
+- Added switch "-o" which disables the script pre-scan (See documentation for details)
 - Cosmetics
 
 v2.7.8
@@ -28,8 +37,8 @@ v2.7.5
 - Re-organised the ini settings in logical groups
 
 v2.7.4
-- Added ini option "LogUseFileSaveDialog". See manual for details.
-- Brought back ini options "LogDirectory" and "LogFileDateTimeSuffix". See manual for details.
+- Added ini option "LogUseFileSaveDialog" (See documentation for details)
+- Brought back ini options "LogDirectory" and "LogFileDateTimeSuffix" (See documentation for details)
 
 v2.7.3
 - Fixed a bug in the plugin enumeration

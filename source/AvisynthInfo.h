@@ -600,6 +600,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 {
 	BOOL bRet = TRUE;
 	b_Is64BitDLL = FALSE;
+	s_Msg = "UNCATEGORIZED";		
 
 	LOADED_IMAGE li;
 	BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,	TRUE,	TRUE);
@@ -625,8 +626,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			if (!PROCESS_64)
 			{
 				UnMapAndLoad(&li);
-				s_Msg = utils.StrFormat("Error loading \"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
-				return FALSE;
+				return TRUE;
 			}
 		}
 		else
@@ -634,19 +634,34 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			if (PROCESS_64)
 			{
 				UnMapAndLoad(&li);
-				s_Msg = utils.StrFormat("Error loading \"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
-				return FALSE;
+				return TRUE;
 			}
 		}
 
 		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		if (expVA == 0)
+		{
+			UnMapAndLoad(&li);
+			return TRUE;
+		}
+
 		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
+		if (pExp == 0)
+		{
+			UnMapAndLoad(&li);
+			return TRUE;
+		}
+
 		DWORD rvaNames = pExp->AddressOfNames;
 		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
-		string sName = "";
+		if (prvaNames == 0)
+		{
+			UnMapAndLoad(&li);
+			return TRUE;
+		}
 
+		string sName = "";
 		DWORD dwName = 0;
-		s_Msg = "UNCATEGORIZED";
 		for (dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
 			sName = "";

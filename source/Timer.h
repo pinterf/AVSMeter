@@ -32,7 +32,7 @@ public:
 	unsigned __int64 GetSTDTimerMS();
 	double           GetMMTimer();
 	unsigned __int64 GetMMTimerMS();
-	BOOL             TestTimer();
+	BOOL             TestPerfCounter();
 	string           FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 
 private:
@@ -57,7 +57,7 @@ CTimer::~CTimer()
 }
 
 
-BOOL CTimer::TestTimer()
+BOOL CTimer::TestPerfCounter()
 {
 	LARGE_INTEGER liPerfCounter = {0,0};
 	LARGE_INTEGER liPerfFreq = {0,0};
