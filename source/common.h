@@ -177,6 +177,9 @@ string SysErrorMessage()
 								NULL);
 
 	string sRet(szMsg);
+	sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
+	sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
+
 	return sRet;
 }
 

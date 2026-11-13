@@ -28,20 +28,25 @@
   <body>
     <br>
     AVSMeter is a CLI (command line interface) tool that "runs" an
-    Avisynth script with virtually no overhead, displays clip info, CPU
-    and memory usage and the minimum, maximum and average frames
-    processed per second. It measures how fast Avisynth can serve frames
-    to a client application (x264, for example) and comes in handy when
-    testing filters/plugins to evaluate their performance and memory
-    requirements.<br>
-    <b><br>
-      <img alt="" src="avsmeter.png" height="511" width="652"><br>
+    Avisynth script with virtually no overhead, displays clip info,
+    CPU/GPU and memory usage and the minimum, maximum and average frames
+    processed per second.<br>
+    Measuring how fast Avisynth can serve frames to a client application
+    (x264, VirtualDub) and establishing CPU/GPU/memory usage helps with
+    optimizing scripts and tracking down crashes, slowdowns and
+    bottlenecks.<br>
+    <br>
+    <br>
+    <b> <img alt="" src="avsmeter.png" height="607" width="652"><br>
       <br>
     </b><br>
     <font face="Fixedsys"><big>Usage:&nbsp; AVSMeter script.avs
         [switches]<br>
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
 
 
 
@@ -66,6 +71,9 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
 
 
 
@@ -130,13 +138,18 @@
 
 
 
+
+
+
           Set process priority (1:low, 2:normal, 3:high)<br>
         </font></font></big><b><big><font face="Courier New"><br>
         </font></big></b><br>
     (<b><b><b><font color="Red">1</font></b></b></b>) Displays extended
     info about the installed Avisynth version and the plugin sub-system.
     If a custom avisynth.dll is specified in the ini file, info about
-    that file will be displayed.<br>
+    that file will be displayed. The "-avsinfo" switch can be combined
+    with "-log" in order to write the info to a file ("avsinfo.log" in
+    the current directory).<br>
     <br>
     (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
     Creates a log file with various details about the installed Avisynth

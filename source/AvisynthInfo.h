@@ -34,8 +34,7 @@ public:
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	map     <string, BYTE> mPluginDirs;
-	map     <string, BYTE> mPluginDLLsC25;
-	map     <string, BYTE> mPluginDLLsC20;
+	map     <string, BYTE> mPluginDLLsC;
 	map     <string, BYTE> mPluginDLLsCPP26;
 	map     <string, BYTE> mPluginDLLsCPP25;
 	map     <string, BYTE> mPluginDLLsCPP20;
@@ -57,7 +56,7 @@ private:
 	int     GetInterfaceVersion(string &s_ErrorMsg);
   void    EnumPluginDirs();
 	BOOL    CheckPlugin(string s_dll, string &s_Msg);
-	BOOL    GetDLLDependencies(string s_dll, string &s_dependencies);
+	void    AVSCheckPluginDLLs();
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
@@ -859,6 +858,7 @@ void CAvisynthInfo::EnumPluginDLLs()
 {
 	string sDir = "";
 	string sMessage = "";
+
 	for (map<string, BYTE>::iterator it = mPluginDirs.begin(); it != mPluginDirs.end(); ++it)
 	{
 		sDir = it->first;
@@ -881,10 +881,8 @@ void CAvisynthInfo::EnumPluginDLLs()
 				}
 				else
 				{
-					if (sMessage == "AVSC25")
-						mPluginDLLsC25[sCurrentFile] = 1;
-					if (sMessage == "AVSC20")
-						mPluginDLLsC20[sCurrentFile] = 1;
+					if (sMessage == "AVSC")
+						mPluginDLLsC[sCurrentFile] = 1;
 					if (sMessage == "AVS26CPP")
 						mPluginDLLsCPP26[sCurrentFile] = 1;
 					if (sMessage == "AVS25CPP")
@@ -898,6 +896,8 @@ void CAvisynthInfo::EnumPluginDLLs()
 
 		FindClose (hFind);
 	}
+
+	AVSCheckPluginDLLs();
 
 	return;
 }
@@ -922,14 +922,6 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 			s_Msg = StrFormat("Load error:\n\"%s\"", s_dll.c_str());
 
 		return FALSE;
-	}
-
-	string sDependencies = "";
-	GetDLLDependencies(s_dll, sDependencies);
-	if (sDependencies != "")
-	{
-		for (unsigned int y = 0; y < sDependencies.length(); y++)
-			sDependencies[y] = tolower(sDependencies[y]);
 	}
 
 	try
@@ -997,12 +989,7 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 			if (pos != std::string::npos)
 			{
 				bIsPlugin = TRUE;
-				size_t dep = sDependencies.find("avisynth_c.dll");
-				if (dep != std::string::npos)
-					s_Msg = "AVSC20";
-				else
-					s_Msg = "AVSC25";
-
+				s_Msg = "AVSC";
 				break;
 			}
 		}
@@ -1017,16 +1004,17 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 	catch (SE_Exception ep)
 	{
 		bRet = FALSE;
-		s_Msg = SE_ErrorMessage(ep.GetCode());
+		s_Msg = StrFormat("\"%s\"\n%s", s_dll.c_str(), SE_ErrorMessage(ep.GetCode()).c_str());
 	}
 	catch (...)
 	{
 		bRet = FALSE;
+
 		s_Msg = SysErrorMessage();
 		if (s_Msg != "")
-			s_Msg = StrFormat("Unload error:\n\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
+			s_Msg = StrFormat("\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
 		else
-			s_Msg = StrFormat("Unload error:\n\"%s\"", s_dll.c_str());
+			s_Msg = StrFormat("Unknown exception:\n\"%s\"", s_dll.c_str());
 	}
 
 	UnMapAndLoad(&li);
@@ -1035,78 +1023,108 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 }
 
 
-BOOL CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies)
+void CAvisynthInfo::AVSCheckPluginDLLs()
 {
-	BOOL bRet = TRUE;
-	HANDLE hFile = NULL;
-	HANDLE hFileMapping = NULL;
-	LPBYTE lpbaseAddress = NULL;
-	s_dependencies = "";
+	string sPlugin = "";
+	string sMsg = "";
 
-	try
+	HINSTANCE hDLL;
+	if (sAVSDLL == "")
+		hDLL = ::LoadLibrary("avisynth");
+	else
+		hDLL = ::LoadLibrary(sAVSDLL.c_str());
+
+	if (!hDLL)
+		return;
+
+	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+	if (!CreateEnvironment)
 	{
-		hFile = CreateFile(s_dll.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE)
+		::FreeLibrary(hDLL);
+		return;
+	}
+
+	IScriptEnvironment *AVS_env = CreateEnvironment(iInterfaceVersion);
+	if (!AVS_env)
+	{
+		::FreeLibrary(hDLL);
+		return;
+	}
+
+	AVS_linkage = AVS_env->GetAVSLinkage();
+	AVSValue AVS_main;
+
+	for (map<string, BYTE>::iterator itCPP26 = mPluginDLLsCPP26.begin(); itCPP26 != mPluginDLLsCPP26.end(); ++itCPP26)
+	{
+		sPlugin = itCPP26->first;
+		try
 		{
-			s_dependencies = StrFormat("Cannot open file %s", s_dll.c_str());
-			return FALSE;
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
 		}
-		
-		hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-		if (hFileMapping == NULL || hFileMapping == INVALID_HANDLE_VALUE)
+		catch (AvisynthError err)
 		{
-			CloseHandle(hFile);
-			s_dependencies = "Cannot create file mapping";
-			return FALSE;
-		}
-		
-		lpbaseAddress = (LPBYTE)MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
-		if (lpbaseAddress == NULL)
-		{
-			CloseHandle(hFileMapping);
-			CloseHandle(hFile);
-			s_dependencies = "Cannot create file mapping";
-			return FALSE;
-		}
-		
-		PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)lpbaseAddress;
-		PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(lpbaseAddress + pDosHeader->e_lfanew);
-		DWORD rva_import_table = pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-		if (rva_import_table == 0)
-		{
-			s_dependencies = "No import table";
-			UnmapViewOfFile(lpbaseAddress);
-			CloseHandle(hFileMapping);
-			CloseHandle(hFile);
-			return FALSE;
-		}
-		
-		string sTemp = "";
-		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
-		IMAGE_IMPORT_DESCRIPTOR null_iid;
-		IMAGE_THUNK_DATA null_thunk;
-		memset(&null_iid, 0, sizeof(null_iid));
-		memset(&null_thunk, 0, sizeof(null_thunk));
-		for (int i = 0; memcmp(pImageTable + i, &null_iid, sizeof(null_iid)) != 0; i++)
-		{
-			LPCSTR szDllName = (LPCSTR)ImageRvaToVa(pNtHeaders, lpbaseAddress, pImageTable[i].Name,NULL);
-			sTemp = StrFormat("%s, ", szDllName);
-			s_dependencies += sTemp;
+			string s_Msg = StrFormat("%s", (PCSTR)err.msg);
+			if (s_Msg != "")
+				mPluginErrors[s_Msg] = 1;
 		}
 	}
-	catch (...)
-	{
-		bRet = FALSE;
-	}
-	
-	if (lpbaseAddress)
-		UnmapViewOfFile(lpbaseAddress);
-	if (hFileMapping)
-		CloseHandle(hFileMapping);
-	if (hFile)
-		CloseHandle(hFile);
 
-	return bRet;
+	for (map<string, BYTE>::iterator itCPP25 = mPluginDLLsCPP25.begin(); itCPP25 != mPluginDLLsCPP25.end(); ++itCPP25)
+	{
+		sPlugin = itCPP25->first;
+		try
+		{
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			string s_Msg = StrFormat("%s", (PCSTR)err.msg);
+			if (s_Msg != "")
+				mPluginErrors[s_Msg] = 1;
+		}
+	}
+
+	for (map<string, BYTE>::iterator itCPP20 = mPluginDLLsCPP20.begin(); itCPP20 != mPluginDLLsCPP20.end(); ++itCPP20)
+	{
+		sPlugin = itCPP20->first;
+		try
+		{
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			string s_Msg = StrFormat("%s", (PCSTR)err.msg);
+			if (s_Msg != "")
+				mPluginErrors[s_Msg] = 1;
+		}
+	}
+
+	for (map<string, BYTE>::iterator itC = mPluginDLLsC.begin(); itC != mPluginDLLsC.end(); ++itC)
+	{
+		sPlugin = itC->first;
+		try
+		{
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			string s_Msg = StrFormat("%s", (PCSTR)err.msg);
+			if (s_Msg != "")
+				mPluginErrors[s_Msg] = 1;
+		}
+	}
+
+	AVS_main = 0;
+	Sleep(100);
+	AVS_env->DeleteScriptEnvironment();
+	AVS_env = 0;
+
+	AVS_linkage = 0;
+
+	FreeLibrary(hDLL);
+	Sleep(50);
+
+	return;
 }
 
 
