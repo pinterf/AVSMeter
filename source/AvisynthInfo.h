@@ -29,7 +29,6 @@ public:
 	CAvisynthInfo();
 	string  sAVSDLL;
 	BOOL    GetInfo(string &s_ErrorMsg);
-	void    EnumPluginDLLs();
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
@@ -56,8 +55,9 @@ private:
 	string  GetTimeStamp(string s_file);
 	int     GetInterfaceVersion(string &s_ErrorMsg);
   void    EnumPluginDirs();
-	BOOL    CheckPlugin(string s_dll, string &s_Msg);
-	void    AVSCheckPluginDLLs();
+	void    EnumPluginDLLs();
+	BOOL    SYSCheckPlugin(string s_dll, string &s_Msg);
+	void    AVSCheckPlugins();
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
@@ -414,6 +414,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	Sleep(50);
 
 	EnumPluginDirs();
+	EnumPluginDLLs();
 
 	return bRet;
 }
@@ -875,7 +876,7 @@ void CAvisynthInfo::EnumPluginDLLs()
 			if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
 			{
 				sCurrentFile = sDir + "\\" + fd.cFileName;
-				if (!CheckPlugin(sCurrentFile, sMessage))
+				if (!SYSCheckPlugin(sCurrentFile, sMessage))
 				{
 					if (sMessage != "")
 						mPluginErrors[sMessage] = 1;
@@ -900,13 +901,13 @@ void CAvisynthInfo::EnumPluginDLLs()
 		FindClose (hFind);
 	}
 
-	AVSCheckPluginDLLs();
+	AVSCheckPlugins();
 
 	return;
 }
 
 
-BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
+BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 {
 	BOOL bRet = TRUE;
 	s_Msg = "";
@@ -1033,7 +1034,7 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 }
 
 
-void CAvisynthInfo::AVSCheckPluginDLLs()
+void CAvisynthInfo::AVSCheckPlugins()
 {
 	string sPlugin = "";
 	string sMsg = "";

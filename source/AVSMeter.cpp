@@ -56,6 +56,7 @@ public:
 	BOOL      bAutoCompleteExtension;
 	string    sSystemTime;
 	BOOL      bLogFileDateTimeSuffix;
+	BOOL      bSkipSpeedTest;
 };
 
 
@@ -436,7 +437,6 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		AvisynthInfo.EnumPluginDLLs();
 		string sPluginDLL = "";
 
 		//CPP26 plugs
@@ -1043,8 +1043,52 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
-		if (uiFramesToProcess > 10000)
-			uiFrameInterval = 10;
+		if ((uiFrames > 999) && (!Settings.bSkipSpeedTest))
+		{		
+			double dFrameTime = 0.0;
+			double dElapsedTime = 0.0;
+			unsigned int uiFramesRead = 0;
+			double d1 = timer.GetTimer();
+			for (unsigned int fr = (uiFrames - 100); fr < uiFrames; fr++)
+			{
+				PVideoFrame test = AVS_clip->GetFrame(fr, AVS_env);
+				++uiFramesRead;
+				dElapsedTime = (timer.GetTimer() - d1) * 1000.0; //ms
+				if (dElapsedTime >= 1000.0)
+					break;
+			}
+
+			dFrameTime = dElapsedTime / (double)uiFramesRead;
+
+			uiFrameInterval = 20000;
+			if (dFrameTime >   0.001)
+				uiFrameInterval = 10000;
+			if (dFrameTime >   0.002)
+				uiFrameInterval = 5000;
+			if (dFrameTime >   0.005)
+				uiFrameInterval = 2000;
+			if (dFrameTime >   0.010)
+				uiFrameInterval = 1000;
+			if (dFrameTime >   0.020)
+				uiFrameInterval = 500;
+			if (dFrameTime >   0.050)
+				uiFrameInterval = 200;
+			if (dFrameTime >   0.100)
+				uiFrameInterval = 100;
+			if (dFrameTime >   0.200)
+				uiFrameInterval = 50;
+			if (dFrameTime >   0.500)
+				uiFrameInterval = 20;
+			if (dFrameTime >   1.000)
+				uiFrameInterval = 10;
+			if (dFrameTime >  10.000)
+				uiFrameInterval = 1;
+		}
+		else
+		{
+			if (uiFramesToProcess >= 1000)
+				uiFrameInterval = 10;
+		}
 
 		while ((uiFramesToProcess / uiFrameInterval) > 500000)
 			uiFrameInterval *= 10;
@@ -1563,6 +1607,7 @@ string ParseINIFile()
 	Settings.nProcessPriority = 2;
 	Settings.bConUseStdOut = FALSE;
 	Settings.iTimeLimit = -1;
+	Settings.bSkipSpeedTest = FALSE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
 
@@ -1594,6 +1639,7 @@ string ParseINIFile()
 		hINIFile << "ProcessPriority=2\n";
 		hINIFile << "ConUseSTDOUT=0\n";
 		hINIFile << "TimeLimit=-1\n";
+		hINIFile << "SkipSpeedTest=0\n";
 
 		hINIFile << "\n[Miscellaneous]\n";
 		hINIFile << "LogEstimatedTime=0\n";
@@ -1651,6 +1697,14 @@ string ParseINIFile()
 				Settings.bDisplayFPS = FALSE;
 			else
 				Settings.bDisplayFPS = TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 13) == "skipspeedtest")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
+				Settings.bSkipSpeedTest = FALSE;
+			else
+				Settings.bSkipSpeedTest = TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 10) == "displaytpf")
@@ -1865,6 +1919,9 @@ string ParseINIFile()
 	hNewINIFile << sCurrentLine;
 
 	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
+	hNewINIFile << sCurrentLine;
+
+	sCurrentLine = utils.StrFormat("SkipSpeedTest=%u\n", Settings.bSkipSpeedTest);
 	hNewINIFile << sCurrentLine;
 
 	hNewINIFile << "\n[Miscellaneous]\n";
