@@ -1,3 +1,11 @@
+v2.3.9
+- Split list of internal and external functions generated with "-avsinfo"
+  into a separate log file ("avsfunctions.log")
+- Refactor plugin enumeration
+- Update some error messages
+- Re-organise source file structure
+- Other minor fixes
+
 v2.3.8
 - Updated Avisynth headers
 - Updated libcpuid
