@@ -1,3 +1,10 @@
+v2.0.4
+- Added GPU/VPU data to the performance data section in the log file
+- Changed app icon
+- Added INI setting for "TimeLimit"
+- Put back INI settings for "MonitorGPULoad" and "ProcessPriority"
+- Code cleanup, refactoring
+
 v2.0.3
 - Added switch "timelimit" which terminates the program after a specified time
 - Removed (temporarily) "timeout" option due to thread sync issues with some filters

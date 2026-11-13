@@ -54,12 +54,14 @@
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
+
           Monitor GPU/VPU usage<font color="#ff0000"><sup>2</sup></font><br>
           &nbsp;-range=first,last&nbsp;&nbsp; Specify frame range<font
             color="#ff0000"><sup>3</sup></font><br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Specify time (sec) after which the process will exit<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
 
           Specify process priority (1:low, 2:normal, 3:high)<br>
@@ -78,20 +80,14 @@
     files like logs, audio files, etc. and accurate measurements are not
     needed.<br>
     <br>
-    (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
-    "-gpu" enables display of the GPU/VPU usage which of course is only
-    useful if a filter that uses the GPU is in the chain. AVSMeter uses
-    <b><a href="http://www.techpowerup.com/downloads/SysInfo/GPU-Z/">GPU-Z</a></b>
-    to access the graphics card sensors through a shared memory space.
-    GPU-Z has to be running (the window can be minimized to the system
-    tray) before running AVSMeter.<br>
+    (<b><code><font color="#ff0000"><big>2</big></font></code></b>) See
+    "MonitorGPULoad" INI setting below.<br>
     <br>
     (<b><code><font color="#ff0000"><big>3</big></font></code></b>) See
     "FrameRange" INI setting below.<br>
-    <br>
     <b><br>
       <br>
-      INI file settings:</b><br>
+      <u> INI file settings</u></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
     the default settings.<br>
@@ -130,6 +126,32 @@
     <br>
     <b>"</b><b>UseColor" (</b><b><b>0 or <font color="Red">1</font></b>):</b><br>
     When set to "0", coloring of the console output is disabled.<br>
+    <br>
+    <b>"</b><b>MonitorGPULoad" (</b><b><b><b><font color="Red">0</font>
+          or 1</b></b>):</b><br>
+    When set to "1", enables display of the GPU/VPU usage which of
+    course is only useful if a filter that uses the GPU is in the chain.
+    AVSMeter uses <b><a
+        href="http://www.techpowerup.com/downloads/SysInfo/GPU-Z/">GPU-Z</a></b>
+    to access the graphics card sensors through a shared memory space.
+    GPU-Z has to be running (the window can be minimized to the system
+    tray) before running AVSMeter.<br>
+    <b><i>Note:</i></b> The command line switch "-gpu" overrides the INI
+    setting.<br>
+    <br>
+    <b>"ProcessPriority</b><b>" (1</b><b><b><b>, <font color="#ff0000">2</font>
+          or 3</b></b>):</b><br>
+    Specify the process priority for AVSMeter and all attached processes
+    (1: low, 2: normal, 3: high).<br>
+    <b><i>Note:</i></b> The command line switch "-priority" overrides
+    the INI setting.<br>
+    <br>
+    <b>"TimeLimit</b><b>" (1 - 999999</b><b><b><b></b></b>):</b><br>
+    Specify a time limit (in seconds) after which the program will
+    terminate. A setting of "<font color="#ff0000"><b>-1</b></font>"
+    disables this feature.<br>
+    <b><i>Note:</i></b> The command line switch "-timelimit" overrides
+    the INI setting.<br>
     <br>
     <br>
   </body>

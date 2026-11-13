@@ -65,9 +65,7 @@ public:
 
 private:
 	unsigned __int64 GetSTDTimer();
-	unsigned __int64 uiLastSTDTimer;
 	string OSErrorMessage();
-	unsigned __int64 uiLastTimeRun;
 
 	#pragma pack(push, 1)
 		typedef struct GPUZ_RECORD 
@@ -105,8 +103,6 @@ CGPUInfo::CGPUInfo()
 	bGPUZIsRunning = bGPUZRunning;
 	bInitialized = FALSE;
 	sensors.GPULoad = 0;
-	uiLastSTDTimer = 0;
-	uiLastTimeRun = 0;
 	sError = "";
 	pMapAddr = NULL;
 }
@@ -206,8 +202,9 @@ void CGPUInfo::ReadData()
 
 void CGPUInfo::ReadSensors()
 {
-	//Min. update interval 500ms
-	if ((GetSTDTimer() - uiLastTimeRun) < 500)
+	//Min. update interval 300ms
+	static unsigned __int64 uiLastTimeRun;
+	if ((GetSTDTimer() - uiLastTimeRun) < 300)
 		return;
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
@@ -281,6 +278,7 @@ static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
 
 unsigned __int64 CGPUInfo::GetSTDTimer()
 {
+	static unsigned __int64 uiLastSTDTimer;
 	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
 	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
 	uiLastSTDTimer = uiSTDTimer;

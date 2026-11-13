@@ -36,7 +36,7 @@ public:
 	int     iInterfaceVersion;
 	string  sPluginDir;
 	string  sDLLPath;
-	string  sVersion;
+	string  sVersionNumber;
 	string  sVersionString;
 	BOOL    bLoadError;
 	BOOL    bIs64BitVersion;
@@ -134,7 +134,7 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 	bIs64BitVersion = FALSE;
 	bIsMTVersion = FALSE;
 	iInterfaceVersion = 0;
-	sVersion = "";
+	sVersionNumber = "";
 	sVersionString = "Unknown Avisynth Version";
 	bAVSLinkage = FALSE;
 	bLoadError = FALSE;
@@ -248,7 +248,7 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 	if (!bRet)
 		return FALSE;
 
-	sVersion = GetFileVersion(sDLLPath);
+	sVersionNumber = GetFileVersion(sDLLPath);
 
 	iInterfaceVersion = GetAVSInterfaceVersion(s_ErrorMsg);
 	if (iInterfaceVersion == 0)

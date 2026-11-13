@@ -16,6 +16,7 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
 
+
 #include "stdafx.h"
 #include "AvisynthInfo.h"
 #include "utility.h"
@@ -58,6 +59,8 @@ struct PerformanceData
 	unsigned int  frame_high;
 	double        fps;
 	WORD          cpu_usage;
+	WORD          gpu_usage;
+	WORD          vpu_usage;
 	DWORD         phys_mem;
 	DWORD         virt_mem;
 	WORD          num_threads;
@@ -70,7 +73,7 @@ CTimer timer;
 CSettings Settings;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
+string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
 string ParseINIFile();
 void PrintUsage();
 void Pause();
@@ -82,10 +85,7 @@ int main(int argc, char* argv[])
 	//some defaults
 	Settings.bPauseBeforeExit = TRUE;
 	Settings.bUseColor = TRUE;
-	Settings.iTimeLimit = -1;
 	Settings.bUseFixedFrameInterval = FALSE;
-	Settings.bProcessPriority = 2;
-	Settings.bMonitorGPULoad = FALSE;
 
 	int iRet = 0;
 	string sAVSMVersion = utils.GetFileVersion("");
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	PrintFmt(STD_ERR, COLOR_AVISYNTH_VERSION, "\r%s (%s)\n", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersion.c_str());
+	PrintFmt(STD_ERR, COLOR_AVISYNTH_VERSION, "\r%s (%s)\n", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -514,7 +514,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-		sOutBuf = utils.StrFormat("Avisynth version:        %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersion.c_str());
+		sOutBuf = utils.StrFormat("Avisynth version:        %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Avisynth DLL location:   %s", AvisynthInfo.sDLLPath.c_str());
@@ -532,7 +532,9 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("Active MT Mode: %d", iMTMode);
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\n", sOutBuf.c_str());
-			sLogBuffer += "                         " + sOutBuf + "\n";
+
+			sOutBuf = utils.StrFormat("Active MT Mode:          %d", iMTMode);
+			sLogBuffer += sOutBuf + "\n";
 		}
 
 		if (Settings.bMonitorGPULoad)
@@ -667,7 +669,7 @@ int main(int argc, char* argv[])
 			if (Settings.bCreateLog)
 			{
 				perfdata = new PerformanceData[1];
-				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval);
+				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, FALSE);
 				if (sLogRet != "")
 					PrintFmt(STD_ERR, COLOR_ERROR, sLogRet.c_str());
 
@@ -740,7 +742,7 @@ int main(int argc, char* argv[])
 						if (Settings.bCreateLog)
 						{
 							perfdata = new PerformanceData[1];
-							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval);
+							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, FALSE);
 							if (sLogRet != "")
 								PrintFmt(STD_ERR, COLOR_DEFAULT, sLogRet.c_str());
 			
@@ -766,7 +768,7 @@ int main(int argc, char* argv[])
 		if ((Settings.bUseFixedFrameInterval) && (uiFramesToProcess <= 10))
 			uiFrameInterval = 1;
 
-		while ((uiFramesToProcess / uiFrameInterval) > 200000)
+		while ((uiFramesToProcess / uiFrameInterval) > 500000)
 			uiFrameInterval *= 10;
 
 		unsigned int uiArraySize = (uiFramesToProcess / uiFrameInterval) + 2;
@@ -778,6 +780,8 @@ int main(int argc, char* argv[])
 			perfdata[x].frame_high = 0;
 			perfdata[x].fps = 0.0;
 			perfdata[x].cpu_usage = 0;
+			perfdata[x].gpu_usage = 0;
+			perfdata[x].vpu_usage = 0;
 			perfdata[x].phys_mem = 0;
 			perfdata[x].virt_mem = 0;
 			perfdata[x].num_threads = 0;
@@ -874,6 +878,17 @@ int main(int argc, char* argv[])
 			perfdata[uiPDIndex].frame_high = uiCurrentFrame;
 			perfdata[uiPDIndex].fps = dFPSCurrent;
 			perfdata[uiPDIndex].cpu_usage = processinfo.wCPUUsage;
+
+			if (Settings.bMonitorGPULoad)
+			{
+				perfdata[uiPDIndex].gpu_usage = gpuinfo.sensors.GPULoad;
+				perfdata[uiPDIndex].vpu_usage = gpuinfo.sensors.VPULoad;
+			}
+			else
+			{
+				perfdata[uiPDIndex].gpu_usage = 0;
+				perfdata[uiPDIndex].vpu_usage = 0;
+			}
 
 			perfdata[uiPDIndex].num_threads = processinfo.wThreadCount;
 			perfdata[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
@@ -1143,7 +1158,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateLog)
 	{
-		string sRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval);
+		string sRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, gpuinfo.data.NVVP);
 		if (sRet != "")
 		{
 			PrintFmt(STD_ERR, COLOR_ERROR, sRet.c_str());
@@ -1189,6 +1204,9 @@ string ParseINIFile()
 	Settings.bAllowOnlyOneInstance = TRUE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bUseColor = TRUE;
+	Settings.bMonitorGPULoad = FALSE;
+	Settings.bProcessPriority = 2;
+	Settings.iTimeLimit = -1;
 
 	string sAVSMVersion = utils.GetFileVersion("");
 	if (sAVSMVersion.length() > 5)
@@ -1243,6 +1261,9 @@ string ParseINIFile()
 		hINIFile << "AllowOnlyOneInstance=1\n";
 		hINIFile << "LogEstimatedTime=0\n";
 		hINIFile << "UseColor=1\n";
+		hINIFile << "MonitorGPULoad=0\n";
+		hINIFile << "ProcessPriority=2\n";
+		hINIFile << "TimeLimit=-1\n";
 
 		hINIFile.flush();
 		hINIFile.close();
@@ -1298,6 +1319,34 @@ string ParseINIFile()
 				Settings.bLogEstimatedTime = TRUE;
 		}
 
+		if (sCurrentLine.substr(0, 14) == "monitorgpuload")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
+				Settings.bMonitorGPULoad = TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 16) == "processpriority=")
+		{
+			sTemp = sCurrentLine.substr(16);
+			if (utils.IsNumeric(sTemp))
+			{
+				Settings.bProcessPriority = (BYTE)atol(sTemp.c_str());
+				if ((Settings.bProcessPriority < 1) || (Settings.bProcessPriority > 3))
+					Settings.bProcessPriority = 2;
+			}
+		}
+
+		if (sCurrentLine.substr(0, 10) == "timelimit=")
+		{
+			sTemp = sCurrentLine.substr(10);
+			if (utils.IsNumeric(sTemp))
+			{
+				Settings.iTimeLimit = atoi(sTemp.c_str());
+				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
+					Settings.iTimeLimit = -1;
+			}
+		}
+
 		if (sCurrentLine.substr(0, 8) == "usecolor")
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
@@ -1332,7 +1381,7 @@ string ParseINIFile()
 }
 
 
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval)
+string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP)
 {
 	string sRet = "";
 	string sAVSBuffer = "";
@@ -1379,9 +1428,29 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	if (ui_index > 0)
 	{
 		if (ui_frameinterval == 1)
-			sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+		{
+			if (Settings.bMonitorGPULoad)
+			{
+				if (bNVVP)
+					sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+				else
+					sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+			}
+			else
+				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+		}
 		else
-			sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+		{
+			if (Settings.bMonitorGPULoad)
+			{
+				if (bNVVP)
+					sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+				else
+					sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+			}
+			else
+				sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+		}
 
 		hLogFile << sLog;
 
@@ -1395,13 +1464,29 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 				{
 					stemp1 = utils.StrFormat("%u", cs_pdata[i].frame_low);
 					string spad((12 - stemp1.length()), ' ');
-					stemp2 = utils.StrFormat("%s%u %13.3f %16.4f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					if (Settings.bMonitorGPULoad)
+					{
+						if (bNVVP)
+							stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						else
+							stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					}
+					else
+						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 				else
 				{
 					stemp1 = utils.StrFormat("%u-%u", cs_pdata[i].frame_low, cs_pdata[i].frame_high);
 					string spad((21 - stemp1.length()), ' ');
-					stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.4f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					if (Settings.bMonitorGPULoad)
+					{
+						if (bNVVP)
+							stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						else
+							stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					}
+					else
+						stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 
 				hLogFile << stemp2 + "\n";
@@ -1517,7 +1602,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			++uif;
 
 			TDelta = timer.GetSTDTimer() - T0;
-			if ((TDelta >= 5.0) || (uif == uiTotalFrames))
+			if ((TDelta >= 2.0) || (uif == uiTotalFrames))
 				break;
 		}
 

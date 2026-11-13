@@ -14,6 +14,9 @@
 
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+
+	Windows part for CPU usage by (c) 2009 Ben Watson	taken from
+	http://www.philosophicalgeek.com/2009/01/03/determine-cpu-usage-of-current-process-c-and-c/
 */
 
 #ifndef _PROCESSINFO_H
@@ -37,35 +40,20 @@ public:
 
 private:
 	WORD GetCurrentThreadCount();
-	void GetCPUUsage();
+	BYTE GetCPUUsage();
 	inline unsigned __int64 SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
 	BYTE btCPUUsage;
 	BOOL bFirstRun;
 	unsigned __int64 GetSTDTimer();
-	unsigned __int64 uiLastSTDTimer;
 
-	FILETIME ftSysIdle, ftSysKernel, ftSysUser;
-	FILETIME ftProcCreation, ftProcExit, ftProcKernel, ftProcUser;
-
-	//system total times
 	FILETIME ftPrevSysKernel;
 	FILETIME ftPrevSysUser;
-
-	//process times
 	FILETIME ftPrevProcKernel;
 	FILETIME ftPrevProcUser;
 
-	unsigned __int64 uiSysKernelDiff;
-	unsigned __int64 uiSysUserDiff;
-	unsigned __int64 uiProcKernelDiff;
-	unsigned __int64 uiProcUserDiff;
-	unsigned __int64 uiTotalSys;
-	unsigned __int64 uiTotalProc;
-
-	unsigned __int64 uiLastTimeRun;
-	unsigned __int64 uiLastTimeRunThreadCount;
 	HANDLE hProcess;
 	PROCESS_MEMORY_COUNTERS pmc;
+	volatile LONG lRunCount;
 };
 
 
@@ -84,10 +72,7 @@ CProcessInfo::CProcessInfo()
 	btCPUUsage = 0;
 	wThreadCount = GetCurrentThreadCount();
 	bFirstRun = TRUE;
-
-	uiLastTimeRun = 0;
-	uiLastTimeRunThreadCount = 0;
-	uiLastSTDTimer = 0;
+	lRunCount = 0;
 }
 
 CProcessInfo::~CProcessInfo()
@@ -106,11 +91,14 @@ void CProcessInfo::CloseProcess()
 
 void CProcessInfo::Update()
 {
+	static unsigned __int64 uiLastTimeRunCPU;
+	static unsigned __int64 uiLastTimeRunTC;
+
 	//Min. update interval 100ms
-	if ((GetSTDTimer() - uiLastTimeRun) < 100)
+	if ((GetSTDTimer() - uiLastTimeRunCPU) < 100)
 		return;
 
-	GetCPUUsage();
+	btCPUUsage = GetCPUUsage();
 	bFirstRun = FALSE;
 
 	if ((btCPUUsage < 1) || (btCPUUsage > 100))
@@ -118,51 +106,64 @@ void CProcessInfo::Update()
 	else
 		wCPUUsage = (WORD)btCPUUsage;
 
-	if ((GetSTDTimer() - uiLastTimeRunThreadCount) > 2000)
+	//Min. update interval 1000ms
+	if ((GetSTDTimer() - uiLastTimeRunTC) > 1000)
 	{
 		wThreadCount = GetCurrentThreadCount();
-		uiLastTimeRunThreadCount = GetSTDTimer();
+		uiLastTimeRunTC = GetSTDTimer();
 	}
 
 	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
 	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
 	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
 
-	uiLastTimeRun = GetSTDTimer();
+	uiLastTimeRunCPU = GetSTDTimer();
 
 	return;
 }
 
 
-void CProcessInfo::GetCPUUsage()
+BYTE CProcessInfo::GetCPUUsage()
 {
-	if (!::GetSystemTimes(&ftSysIdle, &ftSysKernel, &ftSysUser) || !::GetProcessTimes(::GetCurrentProcess(), &ftProcCreation, &ftProcExit, &ftProcKernel, &ftProcUser))
-		return;
+	//create a local copy to protect against race conditions in setting the member variable
+	BYTE btCPUUsageCopy = btCPUUsage;
 
-	if (!bFirstRun)
+	if (::InterlockedIncrement(&lRunCount) == 1)
 	{
-		/*
-		CPU usage is calculated by getting the total amount of time the system
-		has operated since the last measurement (made up of kernel + user) and
-		the total amount of time the process has run (kernel + user).
-		*/
-		uiSysKernelDiff = SubtractTimes(ftSysKernel, ftPrevSysKernel);
-		uiSysUserDiff = SubtractTimes(ftSysUser, ftPrevSysUser);
-		uiProcKernelDiff = SubtractTimes(ftProcKernel, ftPrevProcKernel);
-		uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
-		uiTotalSys =  uiSysKernelDiff + uiSysUserDiff;
-		uiTotalProc = uiProcKernelDiff + uiProcUserDiff;
+		FILETIME ftSysIdle, ftSysKernel, ftSysUser, ftProcCreation, ftProcExit, ftProcKernel, ftProcUser;
+		if (!::GetSystemTimes(&ftSysIdle, &ftSysKernel, &ftSysUser) || !::GetProcessTimes(::GetCurrentProcess(), &ftProcCreation, &ftProcExit, &ftProcKernel, &ftProcUser))
+		{
+			::InterlockedDecrement(&lRunCount);
+			return btCPUUsageCopy;
+		}
 
-		if (uiTotalSys > 0)
-			btCPUUsage = (BYTE)((100.0 * (double)uiTotalProc) / (double)uiTotalSys);
-	}
+		if (!bFirstRun)
+		{
+			/*
+			CPU usage is calculated by getting the total amount of time the system
+			has operated since the last measurement (made up of kernel + user) and
+			the total amount of time the process has run (kernel + user).
+			*/
+			unsigned __int64 uiSysKernelDiff = SubtractTimes(ftSysKernel, ftPrevSysKernel);
+			unsigned __int64 uiSysUserDiff = SubtractTimes(ftSysUser, ftPrevSysUser);
+			unsigned __int64 uiProcKernelDiff = SubtractTimes(ftProcKernel, ftPrevProcKernel);
+			unsigned __int64 uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
+
+			if ((uiSysKernelDiff + uiSysUserDiff) > 0)
+				btCPUUsage = (BYTE)((100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff));
+		}
 	
-	ftPrevSysKernel = ftSysKernel;
-	ftPrevSysUser = ftSysUser;
-	ftPrevProcKernel = ftProcKernel;
-	ftPrevProcUser = ftProcUser;
+		ftPrevSysKernel = ftSysKernel;
+		ftPrevSysUser = ftSysUser;
+		ftPrevProcKernel = ftProcKernel;
+		ftPrevProcUser = ftProcUser;
 
-	return;
+		btCPUUsageCopy = btCPUUsage;
+	}
+
+	::InterlockedDecrement(&lRunCount);
+
+	return btCPUUsageCopy;
 }
 
 
@@ -208,6 +209,7 @@ WORD CProcessInfo::GetCurrentThreadCount()
 
 unsigned __int64 CProcessInfo::GetSTDTimer()
 {
+	static unsigned __int64 uiLastSTDTimer;
 	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
 	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
 	uiLastSTDTimer = uiSTDTimer;
