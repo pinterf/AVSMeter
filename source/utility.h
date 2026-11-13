@@ -47,7 +47,6 @@ class CUtils
 public:
 	CUtils();
 	virtual        ~CUtils();
-	BOOL           Is64BitOS();
 	BOOL           FileExists(string s_file);
 	string         OSErrorMessage();
 	void           CursorUp(unsigned int iLines);
@@ -323,24 +322,6 @@ BOOL CUtils::IsNumeric(string s_string)
 	}
 
 	return TRUE;
-}
-
-
-BOOL CUtils::Is64BitOS()
-{
-	BOOL bIs64BitOS = FALSE;
-	typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL); 
-	LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle("kernel32"), "IsWow64Process");
-
-	if (NULL != fnIsWow64Process)
-	{
-		if (!fnIsWow64Process(GetCurrentProcess(), &bIs64BitOS))
-		{
-			
-		}
-	}
-
-	return bIs64BitOS;
 }
 
 

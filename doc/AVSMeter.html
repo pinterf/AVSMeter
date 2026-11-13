@@ -35,7 +35,7 @@
     testing filters/plugins to evaluate their performance and memory
     requirements.<br>
     <b><br>
-      <img alt="" src="avsmeter1.png" height="543" width="652"><br>
+      <img alt="" src="avsmeter1.png" height="431" width="652"><br>
       <br>
     </b><font face="Fixedsys"><br>
     </font><nobr><b><code>Usage:&nbsp; AVSMeter script.avs [switches]</code></b></nobr><nobr><b><code><br>
@@ -49,11 +49,17 @@
           &nbsp;-f&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
+
+
           Use fixed frame interval for measurements </code></b></nobr><nobr><b><code><b><code>(See
+
+
 
 
               also "UseFixedFrameInterval" INI setting)<br>
             </code></b>&nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -76,7 +82,11 @@
 
 
 
+
+
           Specify timeout (seconds) (See also "ReadTimeout" INI setting)</code></b></nobr><nobr><b><code><br>
+          &nbsp;-priority&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Specify process priority (1:low, 2:normal, 3:high)<br>
         </code></b></nobr><nobr><b><code> &nbsp;-help
           [-h]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Display command line usage</code></b></nobr><nobr><b><code><br>
@@ -156,6 +166,13 @@
     to 3600 seconds are allowed.<br>
     <b><i>Note:</i></b> The command line switch "-timeout" overrides the
     INI setting.<br>
+    <br>
+    <b>"ProcessPriority</b><b>" (1</b><b><b><b>, <font color="#ff0000">2</font>
+          or 3</b></b>):</b><br>
+    Specify the process priority for AVSMeter and all attached processes
+    (1: low, 2: normal, 3: high).<br>
+    <b><i>Note:</i></b> The command line switch "-priority" overrides
+    the INI setting.<br>
     <br>
     <br>
   </body>

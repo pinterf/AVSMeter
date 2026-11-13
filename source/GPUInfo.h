@@ -23,6 +23,7 @@ public:
 	struct Sensors
 	{
 		WORD GPULoad;
+		WORD VPULoad;
 		DWORD MemoryUsed;
 	} sensors;
 
@@ -33,6 +34,7 @@ public:
 		string MemSize;
 		string OpenCLVersion;
 		string DriverVersion;
+		BOOL   NVVP;
 	} data;
 
 	BOOL MemInit();
@@ -140,6 +142,10 @@ void CGPUInfo::ReadData()
 {
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
+	BYTE nCUDA = 0;
+	double dCUDACaps = 0.0;
+	data.NVVP = FALSE;
+
 	for (int i = 0; i <128; i++)
 	{
 		char DefChar = ' ';
@@ -169,7 +175,14 @@ void CGPUInfo::ReadData()
 			data.DriverVersion = sValue;
 		if (sKey == "OpenCL_Version")
 			data.OpenCLVersion = sValue;
+		if (sKey == "CUDA")
+			nCUDA = (BYTE)atol(sValue.c_str());		
+		if (sKey == "CUDA_Capability")
+			dCUDACaps = atof(sValue.c_str());		
 	}
+	
+	if ((nCUDA != 0) && (dCUDACaps >= 1.0))
+		data.NVVP = TRUE;
 
 	return;
 }
@@ -183,20 +196,26 @@ void CGPUInfo::ReadSensors()
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
-	BYTE bDone = 0x00;
+	WORD bDone = 0x0000;
 	for (int i = 0; i <128; i++)
 	{
 		if (wcscmp(lpMem->sensors[i].name, L"GPU Load") == 0)
 		{
 			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
-			bDone |= 0x0F;
+			bDone |= 0x000F;
 		}
 		if (wcscmp(lpMem->sensors[i].name, L"Memory Used") == 0)
 		{
 			sensors.MemoryUsed = (DWORD)(lpMem->sensors[i].value + 0.5);	
-			bDone |= 0xF0;
+			bDone |= 0x00F0;
 		}
-		if (bDone == 0xFF)
+		if ((data.NVVP) && (wcscmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))
+		{
+			sensors.VPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
+			bDone |= 0x0F00;
+		}
+
+		if (bDone == 0x0FFF)
 			break;
 	}
 

@@ -1,3 +1,8 @@
+v1.9.8
+- Added monitoring of the NVIDIA Video Engine load (PureVideo SIP)
+- Added switch and INI setting for specifying the process priority
+- Refactoring, cosmetics and some minor fixes
+
 v1.9.7
 - Fix for potential problems with the latest AVS+ versions
 
