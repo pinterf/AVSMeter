@@ -8,8 +8,6 @@
 
 #include "stdafx.h"
 
-using namespace std;
-
 #define SHMEM_NAME "GPUZShMem"
 #define MAX_RECORDS 128
 
@@ -27,7 +25,16 @@ public:
 		WORD GPULoad;
 	} sensors;
 
+	struct Data
+	{
+		string CardName;
+		string GPUName;
+		string MemSize;
+		string DriverVersion;
+	} data;
+
 	BOOL ReadSensors();
+	BOOL ReadData();
 	BOOL bGPUZIsRunning;
 	string sError;
 
@@ -75,6 +82,63 @@ CGPUInfo::CGPUInfo()
 
 CGPUInfo::~CGPUInfo()
 {
+}
+
+
+BOOL CGPUInfo::ReadData()
+{
+	sError = "";
+	HANDLE hMapFile;
+	LPVOID pMapAddr;
+	LPGPUZ_SH_MEM lpMem;
+
+	if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHMEM_NAME)) == 0)
+	{
+		sError = OSErrorMessage();
+		return FALSE;
+	}
+
+	if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
+	{
+		sError = OSErrorMessage();
+		if (hMapFile)
+			CloseHandle(hMapFile);
+
+		return FALSE;
+	}
+
+	lpMem = (LPGPUZ_SH_MEM)pMapAddr;
+
+	for (int i = 0; i <128; i++)
+	{
+		char DefChar = ' ';
+
+		char szkey[260];
+		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].key, -1, szkey, 260, &DefChar, NULL);
+		string sKey(szkey);
+
+		char szvalue[260];
+		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 260, &DefChar, NULL);
+		string sValue(szvalue);
+
+		if (sKey == "CardName")
+			data.CardName = sValue;
+		if (sKey == "GPUName")
+			data.GPUName = sValue;
+		if (sKey == "MemSize")
+			data.MemSize = sValue;
+		if (sKey == "DriverVersion")
+			data.DriverVersion = sValue;
+	}
+
+	if (hMapFile)
+		CloseHandle(hMapFile);
+
+	lpMem = NULL;
+	pMapAddr = NULL;
+	hMapFile = NULL;
+
+	return true;
 }
 
 

@@ -1,3 +1,7 @@
+v1.9.2
+- GPU/driver info is added to the log file when GPU monitoring is enabled/active
+- Optimizations, cleanup and cosmetics
+
 v1.9.1
 - Added switch "-gpu" to enable GPU monitoring from the command line. The switch overrides the INI setting "MonitorGPULoad=0".
 - Added a check to make sure the user has admin privileges

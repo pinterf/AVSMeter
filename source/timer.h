@@ -8,8 +8,6 @@
 
 #include "stdafx.h"
 
-using namespace std;
-
 class CTimer
 {
 public:
@@ -20,10 +18,17 @@ public:
 	BOOL         TestTimer();
 	string       FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 	string       StrFormat(const char *fmt, ...);
+private:
+	unsigned __int64  uiSTDTimer;
+	unsigned __int64  uiLastSTDTimer;
+	unsigned __int64  uiTimerWrapCompensation;
 };
 
 CTimer::CTimer()
 {
+	uiSTDTimer = 0;
+	uiLastSTDTimer = 0;
+	uiTimerWrapCompensation = 0;
 }
 
 CTimer::~CTimer()
@@ -70,7 +75,12 @@ double CTimer::GetTimer()
 
 double CTimer::GetSTDTimer()
 {
-	return (double)GetTickCount() / 1000.0;
+	uiSTDTimer = (unsigned __int64)GetTickCount();
+	uiTimerWrapCompensation = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
+	uiLastSTDTimer = uiSTDTimer;
+	uiSTDTimer += uiTimerWrapCompensation;
+
+	return (double)uiSTDTimer / 1000.0;
 }
 
 

@@ -9,8 +9,6 @@
 #include "GPUInfo.h"
 #include "timer.h"
 
-using namespace std;
-
 #ifdef AVS64
 	#include "avisynth26.h"
 	const AVS_Linkage *AVS_linkage = 0;
@@ -86,24 +84,21 @@ void PrintUsage();
 void Pause();
 void printcon(WORD wAttributes, const char *fmt, ...);
 
+
 int main(int argc, char* argv[])
 {
+	INISettings.bPauseBeforeExit = TRUE;
+	INISettings.bUseColor = TRUE;
+
 	if (!utils.IsUserAdmin())
 	{
-		INISettings.bPauseBeforeExit = TRUE;
 		printcon(COLOR_ERROR, "\nYou must run AVSMeter with administrator privileges.\n");
 		Pause();
 		return -1;
 	}
 
 	int iRet = 0;
-	string sAVSMVersion = "";
-	if (!utils.GetProductVersion(sAVSMVersion))
-	{
-		printcon(COLOR_ERROR, "\nCannot retrieve product version:\n%s\n", utils.OSErrorMessage().c_str());
-		Pause();
-		return -1;
-	}
+	string sAVSMVersion = utils.GetFileVersion("");
 
 	#ifdef AVS64
 		sAVSMVersion += " (x64)";
@@ -165,7 +160,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-
 	if (!AvisynthInfo.bAVSLinkage)
 	{
 		#ifdef AVS64
@@ -191,6 +185,7 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 	}
+
 
 	if (argc < 2)
 	{
@@ -259,18 +254,21 @@ int main(int argc, char* argv[])
 
 	CGPUInfo gpuinfo;
 
+	if (INISettings.bMonitorGPULoad)
+	{
+		if (!gpuinfo.bGPUZIsRunning)
+		{
+			printcon(COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\nStart GPU-Z and try again.\n");
+			Pause();
+			return -1;
+		}
+		else
+		gpuinfo.ReadData();
+	}
+
+
 	if (!bInfoOnly)
 	{
-		if (INISettings.bMonitorGPULoad)
-		{
-			if (!gpuinfo.bGPUZIsRunning)
-			{
-				printcon(COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\nStart GPU-Z and try again.\n");
-				Pause();
-				return -1;
-			}
-		}
-
 		sAVSError = "";
 
 		ThreadParams* p = new ThreadParams;
@@ -278,51 +276,44 @@ int main(int argc, char* argv[])
 		p->sAVSError = sAVSError;
 		p->sAVSFile = sAVSFile;
 
+		double dT0 = timer.GetSTDTimer();
+		double dT1 = dT0;
+		char szAnimation[] = "|/-\\";
+
 		_beginthread(CalculateFrameInterval, 0, p);
 
-		DWORD dwT0 = GetTickCount();
-		DWORD dwT1 = dwT0;
-
-		for (;;)
+		while (!p->bFinished)
 		{
-			dwT1 = GetTickCount();
-			if ((dwT1 - dwT0) > (DWORD)(INISettings.wReadTimeout * 1000))
+			for (unsigned int n = 0; n < 4; n++)
 			{
-				printf("\r%s", utils.StrPad("", uiConsoleWidth).c_str());
-				printcon(COLOR_ERROR, "\nAvisynth seems to be stuck on reading frame %u.\nTimeout of %u seconds exceeded.\n", p->uiCurFrame, INISettings.wReadTimeout);
-				Pause();
-				return -1;
+				dT1 = timer.GetSTDTimer();
+
+				if ((dT1 - dT0) > (double)INISettings.wReadTimeout)
+				{
+					printf("\r%s", utils.StrPad("", uiConsoleWidth).c_str());
+					printcon(COLOR_ERROR, "\nProcess aborted while reading frame #%u after specified timeout (%u sec).\n", p->uiCurFrame, INISettings.wReadTimeout);
+					Pause();
+					return -1;
+				}
+
+				if (_kbhit())
+				{
+					if (_getch() == 0x1B) //ESC
+					{
+						printf("\r%s", utils.StrPad("Cancelled.", uiConsoleWidth).c_str());
+						printf("\n");
+						Pause();
+						return -1;
+					}
+				}
+
+				printf("\rAnalysing script %c\r", szAnimation[n]);
+
+				if (p->bFinished)
+					break;
+
+				Sleep(250);
 			}
-
-			printf("\r%s\r", utils.StrPad("Analysing script", uiConsoleWidth).c_str());
-			if (p->bFinished)
-				break;
-			Sleep(250);
-
-			printf("\r%s\r", utils.StrPad("Analysing script.", uiConsoleWidth).c_str());
-			if (p->bFinished)
-				break;
-			Sleep(250);
-
-			printf("\r%s\r", utils.StrPad("Analysing script..", uiConsoleWidth).c_str());
-			if (p->bFinished)
-				break;
-			Sleep(250);
-
-			printf("\r%s\r", utils.StrPad("Analysing script...", uiConsoleWidth).c_str());
-			if (p->bFinished)
-				break;
-			Sleep(250);
-
-			printf("\r%s\r", utils.StrPad("Analysing script....", uiConsoleWidth).c_str());
-			if (p->bFinished)
-				break;
-			Sleep(250);
-
-			printf("\r%s\r", utils.StrPad("Analysing script.....", uiConsoleWidth).c_str());
-			if (p->bFinished)
-				break;
-			Sleep(250);
 		}
 
 		sAVSError = p->sAVSError;
@@ -420,6 +411,21 @@ int main(int argc, char* argv[])
 			printf("\r%s\n", sConsoleOut.c_str());
 			sLogBuffer += "                         " + sConsoleOut + "\n";
 		}
+
+		if ((INISettings.bMonitorGPULoad) && (gpuinfo.bGPUZIsRunning))
+		{
+			sLogBuffer += "\n\n[Graphics card info]\n";
+
+			sConsoleOut = utils.StrFormat("Card name:               %s", gpuinfo.data.CardName.c_str());
+			sLogBuffer += sConsoleOut + "\n";
+			sConsoleOut = utils.StrFormat("GPU name:                %s", gpuinfo.data.GPUName.c_str());
+			sLogBuffer += sConsoleOut + "\n";
+			sConsoleOut = utils.StrFormat("Memory size:             %s", gpuinfo.data.MemSize.c_str());
+			sLogBuffer += sConsoleOut + "\n";
+			sConsoleOut = utils.StrFormat("Driver version:          %s", gpuinfo.data.DriverVersion.c_str());
+			sLogBuffer += sConsoleOut + "\n";
+		}
+
 
 		sLogBuffer += "\n\n[Clip info]\n";
 
@@ -552,7 +558,10 @@ int main(int argc, char* argv[])
 			uiFirstFrame = (unsigned int)INISettings.iStartFrame;
 			uiLastFrame = (unsigned int)INISettings.iStopFrame;
 			uiFramesToProcess = uiLastFrame - uiFirstFrame + 1;
-			printf("\r%s\r", utils.StrPad("Reading frame(s)...", uiConsoleWidth).c_str());
+			if (uiFramesToProcess > 1)
+				printf("\r%s\r", utils.StrPad("Reading frames...", uiConsoleWidth).c_str());
+			else
+				printf("\r%s\r", utils.StrPad("Reading frame...", uiConsoleWidth).c_str());
 		}
 		else
 		{
@@ -1228,7 +1237,7 @@ void CalculateFrameInterval(PVOID pParam)
 
 	if (!timer.TestTimer())
 	{
-		p->sAVSError = "Multimedia Timers and/or High Performance Timers are not supported";
+		p->sAVSError = "QueryPerformanceCounter() is not supported";
 		p->bFinished = TRUE;
 		_endthread();
 	}
@@ -1298,9 +1307,6 @@ void CalculateFrameInterval(PVOID pParam)
 		unsigned int uif = 0;
 		p->uiCurFrame = 0;
 		double TDelta = 0.0;
-
-		while (timer.GetSTDTimer() > 4294937.0)
-			Sleep(1000);
 
 		double T0 = timer.GetSTDTimer();
 		for (;;)
@@ -1439,9 +1445,7 @@ BOOL GetAvisynthInfo()
 	if (::GetModuleFileName(hDLL, szPath, 2048) > 0)
 	{
 		AvisynthInfo.sDLLPath = utils.StrFormat("%s", szPath);
-		
-		if (utils.GetResourceInfo(AvisynthInfo.sDLLPath))
-			AvisynthInfo.sVersion = utils.resinfo.sFixedFileVersion;
+		AvisynthInfo.sVersion = utils.GetFileVersion(AvisynthInfo.sDLLPath);
 	}
 
 	try

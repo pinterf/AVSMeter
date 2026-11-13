@@ -7,7 +7,6 @@
 #define _UTILS_H
 
 #include "stdafx.h"
-#include "VerInfo.h"
 
 #define FG_BLACK    0
 #define FG_RED			FOREGROUND_RED
@@ -43,9 +42,6 @@
 #define BG_GREY			BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED
 #define BG_WHITE		BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED | BACKGROUND_INTENSITY
 
-
-using namespace std;
-
 class CUtils
 {
 public:
@@ -58,27 +54,7 @@ public:
 	unsigned int GetConsoleWidth();
 	void SetRGB(WORD wAttributes, BOOL bSet);
 	void ResetRGB(BOOL bSet);
-	BOOL GetProductVersion(string &s_version);
-	BOOL GetResourceInfo(string s_file);
-
-	struct ResourceInfo
-	{
-		string sLanguage;
-		string sFixedFileVersion;
-		string sFixedProductVersion;
-		string sComments;         // VI_STR_COMMENTS
-		string sCompanyName;      // VI_STR_COMPANYNAME
-		string sFileDescription;  // VI_STR_FILEDESCRIPTION
-		string sFileVersion;      // VI_STR_FILEVERSION
-		string sInternalName;     // VI_STR_INTERNALNAME
-		string sLegalCopyright;   // VI_STR_LEGALCOPYRIGHT
-		string sLegalTrademarks;  // VI_STR_LEGALTRADEMARKS
-		string sOriginalFilename; // VI_STR_ORIGINALFILENAME
-		string sPrivateBuild;     // VI_STR_PRIVATEBUILD
-		string sProductName;      // VI_STR_PRODUCTNAME
-		string sProductVersion;   // VI_STR_PRODUCTVERSION
-		string sSpecialBuild;     // VI_STR_SPECIALBUILD
-	} resinfo;
+	string CUtils::GetFileVersion(string s_file);
 
 	//string functions
 	void   StrTrimLeft(string &s_string);
@@ -226,7 +202,7 @@ string CUtils::StrFormat(const char *fmt, ...)
 		if (buffer)
 			delete [] buffer;
 
-		buffer = new char [length];
+		buffer = new char[length];
 		memset(buffer, ' ', sizeof(buffer));
 		result = _vsnprintf(buffer, length, fmt, args);
 		length *= 2;
@@ -276,111 +252,43 @@ string CUtils::StrFormatFPS(double d_fps)
 }
 
 
-BOOL CUtils::GetProductVersion(string &s_version)
+string CUtils::GetFileVersion(string s_file)
 {
-	BOOL bRet = FALSE;
+	string sFileVersion = "0.0.0.0";
 	char szFilename[MAX_PATH + 1] = {0};
 
-	if (GetModuleFileName(NULL, szFilename, MAX_PATH) == 0)
-		return bRet;
+	if (s_file == "")
+	{
+		if (GetModuleFileName(NULL, szFilename, MAX_PATH) == 0)
+			return sFileVersion;
+	}
+	else
+		sprintf(szFilename, "%s", s_file.c_str());
 
 	DWORD dummy;
 	DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
 	if (dwSize == 0)
-		return bRet;
+		return sFileVersion;
 
-	void* pVersion = malloc(dwSize);
-	if (pVersion == NULL)
-		return bRet;
-
-	if (!GetFileVersionInfo(szFilename, NULL, dwSize, pVersion))
+	BYTE* VersionInfoBuffer = new BYTE[dwSize];
+	if (!GetFileVersionInfo(szFilename, 0, dwSize, (VOID*)VersionInfoBuffer))
 	{
-		free(pVersion);
-		return bRet;
+		delete[] VersionInfoBuffer;
+		return sFileVersion;
 	}
 
-	LPVOID pvProductVersion = NULL;
-	unsigned int iProductVersionLen = 0;
-
-	if (!VerQueryValue(pVersion, "\\StringFileInfo\\080904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
-		return bRet;
-
-	s_version = (char*)pvProductVersion;
-	bRet = TRUE;
-
-	return bRet;
-}
-
-
-BOOL CUtils::GetResourceInfo(string s_file)
-{
-	resinfo.sLanguage = "";
-	resinfo.sFixedFileVersion = "";
-	resinfo.sFixedProductVersion = "";
-	resinfo.sComments = "";
-	resinfo.sCompanyName = "";
-	resinfo.sFileDescription = "";
-	resinfo.sFileVersion = "";
-	resinfo.sInternalName = "";
-	resinfo.sLegalCopyright = "";
-	resinfo.sLegalTrademarks = "";
-	resinfo.sOriginalFilename = "";
-	resinfo.sPrivateBuild = "";
-	resinfo.sProductName = "";
-	resinfo.sProductVersion = "";
-	resinfo.sSpecialBuild = "";
-
-	CFileVersionInfo fvi;
-
-	if (fvi.Open(s_file.c_str()))
+	UINT uiLen;
+	VS_FIXEDFILEINFO* pFixedInfo = 0;
+	if (!VerQueryValue(VersionInfoBuffer, "\\", (LPVOID*)(&pFixedInfo), &uiLen))
 	{
-		if (fvi.GetTransCount() > 0)
-		{
-			char szLID[56] = {0};
-			fvi.GetLIDName(fvi.GetLIDByIndex(0), szLID, 56);
-			resinfo.sLanguage = StrFormat("%s", szLID);
-		}
-		else
-		{
-			fvi.Close();
-			return FALSE;
-		}
-
-		char szVer[1024] = {0};
-		resinfo.sFixedFileVersion = StrFormat("%d.%d.%d.%d", fvi.GetFileVersionMajor(), fvi.GetFileVersionMinor(), fvi.GetFileVersionBuild(), fvi.GetFileVersionQFE());
-		resinfo.sFixedProductVersion = StrFormat("%d.%d.%d.%d", fvi.GetProductVersionMajor(), fvi.GetProductVersionMinor(), fvi.GetProductVersionBuild(), fvi.GetProductVersionQFE());
-
-		if (fvi.QueryStringValue(VI_STR_COMMENTS, szVer, 1024))
-			resinfo.sComments = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_COMPANYNAME, szVer, 1024))
-			resinfo.sCompanyName = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_FILEDESCRIPTION, szVer, 1024))
-			resinfo.sFileDescription = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_FILEVERSION, szVer, 1024))
-			resinfo.sFileVersion = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_INTERNALNAME, szVer, 1024))
-			resinfo.sInternalName = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_LEGALCOPYRIGHT, szVer, 1024))
-			resinfo.sLegalCopyright = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_LEGALTRADEMARKS, szVer, 1024))
-			resinfo.sLegalTrademarks = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_ORIGINALFILENAME, szVer, 1024))
-			resinfo.sOriginalFilename = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_PRIVATEBUILD, szVer, 1024))
-			resinfo.sPrivateBuild = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_PRODUCTNAME, szVer, 1024))
-			resinfo.sProductName = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_PRODUCTVERSION, szVer, 1024))
-			resinfo.sProductVersion = StrFormat("%s", szVer);
-		if (fvi.QueryStringValue(VI_STR_SPECIALBUILD, szVer, 1024))
-			resinfo.sSpecialBuild = StrFormat("%s", szVer);
-
-		fvi.Close();
-
-		return TRUE;
+		delete[] VersionInfoBuffer;
+		return sFileVersion;
 	}
 
-	return FALSE; //no version resource
+	sFileVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
+	delete[] VersionInfoBuffer;
+
+	return sFileVersion;
 }
 
 
