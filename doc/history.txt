@@ -1,3 +1,6 @@
+v2.9.5
+- Updated libcpuid (AMD Zen 2 support)
+
 v2.9.4
 - Updated CPU extension flags
 - Updated plugin type detection
