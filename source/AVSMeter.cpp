@@ -13,10 +13,10 @@ using namespace std;
 #define AVSDLL_SUCCESS 0x00
 #define AVSDLL_INCOMPATIBLE 0x01
 #define CANNOT_LOAD_AVSDLL 0x02
-#define NO_AVS_LINKAGE 0x03
+BOOL bAVSLinkage;
 
 
-#if defined(AVS26_32) || defined(AVS26_64)
+#ifdef AVS64
 	#include "avisynth26.h"
 	const AVS_Linkage *AVS_linkage = 0;
 #else
@@ -51,7 +51,7 @@ CTimer timer;
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, perfdata * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
 string ParseINIFile();
-BYTE CheckAvisynth();
+BYTE CheckAvisynth(BOOL &avs_linkage);
 BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion);
 void PrintUsage();
 void Pause();
@@ -68,12 +68,10 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	#ifdef AVS26_32
-		sAVSMVersion += " (AVS 2.6, x86)";
-	#elif AVS26_64
-		sAVSMVersion += " (AVS 2.6, x64)";
+	#ifdef AVS64
+		sAVSMVersion += " (x64)";
 	#else
-		sAVSMVersion += " (AVS 2.5, x86)";
+		sAVSMVersion += " (x86)";
 	#endif
 
 	printf("\nAVSMeter %s by Groucho2004\n", sAVSMVersion.c_str());
@@ -99,7 +97,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	BYTE bRet = CheckAvisynth();
+	BYTE bRet = CheckAvisynth(bAVSLinkage);
 
 	if (bRet == CANNOT_LOAD_AVSDLL)
 	{
@@ -110,7 +108,7 @@ int main(int argc, char* argv[])
 
 	if (bRet == AVSDLL_INCOMPATIBLE)
 	{
-		#ifdef AVS26_64
+		#ifdef AVS64
 			printf("\nCannot load avisynth.dll.\nMake sure you are using a 64 Bit version.\n");
 		#else
 			printf("\nCannot load avisynth.dll.\nMake sure you are using a 32 Bit version.\n");
@@ -120,10 +118,10 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	if (bRet == NO_AVS_LINKAGE)
+	if (!bAVSLinkage)
 	{
-		#if defined(AVS26_32) || defined(AVS26_64)
-			printf("\nAvisynth 2.6 (Alpha 4 and above) is required.\n");
+		#ifdef AVS64
+			printf("\nAvisynth 2.6 x64 is required.\n");
 			Pause();
 			return -1;
 		#endif
@@ -269,7 +267,7 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
-		#if defined(AVS26_32) || defined(AVS26_64)
+		#ifdef AVS64
 			AVS_linkage = AVS_env->GetAVSLinkage();
 		#endif
 
@@ -410,11 +408,11 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
-			#if defined(AVS26_32) || defined(AVS26_64)
+
+			if (AVS_env->FunctionExists("DeleteScriptEnvironment"))
 				AVS_env->DeleteScriptEnvironment();
-			#else
+			else
 				AVS_env->~IScriptEnvironment();
-			#endif
 
 			if (settings.bCreateLog)
 			{
@@ -597,11 +595,10 @@ int main(int argc, char* argv[])
 		AVS_main = 0;
 		AVS_temp = 0;
 
-		#if defined(AVS26_32) || defined(AVS26_64)
+		if (bAVSLinkage)
 			AVS_env->DeleteScriptEnvironment();
-		#else
+		else
 			AVS_env->~IScriptEnvironment();
-		#endif
 
 		sLogBuffer += "\n\n[Runtime info]\n";
 
@@ -673,6 +670,7 @@ int main(int argc, char* argv[])
 	}
 	catch (AvisynthError err)
 	{
+		settings.bCreateLog = TRUE;
 		sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
 		iRet = -1;
 
@@ -689,6 +687,7 @@ int main(int argc, char* argv[])
 	}
 	catch (...)
 	{
+		settings.bCreateLog = TRUE;
 		iRet = -1;
 		if (bEarlyExit == FALSE)
 		{
@@ -702,7 +701,7 @@ int main(int argc, char* argv[])
 			printf("\nUnknown exception\n");
 	}
 
-	#if defined(AVS26_32) || defined(AVS26_64)
+	#ifdef AVS64
 		AVS_linkage = 0;
 	#endif
 
@@ -842,6 +841,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, perfdata * cs_pdata
 	hAVSFile.close();
 
 	string sLogFile = s_avsfile + ".log";
+
 	ofstream hLogFile(sLogFile.c_str());
 	if (!hLogFile.is_open())
 	{
@@ -955,7 +955,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			return uiFrameInterval;
 		}
 
-		#if defined(AVS26_32) || defined(AVS26_64)
+		#ifdef AVS64
 			AVS_linkage = AVS_env->GetAVSLinkage();
 		#endif
 
@@ -1044,11 +1044,10 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		AVS_main = 0;
 		AVS_temp = 0;
 
-		#if defined(AVS26_32) || defined(AVS26_64)
+		if (bAVSLinkage)
 			AVS_env->DeleteScriptEnvironment();
-		#else
+		else
 			AVS_env->~IScriptEnvironment();
-		#endif
 	}
 	catch (AvisynthError err)
 	{
@@ -1061,7 +1060,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		uiFrameInterval = 0;
 	}
 
-	#if defined(AVS26_32) || defined(AVS26_64)
+	#ifdef AVS64
 		AVS_linkage = 0;
 	#endif
 	::FreeLibrary(hDLL);
@@ -1070,9 +1069,10 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 }
 
 
-BYTE CheckAvisynth()
+BYTE CheckAvisynth(BOOL &avs_linkage)
 {
 	BYTE bRet = AVSDLL_SUCCESS;
+	avs_linkage = FALSE;
 
 	try
 	{
@@ -1087,19 +1087,16 @@ BYTE CheckAvisynth()
 		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
 		string sName = "";
 		int iPos = 0;
-		bRet = NO_AVS_LINKAGE;
 
 		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
 			DWORD rvaName = prvaNames[dwName];
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
 			utils.StrToLC(sName);
+
 			iPos = (int)sName.find("avs_linkage");
 			if (iPos >= 0)
-			{
-				bRet = AVSDLL_SUCCESS;
-				break;
-			}
+				avs_linkage = TRUE;
 		}
 
 		UnMapAndLoad(&li);
@@ -1140,7 +1137,7 @@ BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 			return FALSE;
 		}
 
-		#if defined(AVS26_32) || defined(AVS26_64)
+		#ifdef AVS64
 			AVS_linkage = AVS_env->GetAVSLinkage();
 		#endif
 
@@ -1160,11 +1157,10 @@ BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 
 		AVS_temp = 0;
 
-		#if defined(AVS26_32) || defined(AVS26_64)
+		if (bAVSLinkage)
 			AVS_env->DeleteScriptEnvironment();
-		#else
+		else
 			AVS_env->~IScriptEnvironment();
-		#endif
 	}
 	catch (AvisynthError err)
 	{
@@ -1175,7 +1171,7 @@ BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 		sMsg = "Unknown exception";
 	}
 
-	#if defined(AVS26_32) || defined(AVS26_64)
+	#ifdef AVS64
 		AVS_linkage = 0;
 	#endif
 	::FreeLibrary(hDLL);

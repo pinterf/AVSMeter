@@ -1,3 +1,9 @@
+v1.8.1
+- Merged the 32 Bit versions into one binary. This binary should be compatible with all
+  32 Bit Avisynth versions out there.
+- The implicit log file creation in case of an error that was implemeted in v1.4.8 is now
+  working again.
+
 v1.8.0
 - Made sure all return paths in "main" return the correct value ("-1" -> error; "0" -> OK)
 - Other error handling improvements
