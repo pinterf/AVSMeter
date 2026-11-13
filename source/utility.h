@@ -15,11 +15,10 @@ class CUtils
 public:
 	CUtils();
 	virtual      ~CUtils();
-	double       GetTimer();
-	BOOL         TestTimer();
 	BOOL         FileExists(string s_file);
 	void         CursorUp(int iLines);
 	unsigned int GetConsoleWidth();
+	BOOL GetProductVersion(string &s_version);
 	HANDLE       hConsole;
 
 	//string functions
@@ -29,7 +28,6 @@ public:
 	void   StrToUC(string &s_string);
 	void   StrToLC(string &s_string);
 	string StrFormat(const char *fmt, ...);
-	string StrFormatTime(unsigned int ui_milliseconds);
 	string StrPad(string s_line, unsigned int ui_consolewidth);
 	string StrFormatFPS(double d_fps);
 };
@@ -63,38 +61,6 @@ unsigned int CUtils::GetConsoleWidth()
 	::GetConsoleScreenBufferInfo(hConsole, &csbi); 
 
 	return (unsigned int)csbi.dwSize.X;
-}
-
-
-double CUtils::GetTimer()
-{
-	LARGE_INTEGER liPerfCounter = {0,0};
-	LARGE_INTEGER liPerfFreq = {0,0};
-
-	DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x01);
-	Sleep(0);
-
-	::QueryPerformanceFrequency(&liPerfFreq);
-	::QueryPerformanceCounter(&liPerfCounter);
-
-	::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
-	Sleep(0);
-
-	return (double)liPerfCounter.QuadPart / (double)liPerfFreq.QuadPart;
-}
-
-
-BOOL CUtils::TestTimer()
-{
-	LARGE_INTEGER liPerfCounter = {0,0};
-	LARGE_INTEGER liPerfFreq = {0,0};
-
-	BOOL bRet = TRUE;
-
-	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
-		bRet = FALSE;
-
-	return bRet;
 }
 
 
@@ -203,17 +169,6 @@ string CUtils::StrPad(string s_line, unsigned int ui_consolewidth)
 }
 
 
-string CUtils::StrFormatTime(unsigned int ui_milliseconds)
-{
-	unsigned int hours = ui_milliseconds / 3600000;
-	unsigned int minutes = (ui_milliseconds / 60000) % 60;
-	unsigned int seconds = (ui_milliseconds / 1000) % 60;
-	unsigned int milliseconds = ui_milliseconds % 1000;
-
-	return StrFormat("%03d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
-}
-
-
 string CUtils::StrFormatFPS(double d_fps)
 {
 	string sRet = "";
@@ -228,6 +183,42 @@ string CUtils::StrFormatFPS(double d_fps)
 		sRet = StrFormat("%u", (unsigned int)(d_fps + 0.5));
 
 	return sRet;
+}
+
+
+BOOL CUtils::GetProductVersion(string &s_version)
+{
+	BOOL bRet = FALSE;
+	char szFilename[MAX_PATH + 1] = {0};
+
+	if (GetModuleFileName(NULL, szFilename, MAX_PATH) == 0)
+		return bRet;
+
+	DWORD dummy;
+	DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
+	if (dwSize == 0)
+		return bRet;
+
+	void* pVersion = malloc(dwSize);
+	if (pVersion == NULL)
+		return bRet;
+
+	if (!GetFileVersionInfo(szFilename, NULL, dwSize, pVersion))
+	{
+		free(pVersion);
+		return bRet;
+	}
+
+	LPVOID pvProductVersion = NULL;
+	unsigned int iProductVersionLen = 0;
+
+	if (!VerQueryValue(pVersion, "\\StringFileInfo\\080904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
+		return bRet;
+
+	s_version = (char*)pvProductVersion;
+	bRet = TRUE;
+
+	return bRet;
 }
 
 

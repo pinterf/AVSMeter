@@ -1,3 +1,8 @@
+v1.7.9
+- Improved exception handling
+- More accurate timing functionality for very fast scripts
+- Cosmetics and minor fixes/refactoring
+
 v1.7.8
 - Cosmetics and minor fixes/refactoring
 - Updated compiler for all binaries to VC10

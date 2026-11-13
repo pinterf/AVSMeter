@@ -6,10 +6,9 @@
 #include "stdafx.h"
 #include "utility.h"
 #include "ProcessInfo.h"
+#include "timer.h"
 
 using namespace std;
-
-#define AVSM_VERSION "1.7.8"
 
 #define AVSDLL_SUCCESS 0x00
 #define AVSDLL_INCOMPATIBLE 0x01
@@ -38,7 +37,7 @@ typedef struct sPerformanceData
 {
 	unsigned int frame_low;
 	unsigned int frame_high;
-	double frame_interval_time;
+	double fps;
 	WORD  cpu_usage;
 	DWORD phys_mem;
 	DWORD virt_mem;
@@ -46,19 +45,26 @@ typedef struct sPerformanceData
 } perfdata;
 
 CUtils utils;
+CTimer timer;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, perfdata * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
 string ParseINIFile();
 BYTE CheckAvisynth();
-BOOL GetAvisynthVersion(string &sMsg);
+BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion);
 void PrintUsage();
 void Pause();
 
 
 int main(int argc, char* argv[])
 {
-	string sAVSMVersion = AVSM_VERSION;
+	string sAVSMVersion = "";
+	if (!utils.GetProductVersion(sAVSMVersion))
+	{
+		printf("\nCannot retrieve product version\n");
+		Pause();
+		return -1;
+	}
 
 	#ifdef AVS26_32
 		sAVSMVersion += " (AVS 2.6, x86)";
@@ -76,9 +82,8 @@ int main(int argc, char* argv[])
 	string sArgTest = "";
 	string sAVSFile = "";
 	string sLogBuffer = "";
-	perfdata * PerformanceData;
+	perfdata * PerformanceData = 0;
 	unsigned int uiPDIndex = 0;
-	BOOL bPerfDataInit = FALSE;
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
 	string sAVSError = "";
@@ -115,12 +120,16 @@ int main(int argc, char* argv[])
 	}
 
 	string sAvisynthVersion = "";
-	if (!GetAvisynthVersion(sAvisynthVersion))
+	BOOL bIsMTVersion = FALSE;
+	if (!GetAvisynthVersion(sAvisynthVersion, bIsMTVersion))
 	{
 		printf("\n%s\n", sAvisynthVersion.c_str());
 		Pause();
 		return -1;
 	}
+
+	if (bIsMTVersion)
+		sAvisynthVersion += " (MT)";
 
 	printf("\r%s\n", sAvisynthVersion.c_str());
 
@@ -216,15 +225,6 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-
-	if (!utils.TestTimer())
-	{
-		printf("\nQueryPerformanceCounter() is not supported\n");
-		Pause();
-		return -1;
-	}
-
-
 	if (!bInfoOnly)
 	{
 		sAVSError = "";
@@ -238,6 +238,7 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 	}
+
 
 	HINSTANCE hDLL = ::LoadLibrary("avisynth");
 	if (!hDLL)
@@ -323,7 +324,7 @@ int main(int argc, char* argv[])
 		printf("\n%s", sConsoleOut.c_str());
 		sLogBuffer += sConsoleOut + "\n";
 
-		sConsoleOut = utils.StrFormat("Length (hhh:mm:ss.ms):   %s", utils.StrFormatTime(uiMilliSeconds).c_str());
+		sConsoleOut = utils.StrFormat("Length (hhh:mm:ss.ms):   %s", timer.FormatTimeString(uiMilliSeconds).c_str());
 		printf("\n%s", sConsoleOut.c_str());
 		sLogBuffer += sConsoleOut + "\n";
 
@@ -395,7 +396,7 @@ int main(int argc, char* argv[])
 		sConsoleOut = "Audio samples:     ";
 		sLogBuffer += sConsoleOut;
 		if (AVS_vidinfo.num_audio_samples)
-			sConsoleOut = utils.StrFormat("%19d", AVS_vidinfo.num_audio_samples);
+			sConsoleOut = utils.StrFormat("%19I64d", AVS_vidinfo.num_audio_samples);
 		else
 			sConsoleOut = "                n/a";
 
@@ -419,6 +420,8 @@ int main(int argc, char* argv[])
 				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, PerformanceData, uiPDIndex, sAVSError, uiFrameInterval);
 				if (sLogRet != "")
 					printf(sLogRet.c_str());
+
+				delete[] PerformanceData;
 			}
 
 			Pause();
@@ -462,14 +465,12 @@ int main(int argc, char* argv[])
 		{
 			PerformanceData[x].frame_low = 0;
 			PerformanceData[x].frame_high = 0;
-			PerformanceData[x].frame_interval_time = 0.0;
+			PerformanceData[x].fps = 0.0;
 			PerformanceData[x].cpu_usage = 0;
 			PerformanceData[x].phys_mem = 0;
 			PerformanceData[x].virt_mem = 0;
 			PerformanceData[x].num_threads = 0;
 		}
-		bPerfDataInit = TRUE;
-
 
 		bEarlyExit = FALSE;
 		unsigned int n = 0;
@@ -492,7 +493,7 @@ int main(int argc, char* argv[])
 		double dFPSMin = 1.0e+20;
 		double dFPSMax = 0.0;
 
-		double dStartTime = utils.GetTimer();
+		double dStartTime = timer.GetTimer();
 		double dCurrentTime = dStartTime;
 		double dLastDisplayTime = dStartTime;
 		double dLastIntervalTime = dStartTime;
@@ -506,7 +507,7 @@ int main(int argc, char* argv[])
 
 			if (((n % uiFrameInterval) == 0) || (n == uiFramesToProcess))
 			{
-				dCurrentTime = utils.GetTimer();
+				dCurrentTime = timer.GetTimer();
 				process_info.Update();
 				++uiCounter;
 
@@ -528,8 +529,11 @@ int main(int argc, char* argv[])
 
 				if ((n % uiFrameInterval) == 0)
 				{
-					if ((dCurrentTime - dLastIntervalTime) > 0.0)
+					if ((dCurrentTime - dLastIntervalTime) > 0.0000001)
 						dFPSCurrent = (double)uiFrameInterval / (dCurrentTime - dLastIntervalTime);
+					else
+						dFPSCurrent = (double)uiFrameInterval / 0.0000001;
+
 					if (dFPSCurrent > dFPSMax)
 						dFPSMax = dFPSCurrent;
 					if (dFPSCurrent < dFPSMin)
@@ -537,7 +541,7 @@ int main(int argc, char* argv[])
 
 					PerformanceData[uiPDIndex].frame_low = (uiCurrentFrame + 1) - uiFrameInterval;
 					PerformanceData[uiPDIndex].frame_high = uiCurrentFrame;
-					PerformanceData[uiPDIndex].frame_interval_time = (dCurrentTime - dLastIntervalTime) / (double)uiFrameInterval;
+					PerformanceData[uiPDIndex].fps = dFPSCurrent;
 					PerformanceData[uiPDIndex].cpu_usage = process_info.wCPUUsage;
 					PerformanceData[uiPDIndex].num_threads = process_info.wThreadCount;
 					PerformanceData[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
@@ -547,7 +551,7 @@ int main(int argc, char* argv[])
 					dLastIntervalTime = dCurrentTime;
 				}
 
-				if ((dCurrentTime - dLastDisplayTime) > 0.2)
+				if ((dCurrentTime - dLastDisplayTime) >= 0.25)
 				{
 					uiConsoleWidth = utils.GetConsoleWidth();
 					dLastDisplayTime = dCurrentTime;
@@ -568,7 +572,7 @@ int main(int argc, char* argv[])
 					printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 					sConsoleOut = utils.StrFormat("Virtual Memory usage:           %u MB", dwVirtualMemCurrentMB);
 					printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
-					sConsoleOut = utils.StrFormat("Time (elapsed | estimated):     %s | %s", utils.StrFormatTime(uiElapsedMS).c_str(), utils.StrFormatTime(uiEstimatedMS).c_str());
+					sConsoleOut = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(uiElapsedMS).c_str(), timer.FormatTimeString(uiEstimatedMS).c_str());
 					printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 
 					printf("\nPress \'Esc\' to cancel the process...\n\n");
@@ -638,9 +642,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sConsoleOut + "\n";
 
 			if ((settings.bLogEstimatedTime) && (n < uiFramesToProcess))
-				sConsoleOut = utils.StrFormat("Time (elapsed | estimated):     %s | %s", utils.StrFormatTime(uiElapsedMS).c_str(), utils.StrFormatTime(uiEstimatedMS).c_str());
+				sConsoleOut = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(uiElapsedMS).c_str(), timer.FormatTimeString(uiEstimatedMS).c_str());
 			else
-				sConsoleOut = utils.StrFormat("Time (elapsed):                 %s", utils.StrFormatTime(uiElapsedMS).c_str());
+				sConsoleOut = utils.StrFormat("Time (elapsed):                 %s", timer.FormatTimeString(uiElapsedMS).c_str());
 
 			printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 			sLogBuffer += sConsoleOut + "\n";
@@ -665,7 +669,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sConsoleOut;
 		}
 	}
-	catch(AvisynthError err)
+	catch (AvisynthError err)
 	{
 		sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
 
@@ -679,6 +683,19 @@ int main(int argc, char* argv[])
 		}
 		else
 			printf("\n%s\n", sAVSError.c_str());
+	}
+	catch (...)
+	{
+		if (bEarlyExit == FALSE)
+		{
+			utils.CursorUp(2);
+			printf("\r%s\n", utils.StrPad("", uiConsoleWidth).c_str());
+			printf("\r%s\n", utils.StrPad("", uiConsoleWidth).c_str());
+			utils.CursorUp(2);
+			printf("\rUnknown exception\n");
+		}
+		else
+			printf("\nUnknown exception\n");
 	}
 
 	#if defined(AVS26_32) || defined(AVS26_64)
@@ -698,8 +715,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (bPerfDataInit)
-		delete[] PerformanceData;
+	delete[] PerformanceData;
 
 	Pause();
 
@@ -855,13 +871,13 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, perfdata * cs_pdata
 				{
 					stemp1 = utils.StrFormat("%u", cs_pdata[i].frame_low);
 					string spad((12 - stemp1.length()), ' ');
-					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, 1.0 / cs_pdata[i].frame_interval_time, cs_pdata[i].frame_interval_time * 1000.0, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp2 = utils.StrFormat("%s%u %13.3f %16.4f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 				else
 				{
 					stemp1 = utils.StrFormat("%u-%u", cs_pdata[i].frame_low, cs_pdata[i].frame_high);
 					string spad((21 - stemp1.length()), ' ');
-					stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, 1.0 / cs_pdata[i].frame_interval_time, cs_pdata[i].frame_interval_time * 1000.0, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.4f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 
 				hLogFile << stemp2 + "\n";
@@ -901,14 +917,20 @@ void Pause()
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 {
-	unsigned int uiFI = 1000;
+	unsigned int uiFrameInterval = 0;
 	s_avserror = "";
+
+	if (!timer.TestTimer())
+	{
+		s_avserror = "Multimedia Timers and/or High Performance Timers are not supported";
+		return uiFrameInterval;
+	}
 
 	HINSTANCE hDLL = ::LoadLibrary("avisynth");
 	if (!hDLL)
 	{
 		s_avserror = "Failed to load avisynth.dll";
-		return 0;
+		return uiFrameInterval;
 	}
 
 	try
@@ -918,7 +940,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		{
 			s_avserror = "Failed to load CreateScriptEnvironment()";
 			::FreeLibrary(hDLL);
-			return 0;
+			return uiFrameInterval;
 		}
 
 		IScriptEnvironment *AVS_env = CreateEnvironment(AVISYNTH_INTERFACE_VERSION);
@@ -926,7 +948,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		{
 			s_avserror = "Could not create IScriptenvironment";
 			::FreeLibrary(hDLL);
-			return 0;
+			return uiFrameInterval;
 		}
 
 		#if defined(AVS26_32) || defined(AVS26_64)
@@ -963,37 +985,56 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
 
 		unsigned int uiCurrentFrame = 0;
-		double dT1 = utils.GetTimer();
-		double dT2 = dT1;
-		for (;;)
-		{
-			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
-			++uiCurrentFrame;
-			dT2 = utils.GetTimer();
+		
+		double dT1 = 0.0;
+		double dT2 = 0.0;
+		double dTDelta = -1.0;
 
-			if (((dT2 - dT1) >= 4.0) || (uiCurrentFrame == uiTotalFrames))
-				break;
+		while (dTDelta < 0.0) //account for timer wrap
+		{
+			dT1 = timer.GetMMTimer();
+			dT2 = dT1;
+			for (;;)
+			{
+				PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
+				++uiCurrentFrame;
+				dT2 = timer.GetMMTimer();
+
+				if (((dT2 - dT1) >= 4.0) || (uiCurrentFrame == uiTotalFrames))
+					break;
+			}
+			dTDelta = (dT2 - dT1) * 1000.0; //ms
 		}
 
-		double dTDelta = (dT2 - dT1) * 1000.0; //ms
+		uiFrameInterval = 50000;
 		double dAverageFrameTime = 0.0;
 		if (dTDelta > 200)
 			dAverageFrameTime = dTDelta / (double)uiCurrentFrame;
 
-		if (dAverageFrameTime > 0.10)
-			uiFI = 500;
-		if (dAverageFrameTime > 0.25)
-			uiFI = 200;
-		if (dAverageFrameTime > 0.50)
-			uiFI = 100;
-		if (dAverageFrameTime > 1.00)
-			uiFI = 50;
-		if (dAverageFrameTime > 2.50)
-			uiFI = 20;
-		if (dAverageFrameTime > 5.00)
-			uiFI = 10;
-		if (dAverageFrameTime > 50.0)
-			uiFI = 1;
+		if (dAverageFrameTime > 0.001)
+			uiFrameInterval = 20000;
+		if (dAverageFrameTime > 0.002)
+			uiFrameInterval = 10000;
+		if (dAverageFrameTime > 0.004)
+			uiFrameInterval = 5000;
+		if (dAverageFrameTime > 0.010)
+			uiFrameInterval = 2000;
+		if (dAverageFrameTime > 0.020)
+			uiFrameInterval = 1000;
+		if (dAverageFrameTime > 0.040)
+			uiFrameInterval = 500;
+		if (dAverageFrameTime > 0.100)
+			uiFrameInterval = 200;
+		if (dAverageFrameTime > 0.200)
+			uiFrameInterval = 100;
+		if (dAverageFrameTime > 0.400)
+			uiFrameInterval = 50;
+		if (dAverageFrameTime > 1.000)
+			uiFrameInterval = 20;
+		if (dAverageFrameTime > 2.000)
+			uiFrameInterval = 10;
+		if (dAverageFrameTime > 20.00)
+			uiFrameInterval = 1;
 
 		AVS_clip = 0;
 		AVS_main = 0;
@@ -1005,10 +1046,15 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			AVS_env->~IScriptEnvironment();
 		#endif
 	}
-	catch(AvisynthError err)
+	catch (AvisynthError err)
 	{
 		s_avserror = utils.StrFormat("%s", (PCSTR)err.msg);
-		uiFI = 0;
+		uiFrameInterval = 0;
+	}
+	catch (...)
+	{
+		s_avserror = "Unknown exception";
+		uiFrameInterval = 0;
 	}
 
 	#if defined(AVS26_32) || defined(AVS26_64)
@@ -1016,7 +1062,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 	#endif
 	::FreeLibrary(hDLL);
 
-	return uiFI;
+	return uiFrameInterval;
 }
 
 
@@ -1063,7 +1109,7 @@ BYTE CheckAvisynth()
 }
 
 
-BOOL GetAvisynthVersion(string &sMsg)
+BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 {
 	HINSTANCE hDLL = ::LoadLibrary("avisynth");
 	if (!hDLL)
@@ -1104,6 +1150,10 @@ BOOL GetAvisynthVersion(string &sMsg)
 		{
 		}
 
+		bIsMTVersion = FALSE;
+		if ((AVS_env->FunctionExists("GetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
+			bIsMTVersion = TRUE;
+
 		AVS_temp = 0;
 
 		#if defined(AVS26_32) || defined(AVS26_64)
@@ -1112,9 +1162,13 @@ BOOL GetAvisynthVersion(string &sMsg)
 			AVS_env->~IScriptEnvironment();
 		#endif
 	}
-	catch(AvisynthError err)
+	catch (AvisynthError err)
 	{
 		sMsg = utils.StrFormat("%s", (PCSTR)err.msg);
+	}
+	catch (...)
+	{
+		sMsg = "Unknown exception";
 	}
 
 	#if defined(AVS26_32) || defined(AVS26_64)
@@ -1135,5 +1189,4 @@ void PrintUsage()
 
 	return;
 }
-
 
