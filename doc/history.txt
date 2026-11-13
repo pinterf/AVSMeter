@@ -1,3 +1,8 @@
+v2.0.3
+- Added switch "timelimit" which terminates the program after a specified time
+- Removed (temporarily) "timeout" option due to thread sync issues with some filters
+- Removed some INI settings that are already covered by command line switches
+
 v2.0.2
 - Added more info to the log file (script name, command line switches, plugin directory)
 - Everything pertaining to information about the loaded Avisynth DLL including utility

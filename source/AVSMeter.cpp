@@ -34,52 +34,43 @@
 
 #define REFRESH_INTERVAL 0.25
 
-struct _Settings
+class CSettings
 {
-	BOOL    bCreateLog;
-	BOOL    bPauseBeforeExit;
-	__int64 iStartFrame;
-	__int64 iStopFrame;
-	string  sFrameRange;
-	BOOL    bInvokeDistributor;
-	BOOL    bAllowOnlyOneInstance;
-	BOOL    bLogEstimatedTime;
-	BOOL    bUseColor;
-	BOOL    bUseFixedFrameInterval;
-	BOOL    bMonitorGPULoad;
-	WORD    wReadTimeout;
-	BYTE    bProcessPriority;
+public:
+	BOOL      bCreateLog;
+	BOOL      bPauseBeforeExit;
+	__int64   iStartFrame;
+	__int64   iStopFrame;
+	string    sFrameRange;
+	__int64   iTimeLimit;
+	BOOL      bInvokeDistributor;
+	BOOL      bAllowOnlyOneInstance;
+	BOOL      bLogEstimatedTime;
+	BOOL      bUseColor;
+	BOOL      bUseFixedFrameInterval;
+	BOOL      bMonitorGPULoad;
+	BYTE      bProcessPriority;
 };
 
-struct _PerfData
+struct PerformanceData
 {
-	unsigned int frame_low;
-	unsigned int frame_high;
-	double fps;
-	WORD  cpu_usage;
-	DWORD phys_mem;
-	DWORD virt_mem;
-	WORD num_threads;
-};
-
-struct _ThreadParams
-{
-	HINSTANCE hAVSDLL;
-	string sAVSFile;
-	unsigned int uiFrameInterval;
-	string sAVSError;
-	unsigned int uiCurFrame;
-	string sStatus;
+	unsigned int  frame_low;
+	unsigned int  frame_high;
+	double        fps;
+	WORD          cpu_usage;
+	DWORD         phys_mem;
+	DWORD         virt_mem;
+	WORD          num_threads;
 };
 
 
 CAvisynthInfo AvisynthInfo;
 CUtils utils;
 CTimer timer;
-_Settings Settings;
+CSettings Settings;
 
-unsigned __stdcall CalculateFrameInterval(void* pParam);
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, _PerfData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
+unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
+string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
 string ParseINIFile();
 void PrintUsage();
 void Pause();
@@ -88,8 +79,13 @@ void PrintFmt(BYTE bStream, WORD wAttributes, const char *fmt, ...); //bStream: 
 
 int main(int argc, char* argv[])
 {
+	//some defaults
 	Settings.bPauseBeforeExit = TRUE;
 	Settings.bUseColor = TRUE;
+	Settings.iTimeLimit = -1;
+	Settings.bUseFixedFrameInterval = FALSE;
+	Settings.bProcessPriority = 2;
+	Settings.bMonitorGPULoad = FALSE;
 
 	int iRet = 0;
 	string sAVSMVersion = utils.GetFileVersion("");
@@ -120,7 +116,7 @@ int main(int argc, char* argv[])
 	string sAVSFile = "";
 	string sLogBuffer = "";
 	string sGPUInfo = "";
-	_PerfData * PerformanceData = 0;
+	PerformanceData * perfdata = 0;
 	unsigned int uiPDIndex = 0;
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
@@ -214,7 +210,7 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if (sArgTest == "-f")
+		if ((sArgTest == "-fixed") || (sArgTest == "-f"))
 		{
 			sCommandLine += sCmdToken + " ";
 			Settings.bUseFixedFrameInterval = TRUE;
@@ -266,23 +262,6 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if (sArgTest.substr(0, 9) == "-timeout=")
-		{
-			sCommandLine += sCmdToken + " ";
-			sTemp = sArgTest.substr(9);
-			if (utils.IsNumeric(sTemp))
-			{
-				Settings.wReadTimeout = (WORD)atol(sTemp.c_str());
-				if ((Settings.wReadTimeout < 10) || (Settings.wReadTimeout > 3600))
-				{
-					PrintFmt(STD_ERR, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue for timeout must be between 10 and 3600\n", sArg.c_str());
-					Pause();
-					return -1;
-				}
-			}
-			continue;
-		}
-
 		if (sArgTest.substr(0, 10) == "-priority=")
 		{
 			sCommandLine += sCmdToken + " ";
@@ -292,11 +271,42 @@ int main(int argc, char* argv[])
 				Settings.bProcessPriority = (BYTE)atol(sTemp.c_str());
 				if ((Settings.bProcessPriority < 1) || (Settings.bProcessPriority > 3))
 				{
-					PrintFmt(STD_ERR, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue for priority must be between 1 and 3\n", sArg.c_str());
+					PrintFmt(STD_ERR, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1 and 3\n", sArg.c_str());
 					Pause();
 					return -1;
 				}
 			}
+			else
+			{
+				PrintFmt(STD_ERR, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1 and 3\n", sArg.c_str());
+				Pause();
+				return -1;
+			}
+
+			continue;
+		}
+
+		if (sArgTest.substr(0, 11) == "-timelimit=")
+		{
+			sCommandLine += sCmdToken + " ";
+			sTemp = sArgTest.substr(11);
+			if (utils.IsNumeric(sTemp))
+			{
+				Settings.iTimeLimit = atoi(sTemp.c_str());
+				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
+				{
+					PrintFmt(STD_ERR, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1 and 999999\n", sArg.c_str());
+					Pause();
+					return -1;
+				}
+			}
+			else
+			{
+				PrintFmt(STD_ERR, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1 and 999999\n", sArg.c_str());
+				Pause();
+				return -1;
+			}
+
 			continue;
 		}
 
@@ -354,7 +364,7 @@ int main(int argc, char* argv[])
 
 			for (;;)
 			{
-				Sleep(100);
+				Sleep(10);
 				if (_kbhit())
 				{
 					int iKey = _getch();
@@ -392,83 +402,30 @@ int main(int argc, char* argv[])
 		}
 	}
 
+
 	if (!bInfoOnly)
 	{
-		if (!timer.TestTimer())
-		{
-			PrintFmt(STD_ERR, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-			Pause();
-			return -1;
-		}
-
 		sAVSError = "";
 		uiFrameInterval = 10;
 		if (!Settings.bUseFixedFrameInterval)
 		{
-			_ThreadParams* p = new _ThreadParams;
-			p->sAVSError = sAVSError;
-			p->sAVSFile = sAVSFile;
-			p->sStatus = "";
-			p->uiCurFrame = 0;
-			p->uiFrameInterval = 0;
-
-			p->hAVSDLL = ::LoadLibrary("avisynth");
-			if (!p->hAVSDLL)
-			{
-				PrintFmt(STD_ERR, COLOR_ERROR, "\nCannot load avisynth.dll\n%s\n", utils.OSErrorMessage().c_str());
-				Pause();
-				return -1;
-			}
-
-			double dT0 = timer.GetSTDTimer();
-			double dT1 = dT0;
-
-			unsigned ThreadID;
-			HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, &CalculateFrameInterval, p, 0, &ThreadID);
-
-			while (WaitForSingleObject(hThread, 100))
-			{
-				dT1 = timer.GetSTDTimer();
-
-				if ((dT1 - dT0) > (double)Settings.wReadTimeout)
-				{
-					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-					PrintFmt(STD_ERR, COLOR_ERROR, "\nProcess aborted while reading frame #%u after specified timeout (%u sec).\n", p->uiCurFrame, Settings.wReadTimeout);
-					::FreeLibrary(p->hAVSDLL);
-					delete p;
-					CloseHandle(hThread);
-					Pause();
-					return -1;
-				}
-
-				if (_kbhit())
-				{
-					if (_getch() == 0x1B) //ESC
-					{
-						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("Cancelled.").c_str());
-						PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
-						::FreeLibrary(p->hAVSDLL);
-						delete p;
-						CloseHandle(hThread);
-						Pause();
-						return -1;
-					}
-				}
-
-				PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad(p->sStatus).c_str());
-			}
-
-			::FreeLibrary(p->hAVSDLL);
-			sAVSError = p->sAVSError;
-			uiFrameInterval = p->uiFrameInterval;
-			delete p;
-			CloseHandle(hThread);
+			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
+			uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
 
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 			if ((uiFrameInterval == 0) || (sAVSError != ""))
 			{
 				PrintFmt(STD_ERR, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
+				Pause();
+				return -1;
+			}
+		}
+		else
+		{
+			if (!timer.TestTimer())
+			{
+				PrintFmt(STD_ERR, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
 				Pause();
 				return -1;
 			}
@@ -709,12 +666,12 @@ int main(int argc, char* argv[])
 
 			if (Settings.bCreateLog)
 			{
-				PerformanceData = new _PerfData[1];
-				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, PerformanceData, uiPDIndex, sAVSError, uiFrameInterval);
+				perfdata = new PerformanceData[1];
+				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval);
 				if (sLogRet != "")
 					PrintFmt(STD_ERR, COLOR_ERROR, sLogRet.c_str());
 
-				delete [] PerformanceData;
+				delete [] perfdata;
 			}
 
 			AVS_linkage = 0;
@@ -782,12 +739,12 @@ int main(int argc, char* argv[])
 			
 						if (Settings.bCreateLog)
 						{
-							PerformanceData = new _PerfData[1];
-							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, PerformanceData, uiPDIndex, sAVSError, uiFrameInterval);
+							perfdata = new PerformanceData[1];
+							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval);
 							if (sLogRet != "")
 								PrintFmt(STD_ERR, COLOR_DEFAULT, sLogRet.c_str());
 			
-							delete [] PerformanceData;
+							delete [] perfdata;
 						}
 			
 						AVS_linkage = 0;
@@ -814,16 +771,16 @@ int main(int argc, char* argv[])
 
 		unsigned int uiArraySize = (uiFramesToProcess / uiFrameInterval) + 2;
 
-		PerformanceData = new _PerfData[uiArraySize];
+		perfdata = new PerformanceData[uiArraySize];
 		for (unsigned int x = 0; x < uiArraySize; x++)
 		{
-			PerformanceData[x].frame_low = 0;
-			PerformanceData[x].frame_high = 0;
-			PerformanceData[x].fps = 0.0;
-			PerformanceData[x].cpu_usage = 0;
-			PerformanceData[x].phys_mem = 0;
-			PerformanceData[x].virt_mem = 0;
-			PerformanceData[x].num_threads = 0;
+			perfdata[x].frame_low = 0;
+			perfdata[x].frame_high = 0;
+			perfdata[x].fps = 0.0;
+			perfdata[x].cpu_usage = 0;
+			perfdata[x].phys_mem = 0;
+			perfdata[x].virt_mem = 0;
+			perfdata[x].num_threads = 0;
 		}
 
 		bEarlyExit = FALSE;
@@ -913,14 +870,14 @@ int main(int argc, char* argv[])
 			if (dFPSCurrent < dFPSMin)
 				dFPSMin = dFPSCurrent;
 
-			PerformanceData[uiPDIndex].frame_low = (uiCurrentFrame + 1) - uiFrameInterval;
-			PerformanceData[uiPDIndex].frame_high = uiCurrentFrame;
-			PerformanceData[uiPDIndex].fps = dFPSCurrent;
-			PerformanceData[uiPDIndex].cpu_usage = processinfo.wCPUUsage;
+			perfdata[uiPDIndex].frame_low = (uiCurrentFrame + 1) - uiFrameInterval;
+			perfdata[uiPDIndex].frame_high = uiCurrentFrame;
+			perfdata[uiPDIndex].fps = dFPSCurrent;
+			perfdata[uiPDIndex].cpu_usage = processinfo.wCPUUsage;
 
-			PerformanceData[uiPDIndex].num_threads = processinfo.wThreadCount;
-			PerformanceData[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
-			PerformanceData[uiPDIndex].virt_mem = dwVirtualMemCurrentMB;
+			perfdata[uiPDIndex].num_threads = processinfo.wThreadCount;
+			perfdata[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
+			perfdata[uiPDIndex].virt_mem = dwVirtualMemCurrentMB;
 			++uiPDIndex;
 
 			dLastIntervalTime = dCurrentTime;
@@ -1007,6 +964,16 @@ int main(int argc, char* argv[])
 			++uiCursorOffset;
 			++uiCursorOffset;
 			++uiCursorOffset;
+
+
+			if (Settings.iTimeLimit != -1)
+			{
+				if (iElapsedMS >= (Settings.iTimeLimit * 1000))
+				{
+					uiLastFrame = uiCurrentFrame;
+					break;
+				}
+			}
 
 			if (_kbhit())
 			{
@@ -1176,7 +1143,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateLog)
 	{
-		string sRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, PerformanceData, uiPDIndex, sAVSError, uiFrameInterval);
+		string sRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval);
 		if (sRet != "")
 		{
 			PrintFmt(STD_ERR, COLOR_ERROR, sRet.c_str());
@@ -1185,7 +1152,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	delete [] PerformanceData;
+	delete [] perfdata;
 
 	Pause();
 
@@ -1216,16 +1183,12 @@ string ParseINIFile()
 
 	Settings.bCreateLog = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
-	Settings.bUseFixedFrameInterval = FALSE;
 	Settings.iStartFrame = 0;
 	Settings.iStopFrame = -1;
 	Settings.bInvokeDistributor = TRUE;
 	Settings.bAllowOnlyOneInstance = TRUE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bUseColor = TRUE;
-	Settings.bMonitorGPULoad = FALSE;
-	Settings.wReadTimeout = 120;
-	Settings.bProcessPriority = 2;
 
 	string sAVSMVersion = utils.GetFileVersion("");
 	if (sAVSMVersion.length() > 5)
@@ -1280,10 +1243,7 @@ string ParseINIFile()
 		hINIFile << "AllowOnlyOneInstance=1\n";
 		hINIFile << "LogEstimatedTime=0\n";
 		hINIFile << "UseColor=1\n";
-		hINIFile << "MonitorGPULoad=0\n";
-		hINIFile << "ReadTimeout=120\n";
-		hINIFile << "UseFixedFrameInterval=0\n";
-		hINIFile << "ProcessPriority=2\n";
+
 		hINIFile.flush();
 		hINIFile.close();
 
@@ -1320,12 +1280,6 @@ string ParseINIFile()
 				Settings.bPauseBeforeExit = TRUE;
 		}
 
-		if (sCurrentLine.substr(0, 21) == "usefixedframeinterval")
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
-				Settings.bUseFixedFrameInterval = TRUE;
-		}
-
 		if (sCurrentLine.substr(0, 17) == "invokedistributor")
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
@@ -1344,38 +1298,10 @@ string ParseINIFile()
 				Settings.bLogEstimatedTime = TRUE;
 		}
 
-		if (sCurrentLine.substr(0, 14) == "monitorgpuload")
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
-				Settings.bMonitorGPULoad = TRUE;
-		}
-
 		if (sCurrentLine.substr(0, 8) == "usecolor")
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
 				Settings.bUseColor = FALSE;
-		}
-
-		if (sCurrentLine.substr(0, 12) == "readtimeout=")
-		{
-			sTemp = sCurrentLine.substr(12);
-			if (utils.IsNumeric(sTemp))
-			{
-				Settings.wReadTimeout = (WORD)atol(sTemp.c_str());
-				if ((Settings.wReadTimeout < 10) || (Settings.wReadTimeout > 3600))
-					Settings.wReadTimeout = 120;
-			}
-		}
-
-		if (sCurrentLine.substr(0, 16) == "processpriority=")
-		{
-			sTemp = sCurrentLine.substr(16);
-			if (utils.IsNumeric(sTemp))
-			{
-				Settings.bProcessPriority = (BYTE)atol(sTemp.c_str());
-				if ((Settings.bProcessPriority < 1) || (Settings.bProcessPriority > 3))
-					Settings.bProcessPriority = 2;
-			}
 		}
 
 		if (sCurrentLine.substr(0, 11) == "framerange=")
@@ -1406,7 +1332,7 @@ string ParseINIFile()
 }
 
 
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, _PerfData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval)
+string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval)
 {
 	string sRet = "";
 	string sAVSBuffer = "";
@@ -1513,36 +1439,49 @@ void Pause()
 }
 
 
-unsigned __stdcall CalculateFrameInterval(void* pParam)
+unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 {
-	_ThreadParams* p = (_ThreadParams*) pParam;
-	p->uiFrameInterval = 0;
-	p->sAVSError = "";
+	unsigned int uiFrameInterval = 0;
+	s_avserror = "";
+
+	if (!timer.TestTimer())
+	{
+		s_avserror = "QueryPerformanceCounter() is not supported";
+		return uiFrameInterval;
+	}
+
+	HINSTANCE hDLL = ::LoadLibrary("avisynth");
+	if (!hDLL)
+	{
+		s_avserror = "Failed to load avisynth.dll";
+		return uiFrameInterval;
+	}
 
 	try
 	{
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(p->hAVSDLL, "CreateScriptEnvironment");
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
-			p->sAVSError = "Failed to load CreateScriptEnvironment()";
-			_endthreadex(0);
+			s_avserror = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return uiFrameInterval;
 		}
 
 		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
-			p->sAVSError = "Could not create IScriptenvironment";
-			_endthreadex(0);
+			s_avserror = "Could not create IScriptenvironment";
+			::FreeLibrary(hDLL);
+			return uiFrameInterval;
 		}
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
 
 		AVSValue AVS_main;
-		p->sStatus = "Loading script...";
-		AVS_main = AVS_env->Invoke("Import", p->sAVSFile.c_str());
+		AVS_main = AVS_env->Invoke("Import", s_avsfile.c_str());
 
 		if (!AVS_main.IsClip()) //not a clip
-			AVS_env->ThrowError("Script did not return a clip:\n(%s)", p->sAVSFile.c_str());
+			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
 
 		AVSValue AVS_temp;
 		PClip AVS_clip;
@@ -1566,48 +1505,45 @@ unsigned __stdcall CalculateFrameInterval(void* pParam)
 		unsigned int uiTotalFrames = (unsigned int)AVS_vidinfo.num_frames;
 
 		if (!AVS_vidinfo.HasVideo())
-			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", p->sAVSFile.c_str());
+			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
 
 		unsigned int uif = 0;
-		p->uiCurFrame = 0;
 		double TDelta = 0.0;
 
-		p->sStatus = "Analysing script...";
 		double T0 = timer.GetSTDTimer();
 		for (;;)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uif, AVS_env);
 			++uif;
-			p->uiCurFrame = uif;
 
 			TDelta = timer.GetSTDTimer() - T0;
 			if ((TDelta >= 5.0) || (uif == uiTotalFrames))
 				break;
 		}
 
-		p->uiFrameInterval = 5000;
+		uiFrameInterval = 5000;
 		double dAverageFrameTime = 0.0;
 		if (TDelta > 0.2)
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uif; //ms
 
 		if (dAverageFrameTime >  0.005)
-			p->uiFrameInterval = 2000;
+			uiFrameInterval = 2000;
 		if (dAverageFrameTime >  0.010)
-			p->uiFrameInterval = 1000;
+			uiFrameInterval = 1000;
 		if (dAverageFrameTime >  0.020)
-			p->uiFrameInterval = 500;
+			uiFrameInterval = 500;
 		if (dAverageFrameTime >  0.050)
-			p->uiFrameInterval = 200;
+			uiFrameInterval = 200;
 		if (dAverageFrameTime >  0.100)
-			p->uiFrameInterval = 100;
+			uiFrameInterval = 100;
 		if (dAverageFrameTime >  0.200)
-			p->uiFrameInterval = 50;
+			uiFrameInterval = 50;
 		if (dAverageFrameTime >  0.500)
-			p->uiFrameInterval = 20;
+			uiFrameInterval = 20;
 		if (dAverageFrameTime >  1.000)
-			p->uiFrameInterval = 10;
+			uiFrameInterval = 10;
 		if (dAverageFrameTime > 10.000)
-			p->uiFrameInterval = 1;
+			uiFrameInterval = 1;
 
 		AVS_clip = 0;
 		AVS_main = 0;
@@ -1617,22 +1553,23 @@ unsigned __stdcall CalculateFrameInterval(void* pParam)
 	}
 	catch (AvisynthError err)
 	{
-		p->sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
-		p->uiFrameInterval = 0;
+		s_avserror = utils.StrFormat("%s", (PCSTR)err.msg);
+		uiFrameInterval = 0;
 	}
 	catch (...)
 	{
-		p->sAVSError = utils.OSErrorMessage();
-		if (p->sAVSError == "")
-			p->sAVSError = "Unknown exception";
+		s_avserror = utils.OSErrorMessage();
+		if (s_avserror == "")
+			s_avserror = "Unknown exception";
 
-		p->uiFrameInterval = 0;
+		uiFrameInterval = 0;
 	}
 
 	AVS_linkage = 0;
 
-	_endthreadex(0);
-	return 0;
+	::FreeLibrary(hDLL);
+
+	return uiFrameInterval;
 }
 
 
@@ -1670,12 +1607,12 @@ void PrintUsage()
 {
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, "Switches:\n");
-	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -info [-i]          Display clip info only\n");
-	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -log  [-l]          Create log file\n");
-	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -f                  Use fixed frame interval for measurements\n");
+	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -info  [-i]         Display clip info only\n");
+	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -log   [-l]         Create log file\n");
+	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -fixed [-f]         Use fixed frame interval for measurements\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -gpu                Monitor GPU/VPU usage\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -range=first,last   Specify frame range\n");
-	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -timeout=n          Specify timeout (seconds)\n");
+	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -timelimit=n        Specify time (sec) after which the process will exit\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -priority=n         Specify process priority (1:low, 2:normal, 3:high)\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -help [-h]          Display command line usage\n");
 
