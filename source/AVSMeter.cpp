@@ -10,10 +10,10 @@
 #include "timer.h"
 
 #ifdef AVS64
-	#include "avisynth26.h"
+	#include "x64\avisynth.h"
 	const AVS_Linkage *AVS_linkage = 0;
 #else
-	#include "avisynth25.h"
+	#include "avisynth.h"
 #endif
 
 #define COLOR_DEFAULT           0
@@ -30,12 +30,12 @@
 struct stAvisynthInfo
 {
 	string sDLLPath;
+	BOOL   b64BitVersion;
 	string sErrorMsg;
 	int    iInterfaceVersion;
 	string sVersion;
 	string sVersionString;
 	BOOL   bAVSLinkage;
-	BOOL   bIsCompatible;
 	BOOL   bIsMTVersion;
 	BOOL   bLoadError;
 } AvisynthInfo;
@@ -52,6 +52,7 @@ struct stSettings
 	BOOL    bAllowOnlyOneInstance;
 	BOOL    bLogEstimatedTime;
 	BOOL    bUseColor;
+	BOOL    bUseFixedFrameInterval;
 	BOOL    bMonitorGPULoad;
 	WORD    wReadTimeout;
 } Settings;
@@ -113,7 +114,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	PrintFmt(STD_ERR, COLOR_AVSM_VERSION, "\nAVSMeter %s by Groucho2004\n", sAVSMVersion.c_str());
+	PrintFmt(STD_ERR, COLOR_AVSM_VERSION, "\nAVSMeter %s\n", sAVSMVersion.c_str());
 
 	string sOutBuf = "";
 	string sArg = "";
@@ -134,22 +135,27 @@ int main(int argc, char* argv[])
 	{
 		if (AvisynthInfo.bLoadError)
 		{
+			#ifdef AVS64
+				if (!AvisynthInfo.b64BitVersion)
+				{
+					PrintFmt(STD_ERR, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
+					Pause();
+					return -1;
+				}
+			#else
+				if (AvisynthInfo.b64BitVersion)
+				{
+					PrintFmt(STD_ERR, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
+					Pause();
+					return -1;
+				}
+			#endif
+
 			PrintFmt(STD_ERR, COLOR_ERROR, "\nCannot load avisynth.dll\n%s\n", utils.OSErrorMessage().c_str());
 			Pause();
 			return -1;
 		}
 
-		if (!AvisynthInfo.bIsCompatible)
-		{
-			#ifdef AVS64
-				PrintFmt(STD_ERR, COLOR_ERROR, "\nCannot load avisynth.dll.\nMake sure you are using a 64 Bit version.\n");
-			#else
-				PrintFmt(STD_ERR, COLOR_ERROR, "\nCannot load avisynth.dll.\nMake sure you are using a 32 Bit version.\n");
-			#endif
-
-			Pause();
-			return -1;
-		}
 
 		if (AvisynthInfo.sErrorMsg != "")
 		{
@@ -216,6 +222,12 @@ int main(int argc, char* argv[])
 		if ((sArgTest == "-i") || (sArgTest == "-info"))
 		{
 			bInfoOnly = TRUE;
+			continue;
+		}
+
+		if (sArgTest == "-f")
+		{
+			Settings.bUseFixedFrameInterval = TRUE;
 			continue;
 		}
 
@@ -341,60 +353,64 @@ int main(int argc, char* argv[])
 		}
 
 		sAVSError = "";
-		ThreadParams* p = new ThreadParams;
-		p->bFinished = FALSE;
-		p->sAVSError = sAVSError;
-		p->sAVSFile = sAVSFile;
-		p->sStatus = "";
-		double dT0 = timer.GetSTDTimer();
-		double dT1 = dT0;
-
-		_beginthread(CalculateFrameInterval, 0, p);
-
-		while (!p->bFinished)
+		uiFrameInterval = 10;
+		if (!Settings.bUseFixedFrameInterval)
 		{
-			for (unsigned int n = 0; n < 4; n++)
+			ThreadParams* p = new ThreadParams;
+			p->bFinished = FALSE;
+			p->sAVSError = sAVSError;
+			p->sAVSFile = sAVSFile;
+			p->sStatus = "";
+			double dT0 = timer.GetSTDTimer();
+			double dT1 = dT0;
+
+			_beginthread(CalculateFrameInterval, 0, p);
+
+			while (!p->bFinished)
 			{
-				dT1 = timer.GetSTDTimer();
-
-				if ((dT1 - dT0) > (double)Settings.wReadTimeout)
+				for (unsigned int n = 0; n < 4; n++)
 				{
-					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-					PrintFmt(STD_ERR, COLOR_ERROR, "\nProcess aborted while reading frame #%u after specified timeout (%u sec).\n", p->uiCurFrame, Settings.wReadTimeout);
-					Pause();
-					return -1;
-				}
+					dT1 = timer.GetSTDTimer();
 
-				if (_kbhit())
-				{
-					if (_getch() == 0x1B) //ESC
+					if ((dT1 - dT0) > (double)Settings.wReadTimeout)
 					{
-						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("Cancelled.").c_str());
-						PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						PrintFmt(STD_ERR, COLOR_ERROR, "\nProcess aborted while reading frame #%u after specified timeout (%u sec).\n", p->uiCurFrame, Settings.wReadTimeout);
 						Pause();
 						return -1;
 					}
+
+					if (_kbhit())
+					{
+						if (_getch() == 0x1B) //ESC
+						{
+							PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("Cancelled.").c_str());
+							PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
+							Pause();
+							return -1;
+						}
+					}
+
+					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad(p->sStatus).c_str());
+
+					if (p->bFinished)
+						break;
+
+					Sleep(250);
 				}
-
-				PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad(p->sStatus).c_str());
-
-				if (p->bFinished)
-					break;
-
-				Sleep(250);
 			}
-		}
 
-		sAVSError = p->sAVSError;
-		uiFrameInterval = p->uiFrameInterval;
+			sAVSError = p->sAVSError;
+			uiFrameInterval = p->uiFrameInterval;
 
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
-		if ((uiFrameInterval == 0) || (sAVSError != ""))
-		{
-			PrintFmt(STD_ERR, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
-			Pause();
-			return -1;
+			if ((uiFrameInterval == 0) || (sAVSError != ""))
+			{
+				PrintFmt(STD_ERR, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
+				Pause();
+				return -1;
+			}
 		}
 	}
 
@@ -620,9 +636,15 @@ int main(int argc, char* argv[])
 			AVS_temp = 0;
 
 			if (AvisynthInfo.iInterfaceVersion >= 5)
+			{
 				AVS_env->DeleteScriptEnvironment();
+				AVS_env = 0;
+			}
 			else
+			{
 				AVS_env->~IScriptEnvironment();
+				AVS_env = 0;
+			}
 
 			if (Settings.bCreateLog)
 			{
@@ -697,9 +719,15 @@ int main(int argc, char* argv[])
 						AVS_temp = 0;
 			
 						if (IVersion >= 5)
+						{
 							AVS_env->DeleteScriptEnvironment();
+							AVS_env = 0;
+						}
 						else
+						{
 							AVS_env->~IScriptEnvironment();
+							AVS_env = 0;
+						}
 			
 						if (Settings.bCreateLog)
 						{
@@ -728,7 +756,10 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
-		while ((uiFramesToProcess / uiFrameInterval) > 1000000)
+		if ((Settings.bUseFixedFrameInterval) && (uiFramesToProcess <= 10))
+			uiFrameInterval = 1;
+
+		while ((uiFramesToProcess / uiFrameInterval) > 100000)
 			uiFrameInterval *= 10;
 
 		unsigned int uiArraySize = (uiFramesToProcess / uiFrameInterval) + 2;
@@ -919,9 +950,15 @@ int main(int argc, char* argv[])
 		AVS_temp = 0;
 
 		if (AvisynthInfo.iInterfaceVersion >= 5)
+		{
 			AVS_env->DeleteScriptEnvironment();
+			AVS_env = 0;
+		}
 		else
+		{
 			AVS_env->~IScriptEnvironment();
+			AVS_env = 0;
+		}
 
 		sLogBuffer += "\n\n[Runtime info]\n";
 
@@ -1084,6 +1121,7 @@ string ParseINIFile()
 
 	Settings.bCreateLog = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
+	Settings.bUseFixedFrameInterval = FALSE;
 	Settings.iStartFrame = 0;
 	Settings.iStopFrame = -1;
 	Settings.bInvokeDistributor = TRUE;
@@ -1110,6 +1148,7 @@ string ParseINIFile()
 		hINIFile << "UseColor=1\n";
 		hINIFile << "MonitorGPULoad=0\n";
 		hINIFile << "ReadTimeout=120\n";
+		hINIFile << "UseFixedFrameInterval=0\n";
 		hINIFile.flush();
 		hINIFile.close();
 
@@ -1144,6 +1183,12 @@ string ParseINIFile()
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
 				Settings.bPauseBeforeExit = TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 21) == "usefixedframeinterval")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
+				Settings.bUseFixedFrameInterval = TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 17) == "invokedistributor")
@@ -1448,9 +1493,15 @@ void CalculateFrameInterval(PVOID pParam)
 		AVS_temp = 0;
 
 		if (AvisynthInfo.iInterfaceVersion >= 5)
+		{
 			AVS_env->DeleteScriptEnvironment();
+			AVS_env = 0;
+		}
 		else
+		{
 			AVS_env->~IScriptEnvironment();
+			AVS_env = 0;
+		}
 	}
 	catch (AvisynthError err)
 	{
@@ -1481,8 +1532,8 @@ void CalculateFrameInterval(PVOID pParam)
 BOOL GetAvisynthInfo()
 {
 	AvisynthInfo.sDLLPath = "";
+	AvisynthInfo.b64BitVersion = FALSE;
 	AvisynthInfo.bAVSLinkage = FALSE;
-	AvisynthInfo.bIsCompatible = TRUE;
 	AvisynthInfo.bIsMTVersion = FALSE;
 	AvisynthInfo.iInterfaceVersion = 0;
 	AvisynthInfo.bLoadError = FALSE;
@@ -1498,6 +1549,16 @@ BOOL GetAvisynthInfo()
 		{
 			AvisynthInfo.bLoadError = TRUE;
 			return FALSE;
+		}
+
+		if ((li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_IA64) || (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64))
+		{
+			AvisynthInfo.b64BitVersion = TRUE;
+			#ifndef AVS64
+				UnMapAndLoad(&li);
+				AvisynthInfo.bLoadError = TRUE;
+				return FALSE;
+			#endif
 		}
 
 		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
@@ -1522,12 +1583,11 @@ BOOL GetAvisynthInfo()
 	}
 	catch (...)
 	{
-		AvisynthInfo.bIsCompatible = FALSE;
+		AvisynthInfo.bLoadError = TRUE;
 	}
 
-	if (!AvisynthInfo.bIsCompatible)
+	if (AvisynthInfo.bLoadError)
 		return FALSE;
-
 
 	HINSTANCE hDLL = ::LoadLibrary("avisynth");
 	if (!hDLL)
@@ -1590,9 +1650,15 @@ BOOL GetAvisynthInfo()
 		AVS_temp = 0;
 
 		if (AvisynthInfo.iInterfaceVersion >= 5)
+		{
 			AVS_env->DeleteScriptEnvironment();
+			AVS_env = 0;
+		}
 		else
+		{
 			AVS_env->~IScriptEnvironment();
+			AVS_env = 0;
+		}
 	}
 	catch (AvisynthError err)
 	{
@@ -1651,6 +1717,7 @@ void PrintUsage()
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, "Switches:\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -info [-i]           Display clip info only\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -log  [-l]           Create log file\n");
+	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -f                   Use fixed frame interval for measurements\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -gpu                 Monitor GPU usage\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -range=first,last    Specify frame range\n");
 	PrintFmt(STD_OUT, COLOR_EMPHASIS, " -timeout=n           Specify timeout (seconds)\n");

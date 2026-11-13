@@ -1,3 +1,9 @@
+v1.9.6
+- Better detection of attempts to load 64 Bit avisynth.dll with 32 Bit AVSMeter and vice versa
+- Added "UseFixedFrameInterval" ini setting ("-f" command line switch)
+- Updated Avisynth headers to the latest version from (AVS+) Git
+- Other minor fixes
+
 v1.9.5
 - Improved and more elaborate exception handling (Win32 API)
 - Added GPU memory usage to the console display and log
