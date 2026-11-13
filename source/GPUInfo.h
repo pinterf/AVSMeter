@@ -1,20 +1,20 @@
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
-	AVSMeter is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+	AVSMeter is free software. You can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation, either
+	version 3 of the License, or any later version.
 
-	AVSMeter is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+	AVSMeter is distributed in the hope that it will be useful
+	but WITHOUT ANY WARRANTY and without the implied warranty
+	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
-	GPU-Z shared memory interface by W1zzard from techpowerup
 */
+
 
 #if !defined(_GPUINFO_H)
 #define _GPUINFO_H

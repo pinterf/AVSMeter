@@ -1,19 +1,20 @@
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
-	AVSMeter is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+	AVSMeter is free software. You can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation, either
+	version 3 of the License, or any later version.
 
-	AVSMeter is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+	AVSMeter is distributed in the hope that it will be useful
+	but WITHOUT ANY WARRANTY and without the implied warranty
+	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
+
 
 #if !defined(_AVISYNTHINFO_H)
 #define _AVISYNTHINFO_H
@@ -62,7 +63,6 @@ private:
 	__int64             FileSize(string s_file);
 	BOOL                Is64BitOS();
 	string              BrowseDirectory();
-	typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 
 
@@ -121,18 +121,17 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	BOOL bRet = TRUE;
 	s_ErrorMsg = "";
 
-	LOADED_IMAGE li;
-	BOOL bLoaded;
+	PLOADED_IMAGE li;
 
 	//Make a local copy
 	sAVSDLL = s_AVSDLL;
 
 	if (sAVSDLL == "")
-		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
+		li = ImageLoad("avisynth", NULL);
 	else
-		bLoaded = MapAndLoad((LPSTR)sAVSDLL.c_str(), NULL, &li,	TRUE,	TRUE);
+		li = ImageLoad((LPSTR)sAVSDLL.c_str(), NULL);
 
-	if (!bLoaded)
+	if (li == NULL)
 	{
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
@@ -146,14 +145,14 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	try
 	{
 		_set_se_translator(SE_Translator);
-		sDLLPath = utils.StrFormat("%s", li.ModuleName);
+		sDLLPath = utils.StrFormat("%s", li->ModuleName);
 
-		if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
+		if (li->FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
 		{
 			bIs64BitAVSDLL = TRUE;
 			if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
 			{
-				UnMapAndLoad(&li);
+				ImageUnload(li);
 				s_ErrorMsg = "AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
 				return FALSE;
 			}
@@ -162,21 +161,21 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		{
 			if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
 			{
-				UnMapAndLoad(&li);
+				ImageUnload(li);
 				s_ErrorMsg = "AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
 				return FALSE;
 			}
 		}
 
-		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
+		DWORD expVA = li->FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li->FileHeader, li->MappedAddress, expVA, NULL);
 		DWORD rvaNames = pExp->AddressOfNames;
-		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
+		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaNames, NULL);
 
 		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
 			DWORD rvaName = prvaNames[dwName];
-			string sName((char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL));
+			string sName((char *)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaName, NULL));
 			utils.StrToLC(sName);
 
 			if (sName.find("avs_linkage") != string::npos)
@@ -201,7 +200,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 			s_ErrorMsg = "Cannot load avisynth.dll";
 	}
 
-	UnMapAndLoad(&li);
+	ImageUnload(li);
 
 	if (!bRet)
 		return FALSE;
@@ -257,14 +256,6 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	{
 		_set_se_translator(SE_Translator);
 
-		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
-			::FreeLibrary(hDLL);
-			return FALSE;
-		}
-
 		iInterfaceVersion = 8;
 		while (!AVS_env)
 		{
@@ -276,7 +267,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 				return 0;
 			}
 
-			AVS_env = CreateEnvironment(iInterfaceVersion);
+			AVS_env = CreateScriptEnvironment(iInterfaceVersion);
 		}
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
@@ -343,6 +334,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		}
 
 		foo = 0;
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
@@ -602,10 +594,9 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	b_Is64BitDLL = FALSE;
 	s_Msg = "UNCATEGORIZED";		
 
-	LOADED_IMAGE li;
-	BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,	TRUE,	TRUE);
+	PLOADED_IMAGE li = ImageLoad((LPSTR)s_dll.c_str(), NULL);
 
-	if (!bLoaded)
+	if (li == NULL)
 	{
 		s_Msg = utils.SysErrorMessage();
 		if (s_Msg != "")
@@ -620,12 +611,12 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	{
 		_set_se_translator(SE_Translator);
 
-		if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
+		if (li->FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
 		{
 			b_Is64BitDLL = TRUE;
 			if (!PROCESS_64)
 			{
-				UnMapAndLoad(&li);
+				ImageUnload(li);
 				return TRUE;
 			}
 		}
@@ -633,30 +624,30 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 		{
 			if (PROCESS_64)
 			{
-				UnMapAndLoad(&li);
+				ImageUnload(li);
 				return TRUE;
 			}
 		}
 
-		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		DWORD expVA = li->FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 		if (expVA == 0)
 		{
-			UnMapAndLoad(&li);
+			ImageUnload(li);
 			return TRUE;
 		}
 
-		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
+		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li->FileHeader, li->MappedAddress, expVA, NULL);
 		if (pExp == 0)
 		{
-			UnMapAndLoad(&li);
+			ImageUnload(li);
 			return TRUE;
 		}
 
 		DWORD rvaNames = pExp->AddressOfNames;
-		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
+		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaNames, NULL);
 		if (prvaNames == 0)
 		{
-			UnMapAndLoad(&li);
+			ImageUnload(li);
 			return TRUE;
 		}
 
@@ -666,7 +657,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 		{
 			sName = "";
 			DWORD rvaName = prvaNames[dwName];
-			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
+			sName = (char *)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaName, NULL);
 			utils.StrToLC(sName);
 
 			if (sName.find("avisynthplugininit3") != string::npos)
@@ -712,7 +703,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			s_Msg = utils.StrFormat("Unknown exception:\n\"%s\"", s_dll.c_str());
 	}
 
-	UnMapAndLoad(&li);
+	ImageUnload(li);
 
 	return bRet;
 }
@@ -752,14 +743,7 @@ void CAvisynthInfo::TestLoadPlugins()
 			{
 				_set_se_translator(SE_Translator);
 	
-				CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
-				if (!CreateEnvironment)
-				{
-					::FreeLibrary(hDLL);
-					return;
-				}
-
-				AVS_env = CreateEnvironment(iInterfaceVersion);
+				AVS_env = CreateScriptEnvironment(iInterfaceVersion);
 				if (!AVS_env)
 				{
 					::FreeLibrary(hDLL);
@@ -851,6 +835,7 @@ void CAvisynthInfo::TestLoadPlugins()
 
 		if (((uiPlugin % 40) == 0) && (AVS_env != 0))
 		{
+			Sleep(100);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 			AVS_linkage = 0;
@@ -859,6 +844,7 @@ void CAvisynthInfo::TestLoadPlugins()
 
 	if (AVS_env != 0)
 	{
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;

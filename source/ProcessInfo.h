@@ -1,15 +1,15 @@
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
-	AVSMeter is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+	AVSMeter is free software. You can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation, either
+	version 3 of the License, or any later version.
 
-	AVSMeter is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+	AVSMeter is distributed in the hope that it will be useful
+	but WITHOUT ANY WARRANTY and without the implied warranty
+	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
@@ -17,6 +17,7 @@
 	Windows part for CPU usage by (c) 2009 Ben Watson	derived from
 	http://www.philosophicalgeek.com/2009/01/03/determine-cpu-usage-of-current-process-c-and-c/
 */
+
 
 #if !defined(_PROCESSINFO_H)
 #define _PROCESSINFO_H

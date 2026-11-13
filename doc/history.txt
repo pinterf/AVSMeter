@@ -1,3 +1,7 @@
+v2.8.3
+- Changed to implicit loading of avisynth.dll which seems more stable in multithreaded environments
+- Fixed timing issue when deleting IScriptEnvironment objects
+
 v2.8.2
 - Improved command line switch logic/verification
 - Changed ini file default for "LogUseFileSaveDialog" to "0"

@@ -1,19 +1,20 @@
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
-	AVSMeter is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+	AVSMeter is free software. You can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation, either
+	version 3 of the License, or any later version.
 
-	AVSMeter is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+	AVSMeter is distributed in the hope that it will be useful
+	but WITHOUT ANY WARRANTY and without the implied warranty
+	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
+
 
 #include "common.h"
 #include "exception.h"
@@ -76,7 +77,6 @@ struct stPerfData
 	WORD          num_threads;
 };
 
-typedef IScriptEnvironment * __stdcall CREATE_ENV(int);
 
 static CUtils utils;
 static CTimer timer;
@@ -902,15 +902,7 @@ int main(int argc, char* argv[])
 	{
 		_set_se_translator(SE_Translator);
 
-		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
-			PollKeys();
-			return -1;
-		}
-
-		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		AVS_env = CreateScriptEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
@@ -1244,6 +1236,7 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
+			Sleep(100);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -1671,6 +1664,7 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
@@ -2440,15 +2434,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	{
 		_set_se_translator(SE_Translator);
 
-		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			s_error = "Failed to load CreateScriptEnvironment()";
-			::FreeLibrary(hDLL);
-			return uiFrameInterval;
-		}
-
-		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		AVS_env = CreateScriptEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			s_error = "Could not create IScriptenvironment";
@@ -2529,6 +2515,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
