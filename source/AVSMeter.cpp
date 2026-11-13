@@ -973,9 +973,7 @@ int main(int argc, char* argv[])
 		PClip AVS_clip;
 		VideoInfo	AVS_vidinfo;
 
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
 		AVS_main = AVS_env->Invoke("Import", sAVSFile.c_str());
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 
 		if (!AVS_main.IsClip())
 			AVS_env->ThrowError("\"%s\":\nScript did not return a clip", sAVSFile.c_str());
@@ -2477,7 +2475,6 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 			return uiFrameInterval;
 		}
 
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
 		AVSValue AVS_main;

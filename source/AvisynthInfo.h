@@ -56,6 +56,7 @@ private:
 	CUtils              utils;
 	string              sAVSDLL;
 	//set                 <string> stFunctionDuplicates;
+	BOOL                IsGruntFunc(string s_function);
   void                EnumPluginDirs(BOOL b_CustomPluginDir);
 	void                EnumPluginDLLs();
 	void                AddScriptFunctions(string s_avsi_file);
@@ -689,6 +690,8 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 	string sFunctionLC_y = "";
 	string sOrigin_y = "";
 	string sAVSIError = "";
+	string sGruntTest = "";
+
 	size_t spos_y = 0;
 	set <string> stDups;
 	sort(vAllFunctions.begin(), vAllFunctions.end(), CompareNoCase);
@@ -711,6 +714,13 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 			sFunctionLC_y = sFunction_y;
 			utils.StrToLC(sFunctionLC_y);
 
+			
+			if (sOrigin_y == "[PluginFunction]")
+			{
+				if (IsGruntFunc(sFunctionLC_y))
+					continue;
+			}
+
 			if (sFunctionLC_i == sFunctionLC_y)
 			{
 				utils.StrToLC(sArrayEntry_i);
@@ -720,7 +730,6 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 				{
 					sAVSIError += utils.StrFormat("\"%s\" : \"%s\"\n", sFunction_i.c_str(), sOrigin_i.c_str());
 					sAVSIError += utils.StrFormat("\"%s\" : \"%s\"\n", sFunction_y.c_str(), sOrigin_y.c_str());
-
 					stDups.insert(sArrayEntry_i);
 					stDups.insert(sArrayEntry_y);
 				}
@@ -1315,6 +1324,54 @@ BOOL CAvisynthInfo::Is64BitOS()
 		fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
 	if (bWoW64Process)
 		return TRUE;
+
+	return FALSE;
+}
+
+
+BOOL CAvisynthInfo::IsGruntFunc(string s_function)
+{
+	utils.StrToLC(s_function);
+
+	if (s_function == "averagechromau") return TRUE;
+	if (s_function == "averagechromav") return TRUE;
+	if (s_function == "averageluma") return TRUE;
+	if (s_function == "bindstr") return TRUE;
+	if (s_function == "chromaudifference") return TRUE;
+	if (s_function == "chromavdifference") return TRUE;
+	if (s_function == "conditionalfilter") return TRUE;
+	if (s_function == "frameevaluate") return TRUE;
+	if (s_function == "gconditionalfilter") return TRUE;
+	if (s_function == "gframeevaluate") return TRUE;
+	if (s_function == "grtconfig") return TRUE;
+	if (s_function == "gscriptclip") return TRUE;
+	if (s_function == "gwritefile") return TRUE;
+	if (s_function == "gwritefileif") return TRUE;
+	if (s_function == "lumadifference") return TRUE;
+	if (s_function == "rgbdifference") return TRUE;
+	if (s_function == "rgbdifferencefromprevious") return TRUE;
+	if (s_function == "rgbdifferencetonext") return TRUE;
+	if (s_function == "scriptclip") return TRUE;
+	if (s_function == "udifferencefromprevious") return TRUE;
+	if (s_function == "udifferencetonext") return TRUE;
+	if (s_function == "uplanemax") return TRUE;
+	if (s_function == "uplanemedian") return TRUE;
+	if (s_function == "uplanemin") return TRUE;
+	if (s_function == "uplaneminmaxdifference") return TRUE;
+	if (s_function == "vdifferencefromprevious") return TRUE;
+	if (s_function == "vdifferencetonext") return TRUE;
+	if (s_function == "vplanemax") return TRUE;
+	if (s_function == "vplanemedian") return TRUE;
+	if (s_function == "vplanemin") return TRUE;
+	if (s_function == "vplaneminmaxdifference") return TRUE;
+	if (s_function == "writefile") return TRUE;
+	if (s_function == "writefileif") return TRUE;
+	if (s_function == "ydifferencefromprevious") return TRUE;
+	if (s_function == "ydifferencetonext") return TRUE;
+	if (s_function == "yplanemax") return TRUE;
+	if (s_function == "yplanemedian") return TRUE;
+	if (s_function == "yplanemin") return TRUE;
+	if (s_function == "yplaneminmaxdifference") return TRUE;
 
 	return FALSE;
 }
