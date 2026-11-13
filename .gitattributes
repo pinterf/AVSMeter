@@ -1,0 +1,7 @@
+# Preserve imported release bytes, independently of global autocrlf/filter settings.
+/source/** -text -filter -ident !working-tree-encoding
+/doc/** -text -filter -ident !working-tree-encoding
+/AVSMeter.html -text -filter -ident !working-tree-encoding
+/AVSMeter.png -text -filter -ident !working-tree-encoding
+/history.txt -text -filter -ident !working-tree-encoding
+/AVSMeter.ini -text -filter -ident !working-tree-encoding

@@ -426,3 +426,11 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# AVSMeter release artifacts and external compiled dependencies
+*.exe
+*.lib
+*.exp
+/Intermediate/
+/Intermediate32/
+/Intermediate64/
