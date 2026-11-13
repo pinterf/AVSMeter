@@ -1,16 +1,27 @@
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+/*
+	This file is part of AVSMeter,
+	Copyright(C) Groucho2004.
+
+	AVSMeter is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	AVSMeter is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+*/
 
 #include "stdafx.h"
+#include "AvisynthInfo.h"
 #include "utility.h"
 #include "ProcessInfo.h"
 #include "GPUInfo.h"
 #include "timer.h"
-
-#include "avsinc\avisynth.h"
-const AVS_Linkage *AVS_linkage = 0;
 
 #define COLOR_DEFAULT           0
 #define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
@@ -22,20 +33,6 @@ const AVS_Linkage *AVS_linkage = 0;
 #define STD_ERR 1
 
 #define REFRESH_INTERVAL 0.25
-
-struct _AvisynthInfo
-{
-	string sDLLPath;
-	string sPluginDir;
-	BOOL   bIs64BitVersion;
-	int    iInterfaceVersion;
-	string sVersion;
-	string sVersionString;
-	BOOL   bIsMTVersion;
-	BOOL   bAVSLinkage;
-	BOOL   bLoadError;
-};
-
 
 struct _Settings
 {
@@ -76,16 +73,14 @@ struct _ThreadParams
 };
 
 
+CAvisynthInfo AvisynthInfo;
 CUtils utils;
 CTimer timer;
-_AvisynthInfo AvisynthInfo;
 _Settings Settings;
 
 unsigned __stdcall CalculateFrameInterval(void* pParam);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, _PerfData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
 string ParseINIFile();
-int GetAVSInterfaceVersion(string &s_ErrorMsg);
-BOOL GetAvisynthInfo(string &s_ErrorMsg);
 void PrintUsage();
 void Pause();
 void PrintFmt(BYTE bStream, WORD wAttributes, const char *fmt, ...); //bStream: 0 = stdout, 1 = stderr
@@ -118,6 +113,8 @@ int main(int argc, char* argv[])
 	PrintFmt(STD_ERR, COLOR_AVSM_VERSION, "\nAVSMeter %s\n", sAVSMVersion.c_str());
 
 	string sOutBuf = "";
+	string sCommandLine = "";
+	string sCmdToken = "";
 	string sArg = "";
 	string sArgTest = "";
 	string sAVSFile = "";
@@ -131,7 +128,7 @@ int main(int argc, char* argv[])
 	unsigned int uiFrameInterval = 0;
 
 	string sErrorMsg = "";
-	BOOL bRet = GetAvisynthInfo(sErrorMsg);
+	BOOL bRet = AvisynthInfo.GetAvisynthInfo(sErrorMsg);
 
 	if (!bRet)
 	{
@@ -192,8 +189,9 @@ int main(int argc, char* argv[])
 	{
 		sArg = argv[iArg];
 		sArgTest = sArg;
-		utils.StrToLC(sArgTest);
 		utils.StrTrim(sArgTest);
+		sCmdToken = sArgTest;
+		utils.StrToLC(sArgTest);
 
 		if ((sArgTest == "-h") || (sArgTest == "-help"))
 		{
@@ -204,30 +202,35 @@ int main(int argc, char* argv[])
 
 		if ((sArgTest == "-l") || (sArgTest == "-log"))
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.bCreateLog = TRUE;
 			continue;
 		}
 
 		if ((sArgTest == "-i") || (sArgTest == "-info"))
 		{
+			sCommandLine += sCmdToken + " ";
 			bInfoOnly = TRUE;
 			continue;
 		}
 
 		if (sArgTest == "-f")
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.bUseFixedFrameInterval = TRUE;
 			continue;
 		}
 
 		if (sArgTest == "-gpu")
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.bMonitorGPULoad = TRUE;
 			continue;
 		}
 
 		if (sArgTest.substr(0, 7) == "-range=")
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.iStartFrame = 0xFFFFFFFFFF;
 			Settings.iStopFrame = 0xFFFFFFFFFF;
 
@@ -265,6 +268,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest.substr(0, 9) == "-timeout=")
 		{
+			sCommandLine += sCmdToken + " ";
 			sTemp = sArgTest.substr(9);
 			if (utils.IsNumeric(sTemp))
 			{
@@ -281,6 +285,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest.substr(0, 10) == "-priority=")
 		{
+			sCommandLine += sCmdToken + " ";
 			sTemp = sArgTest.substr(10);
 			if (utils.IsNumeric(sTemp))
 			{
@@ -321,6 +326,8 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	utils.StrTrim(sCommandLine);
+
 	if (sAVSFile == "")
 	{
 		PrintFmt(STD_ERR, COLOR_ERROR, "\nNo script file specified\n");
@@ -328,12 +335,14 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+
 	if (Settings.bProcessPriority == 1)
 		::SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 	else if (Settings.bProcessPriority == 3)
 		::SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	else
 		::SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
+
 
 	CGPUInfo gpuinfo;
 	if (Settings.bMonitorGPULoad)
@@ -477,10 +486,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
-		IScriptEnvironment* AVS_env;
-
-		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(hDLL, "CreateScriptEnvironment");
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			PrintFmt(STD_ERR, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
@@ -488,7 +494,7 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
-		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			PrintFmt(STD_ERR, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
@@ -541,6 +547,15 @@ int main(int argc, char* argv[])
 		sLogBuffer += "[General info]\n";
 		sOutBuf = utils.StrFormat("Log file created with:   AVSMeter %s", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
+
+		sOutBuf = utils.StrFormat("Script file:             %s", sAVSFile.c_str());
+		sLogBuffer += sOutBuf + "\n";
+
+		if (sCommandLine != "")
+		{
+			sOutBuf = utils.StrFormat("Command line switches:   %s", sCommandLine.c_str());
+			sLogBuffer += sOutBuf + "\n";
+		}
 
 		sOutBuf = utils.StrFormat("Avisynth version:        %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
@@ -1506,17 +1521,14 @@ unsigned __stdcall CalculateFrameInterval(void* pParam)
 
 	try
 	{
-		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
-		IScriptEnvironment* AVS_env;
-
-		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(p->hAVSDLL, "CreateScriptEnvironment");
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(p->hAVSDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			p->sAVSError = "Failed to load CreateScriptEnvironment()";
 			_endthreadex(0);
 		}
 
-		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			p->sAVSError = "Could not create IScriptenvironment";
@@ -1621,271 +1633,6 @@ unsigned __stdcall CalculateFrameInterval(void* pParam)
 
 	_endthreadex(0);
 	return 0;
-}
-
-
-int GetAVSInterfaceVersion(string &s_ErrorMsg)
-{
-	int iInterfaceVersion = 0;
-	s_ErrorMsg = "";
-
-	HINSTANCE hDLL = ::LoadLibrary("avisynth");
-	if (!hDLL)
-	{
-		s_ErrorMsg = utils.OSErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-
-		return 0;
-	}
-
-	try
-	{
-		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
-		IScriptEnvironment* AVS_env;
-
-		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
-			::FreeLibrary(hDLL);
-			return 0;
-		}
-
-		iInterfaceVersion = 5;
-		AVS_env = CreateEnvironment(iInterfaceVersion);
-		if (!AVS_env)
-		{
-			s_ErrorMsg = "Could not create IScriptenvironment (AVISYNTH_INTERFACE_VERSION = 5)";
-			::FreeLibrary(hDLL);
-			return 0;
-		}
-
-		try
-		{
-			AVS_env->CheckVersion(6);
-			iInterfaceVersion = 6;
-			AVS_env->CheckVersion(7);
-			iInterfaceVersion = 7;
-		}
-		catch (AvisynthError)
-		{
-		}
-
-		AVS_env->DeleteScriptEnvironment();
-		AVS_env = 0;
-	}
-	catch (AvisynthError err)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
-	}
-	catch (...)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.OSErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-	}
-
-	::FreeLibrary(hDLL);
-
-	return iInterfaceVersion;
-}
-
-
-BOOL GetAvisynthInfo(string &s_ErrorMsg)
-{
-	AvisynthInfo.sDLLPath = "";
-	AvisynthInfo.sPluginDir = "";
-	AvisynthInfo.bIs64BitVersion = FALSE;
-	AvisynthInfo.bIsMTVersion = FALSE;
-	AvisynthInfo.iInterfaceVersion = 0;
-	AvisynthInfo.sVersion = "";
-	AvisynthInfo.sVersionString = "Unknown Avisynth Version";
-	AvisynthInfo.bAVSLinkage = FALSE;
-	AvisynthInfo.bLoadError = FALSE;
-
-	BOOL bRet = TRUE;
-	s_ErrorMsg = "";
-
-	LOADED_IMAGE li;
-	BOOL bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
-	if (!bLoaded)
-	{
-		AvisynthInfo.bLoadError = TRUE;
-		s_ErrorMsg = utils.OSErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-
-		return FALSE;
-	}
-
-	try
-	{
-		HANDLE hFile = CreateFile(li.ModuleName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
-
-		if (hFile == INVALID_HANDLE_VALUE)
-			AvisynthInfo.sDLLPath = utils.StrFormat("%s", li.ModuleName);
-		else
-		{
-			if (!utils.GetFileNameFromHandle(hFile, AvisynthInfo.sDLLPath))
-				AvisynthInfo.sDLLPath = utils.StrFormat("%s", li.ModuleName);
-
-			CloseHandle(hFile);
-		}
-
-		AvisynthInfo.sVersion = utils.GetFileVersion(AvisynthInfo.sDLLPath);
-
-		if ((li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_IA64) || (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64))
-		{
-			AvisynthInfo.bIs64BitVersion = TRUE;
-			#ifndef AVS64
-				UnMapAndLoad(&li);
-				s_ErrorMsg = "Cannot load avisynth.dll";
-				return FALSE;
-			#endif
-		}
-		else //32 Bit Avisynth DLL
-		{
-			#ifdef AVS64
-				UnMapAndLoad(&li);
-				s_ErrorMsg = "Cannot load avisynth.dll";
-				return FALSE;
-			#endif
-		}
-
-		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
-		DWORD rvaNames = pExp->AddressOfNames;
-		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
-		string sName = "";
-		int iPos = 0;
-
-		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
-		{
-			DWORD rvaName = prvaNames[dwName];
-			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-			utils.StrToLC(sName);
-			iPos = (int)sName.find("avs_linkage");
-			if (iPos >= 0)
-			{
-				AvisynthInfo.bAVSLinkage = TRUE;
-				break;
-			}
-		}
-	}
-	catch (...)
-	{
-		bRet = FALSE;
-		s_ErrorMsg = utils.OSErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-	}
-
-	UnMapAndLoad(&li);
-
-	if (!AvisynthInfo.bAVSLinkage)
-	{
-		bRet = FALSE;
-		s_ErrorMsg = "Avisynth version is too old. Please update to at least\nAvisynth 2.6 Alpha4 or Avisynth+ r1576.";
-	}
-
-	if (!bRet)
-		return FALSE;
-
-	AvisynthInfo.iInterfaceVersion = GetAVSInterfaceVersion(s_ErrorMsg);
-	if (AvisynthInfo.iInterfaceVersion == 0)
-		return FALSE;
-
-
-	HINSTANCE hDLL = ::LoadLibrary("avisynth");
-	if (!hDLL)
-	{
-		s_ErrorMsg = utils.OSErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-
-		return FALSE;
-	}
-
-	try
-	{
-		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
-		IScriptEnvironment* AVS_env;
-
-		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
-			::FreeLibrary(hDLL);
-			return FALSE;
-		}
-
-		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
-		if (!AVS_env)
-		{
-			s_ErrorMsg = "Could not create IScriptenvironment";
-			::FreeLibrary(hDLL);
-			return FALSE;
-		}
-
-		AVS_linkage = AVS_env->GetAVSLinkage();
-		AVSValue foo;
-		try
-		{
-			AvisynthInfo.sVersionString = utils.StrFormat("%s", AVS_env->Invoke("VersionString", AVSValue(&foo, 0)).AsString());
-		}
-		catch (IScriptEnvironment::NotFound)
-		{
-			AvisynthInfo.sVersionString = "Unknown Avisynth Version";
-		}
-
-		try
-		{
-			AvisynthInfo.sPluginDir = utils.StrFormat("%s", (char*)AVS_env->GetVar("$PluginDir$").AsString());
-		}
-		catch (...)
-		{
-			AvisynthInfo.sPluginDir = "";
-		}
-
-		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
-			AvisynthInfo.bIsMTVersion = TRUE;
-
-		foo = 0;
-		AVS_env->DeleteScriptEnvironment();
-		AVS_env = 0;
-	}
-	catch (AvisynthError err)
-	{
-		bRet = FALSE;
-		s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
-	}
-	catch (...)
-	{
-		bRet = FALSE;
-		s_ErrorMsg = utils.OSErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-	}
-
-	AVS_linkage = 0;
-	::FreeLibrary(hDLL);
-
-	return bRet;
 }
 
 

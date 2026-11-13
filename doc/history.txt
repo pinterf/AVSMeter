@@ -1,3 +1,9 @@
+v2.0.2
+- Added more info to the log file (script name, command line switches, plugin directory)
+- Everything pertaining to information about the loaded Avisynth DLL including utility
+  functions is now wrapped into one class.
+- Various fixes
+
 v2.0.1
 - Command line processing improvements
 - Detection of outdated INI file didn't work properly. Fixed.

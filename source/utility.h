@@ -1,7 +1,21 @@
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+/*
+	This file is part of AVSMeter,
+	Copyright(C) Groucho2004.
+
+	AVSMeter is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	AVSMeter is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
+*/
+
 
 #ifndef _UTILS_H
 #define _UTILS_H
@@ -42,7 +56,6 @@
 #define BG_GREY			BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED
 #define BG_WHITE		BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED | BACKGROUND_INTENSITY
 
-#define BUFSIZE 2048
 
 class CUtils
 {
@@ -55,7 +68,6 @@ public:
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
-	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 
 	//string functions
 	void           StrTrimLeft(string &s_string);
@@ -286,15 +298,23 @@ string CUtils::GetFileVersion(string s_file)
 
 string CUtils::OSErrorMessage()
 {
-	LPVOID lpMsg;
 	DWORD dwLastError = GetLastError();
+	char *szMsg;
 
 	if (dwLastError == ERROR_SUCCESS)
 		return "";
 		
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),	(LPTSTR)&lpMsg, 0,	NULL);
-	
-	return (LPTSTR)lpMsg;
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+								NULL,
+								dwLastError,
+								MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+								(LPTSTR)&szMsg,
+								0,
+								NULL);
+
+	string sMsg(szMsg);
+
+	return sMsg;
 }
 
 
@@ -325,62 +345,6 @@ BOOL CUtils::IsNumeric(string s_string)
 	}
 
 	return TRUE;
-}
-
-
-BOOL CUtils::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
-{
-	BOOL bSuccess = FALSE;
-	char pszFilename[MAX_PATH + 1];
-	HANDLE hFileMap;
-
-	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
-
-	if (hFileMap) 
-	{
-		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-		if (pMem) 
-		{
-			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
-			{
-				char szTemp[BUFSIZE];
-				szTemp[0] = '\0';
-				if (GetLogicalDriveStrings(BUFSIZE - 1, szTemp))
-				{
-					char szName[MAX_PATH];
-					char szDrive[3] = TEXT(" :");
-					BOOL bFound = FALSE;
-					char* p = szTemp;
-
-					do 
-					{
-						*szDrive = *p;
-						if (QueryDosDevice(szDrive, szName, MAX_PATH))
-						{
-							size_t uNameLen = strlen(szName);
-							if (uNameLen < MAX_PATH)
-							{
-								bFound = _strnicmp(pszFilename, szName, uNameLen) == 0 && *(pszFilename + uNameLen) == '\\';
-								if (bFound)
-								{
-									sFileName = StrFormat("%s%s", szDrive, pszFilename+uNameLen);
-								}
-							}
-						}
-
-						while (*p++);
-					} while (!bFound && *p); // end of string
-				}
-			}
-			bSuccess = TRUE;
-			UnmapViewOfFile(pMem);
-		} 
-		CloseHandle(hFileMap);
-	}
-	else
-	  return FALSE;
-
-  return (bSuccess);
 }
 
 
