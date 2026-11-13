@@ -60,6 +60,8 @@ public:
 	BOOL      bUseUTC;
 	BOOL      bLogFileDateTimeSuffix;
 	BOOL      bSimpleMode;
+	BOOL      bCreateDependencyLog;
+	BOOL      bCreateFunctionLog;
 };
 
 
@@ -739,20 +741,26 @@ int main(int argc, char* argv[])
 					hInfoFile.close();
 				}
 
-				ofstream hFunctionsFile(sFunctionsFile.c_str());
-				if (hFunctionsFile.is_open())
-			  {
-					hFunctionsFile << sLogBufferFunctions;
-					hFunctionsFile.flush();
-					hFunctionsFile.close();
+				if (Settings.bCreateFunctionLog)
+				{
+					ofstream hFunctionsFile(sFunctionsFile.c_str());
+					if (hFunctionsFile.is_open())
+				  {
+						hFunctionsFile << sLogBufferFunctions;
+						hFunctionsFile.flush();
+						hFunctionsFile.close();
+					}
 				}
 
-				ofstream hDepsFile(sDepsFile.c_str());
-				if (hDepsFile.is_open())
-			  {
-					hDepsFile << sLogBufferDeps;
-					hDepsFile.flush();
-					hDepsFile.close();
+				if (Settings.bCreateDependencyLog)
+				{
+					ofstream hDepsFile(sDepsFile.c_str());
+					if (hDepsFile.is_open())
+				  {
+						hDepsFile << sLogBufferDeps;
+						hDepsFile.flush();
+						hDepsFile.close();
+					}
 				}
 			}
 		}
@@ -824,7 +832,7 @@ int main(int argc, char* argv[])
 		if (!AVS_main.IsClip())
 			AVS_env->ThrowError("\"%s\":\nScript did not return a clip", sAVSFile.c_str());
 
-		BOOL bIsMTVersion = TRUE;
+		BOOL bIsSETMTVersion = TRUE;
 		int iMTMode = 0;
 		try
 		{
@@ -835,7 +843,7 @@ int main(int argc, char* argv[])
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
-			bIsMTVersion = FALSE;
+			bIsSETMTVersion = FALSE;
 		}
 
 		AVS_clip = AVS_main.AsClip();
@@ -1008,6 +1016,7 @@ int main(int argc, char* argv[])
 		}
 		else
 			sOutBuf = "Framerate:                         n/a";
+
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
@@ -1082,14 +1091,14 @@ int main(int argc, char* argv[])
 				case VideoInfo::CS_YUVA444PS:   sOutBuf = " YUVA444PS"; break;
 				case VideoInfo::CS_YUVA422PS:   sOutBuf = " YUVA422PS"; break;
 				case VideoInfo::CS_YUVA420PS:   sOutBuf = " YUVA420PS"; break;
-				default:                        sOutBuf = "  Unknown";
+				default:                        sOutBuf = "   Unknown";
 			}
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		if (bIsMTVersion)
+		if (bIsSETMTVersion)
 		{
 			sOutBuf = utils.StrFormat("Active MT Mode:                      %d", iMTMode);
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
@@ -1098,8 +1107,8 @@ int main(int argc, char* argv[])
 
 		sOutBuf = "Audio channels:    ";
 		sLogBuffer += sOutBuf;
-		if (AVS_vidinfo.AudioChannels())
-			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.AudioChannels());
+		if (AVS_vidinfo.nchannels)
+			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.nchannels);
 		else
 			sOutBuf = "                n/a";
 
@@ -1107,17 +1116,23 @@ int main(int argc, char* argv[])
 
 		sOutBuf = "Audio bits/sample: ";
 		sLogBuffer += sOutBuf;
-		if (AVS_vidinfo.SampleType())
-			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.SampleType());
-		else
-			sOutBuf = "                n/a";
+
+		switch (AVS_vidinfo.sample_type)
+		{
+			case SAMPLE_INT8:  sOutBuf = "                  8";         break;
+			case SAMPLE_INT16: sOutBuf = "                 16";         break;
+			case SAMPLE_INT24: sOutBuf = "                 24";         break;
+			case SAMPLE_INT32: sOutBuf = "                 32";         break;
+			case SAMPLE_FLOAT: sOutBuf = "                 32 (Float)"; break;
+			default:           sOutBuf = "                n/a";
+		}
 
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = "Audio sample rate: ";
 		sLogBuffer += sOutBuf;
-		if (AVS_vidinfo.SamplesPerSecond())
-			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.SamplesPerSecond());
+		if (AVS_vidinfo.audio_samples_per_second)
+			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.audio_samples_per_second);
 		else
 			sOutBuf = "                n/a";
 
@@ -1795,6 +1810,8 @@ string ParseINIFile()
 	Settings.bUseUTC = TRUE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
+	Settings.bCreateDependencyLog = FALSE;
+	Settings.bCreateFunctionLog = FALSE;
 
 	if (!utils.FileExists(sINIFile)) //No ini file present, create the file with defaults
 	{
@@ -1978,7 +1995,26 @@ string ParseINIFile()
 				return sRet;
 			}
 			Settings.bConUseStdOut = (iBoolValue == 0) ? FALSE : TRUE;
+		}
 
+		if (sCurrentLine.substr(0, 19) == "createdependencylog")
+		{
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bCreateDependencyLog = (iBoolValue == 0) ? FALSE : TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 17) == "createfunctionlog")
+		{
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bCreateFunctionLog = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 16) == "logestimatedtime")
@@ -2098,12 +2134,12 @@ BOOL WriteINIFile(string &s_inifile)
 	if (!hINIFile.is_open())
 		return FALSE;
 
-	sComment = "# This INI file can be used to set defaults for AVSMeter or configure settings that are not\n";
+	sComment =  "# This INI file can be used to set defaults for AVSMeter or configure settings that are not\n";
 	sComment += "# implemented as command line switches.\n";
 	sComment += "# Note: Command line switches override INI file settings.\n";
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"LogDirectory\"\n";
+	sComment =  "# \"LogDirectory\"\n";
 	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
 	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\" (without the quotes). The default is an empty string\n";
 	sComment += "# which means that all log files are stored in the script directory or, in case the \"-avsinfo\"\n";
@@ -2111,31 +2147,31 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"AVSDLL\"\n";
+	sComment =  "# \"AVSDLL\"\n";
 	sComment += "# The user can specify the avisynth.dll to be used. This has to be a fully qualified path, for example\n";
 	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\" (without the quotes). The default is an empty string which\n";
 	sComment += "# means that AVSMeter will attempt to load avisynth.dll through the standard Windows search hierarchy.\n";
 	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"DisplayFPS\" (0 or 1)\n";
+	sComment =  "# \"DisplayFPS\" (0 or 1)\n";
 	sComment += "# If set to \"1\", frames/second is printed to the console.\n";
 	sCurrentLine = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"DisplayTPF\" (0 or 1):\n";
+	sComment =  "# \"DisplayTPF\" (0 or 1):\n";
 	sComment += "# If set to \"1\", time/frame (in milliseconds) is printed to the console.\n";
 	sCurrentLine = utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"DisplayEfficiencyIndex\" (0 or 1):\n";
+	sComment =  "# \"DisplayEfficiencyIndex\" (0 or 1):\n";
 	sComment += "# If set to \"1\", the result of (FPS / CPU usage) is printed to the console. This ratio indicates the\n";
 	sComment += "# efficiency of a script (higher = better) and is useful for comparing different versions of a script\n";
 	sComment += "# or scripts that are supposed to do the same thing.\n";
 	sCurrentLine = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"CreateLog\" (0 or 1):\n";
+	sComment =  "# \"CreateLog\" (0 or 1):\n";
 	sComment += "# Creates a log file with various details about the installed Avisynth version, clip info, runtime\n";
 	sComment += "# results, a copy of the script and a performance data table with the measured details about each\n";
 	sComment += "# frame/frame interval. The log file is created in the same directory as the script unless the INI\n";
@@ -2145,7 +2181,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"CreateCSV\" (0 or 1):\n";
+	sComment =  "# \"CreateCSV\" (0 or 1):\n";
 	sComment += "# Creates a CSV file containing the performance data formatted as comma-separated values for direct\n";
 	sComment += "# import in Excel or a similar spread sheet program (OpenOffice, LibreOffice). The CSV file is created\n";
 	sComment += "# in the same directory as the script unless the INI option \"LogDirectory\" points to a valid\n";
@@ -2154,28 +2190,28 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"LogFileDateTimeSuffix\" (0 or 1):\n";
+	sComment =  "# \"LogFileDateTimeSuffix\" (0 or 1):\n";
 	sComment += "# If set to \"1\", adds a date/time suffix to all .log and .csv files.\n";
 	sCurrentLine = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"PauseBeforeExit\" (0 or 1):\n";
+	sComment =  "# \"PauseBeforeExit\" (0 or 1):\n";
 	sComment += "# If set to \"1\", pauses the program at the end and returns to the console prompt only after pressing \"ESC\".\n";
 	sCurrentLine = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"FrameRange\" (first,last):\n";
+	sComment =  "# \"FrameRange\" (first,last):\n";
 	sComment += "# Specify the range of frames to be processed. \"FrameRange=0,-1\" processes all frames in the script.\n";
 	sComment += "# \"FrameRange=1500,1999\" processes 500 frames starting at frame 1500.\n";
 	sCurrentLine = utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"AllowOnlyOneInstance\" (0 or 1):\n";
+	sComment =  "# \"AllowOnlyOneInstance\" (0 or 1):\n";
 	sComment += "# If set to \"1\", only one instance of AVSMeter can run at the same time.\n";
 	sCurrentLine = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"MonitorGPULoad\" (0 or 1):\n";
+	sComment =  "# \"MonitorGPULoad\" (0 or 1):\n";
 	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
 	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
 	sComment += "# shared memory space. GPU-Z has to be running (the window can be minimized to the system tray) before\n";
@@ -2183,19 +2219,19 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bMonitorGPULoad);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"ProcessPriority\" (1, 2 or 3):\n";
+	sComment =  "# \"ProcessPriority\" (1, 2 or 3):\n";
 	sComment += "# Specify the process priority for AVSMeter and all attached processes (1: low, 2: normal, 3: high).\n";
 	sCurrentLine = utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"TimeLimit\" (1 - 999999):\n";
+	sComment =  "# \"TimeLimit\" (1 - 999999):\n";
 	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates. A\n";
 	sComment += "# setting of \"-1\" disables this feature. This setting is ignored when the program is invoked with\n";
 	sComment += "# the \"-i\" (\"-info\") switch which only determines the clip properties.\n";
 	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"InvokeDistributor\" (0 or 1):\n";
+	sComment =  "# \"InvokeDistributor\" (0 or 1):\n";
 	sComment += "# For users of SEt's Avisynth MT: If set to \"1\", adds the \"Distributor\" call internally if the\n";
 	sComment += "# script uses MT Mode 1~4 (via \"SetMTMode\"). Note: Setting this value to \"1\" and adding the\n";
 	sComment += "# Distributor call in the script will unnecessarily increase the number of threads which leads to\n";
@@ -2204,27 +2240,39 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"UseUTC\" (0 or 1):\n";
+	sComment =  "# \"UseUTC\" (0 or 1):\n";
 	sComment += "# If set to \"1\", file timestamps are displayed as UTC (Coordinated Universal Time)\n";
 	sCurrentLine = utils.StrFormat("UseUTC=%u\n", Settings.bUseUTC);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"ConUseSTDOUT\" (0 or 1):\n";
+	sComment =  "# \"ConUseSTDOUT\" (0 or 1):\n";
 	sComment += "# If set to \"1\", directs all console output to stdout. The default setting \"0\" uses stderr except\n";
 	sComment += "# the \"command line usage\" message which always goes through stdout.\n";
 	sCurrentLine = utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# \"UseColor\" (0 or 1):\n";
+	sComment =  "# \"UseColor\" (0 or 1):\n";
 	sComment += "# If set to \"0\", coloring of the console output is disabled.\n";
 	sCurrentLine = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# Individual request (http://forum.doom9.org/showpost.php?p=1639610&postcount=96)\n";
+	sComment =  "# \"CreateDependencyLog\" (0 or 1):\n";
+	sComment += "# If set to \"1\", the switch combination \"-avsinfo -log\" creates an additional log file with\n";
+	sComment += "# a list of DLL dependencies for avisynth.dll and all auto-load plugins (\"avsdeps.log\")\n";
+	sCurrentLine = utils.StrFormat("CreateDependencyLog=%u\n", Settings.bCreateDependencyLog);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment =  "# \"CreateFunctionLog\" (0 or 1):\n";
+	sComment += "# If set to \"1\", the switch combination \"-avsinfo -log\" creates an additional log file with\n";
+	sComment += "# a list of internal and external Avisynth functions (\"avsfunctions.log\")\n";
+	sCurrentLine = utils.StrFormat("CreateFunctionLog=%u\n", Settings.bCreateFunctionLog);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment =  "# Individual request (http://forum.doom9.org/showpost.php?p=1639610&postcount=96)\n";
 	sCurrentLine = utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment = "# Individual request (http://forum.doom9.org/showpost.php?p=1728756&postcount=330)\n";
+	sComment =  "# Individual request (http://forum.doom9.org/showpost.php?p=1728756&postcount=330)\n";
 	sCurrentLine = utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 

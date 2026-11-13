@@ -1093,9 +1093,6 @@ void CAvisynthInfo::AVSCheckPlugins()
 
 	for (uiPlugin = 0; uiPlugin < vPlugins.size(); uiPlugin++)
 	{
-		if (bMaxPlugsExceeded)
-			break;
-
 		sPlugin = vPlugins[uiPlugin];
 		spos = sPlugin.find("|");
 		if (spos < 3)
@@ -1110,6 +1107,9 @@ void CAvisynthInfo::AVSCheckPlugins()
 		GetDLLDependencies(sPlugin, sDependencies, sFailedDependencies, sHint);
 		if (sDependencies != "")
 			vPluginDependencies.push_back(sDependencies);
+
+		if (bMaxPlugsExceeded)
+			continue;
 
 		bPlugError = FALSE;
 		sPlugError = "";
