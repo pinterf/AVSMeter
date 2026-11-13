@@ -34,13 +34,15 @@ public:
 
 	struct Sensors
 	{
-		DWORD GPUClock;
-		DWORD MEMClock;
-		BYTE  GPULoad;
-		BYTE  VPULoad;
-		DWORD MemoryUsedGeneral;
-		DWORD MemoryUsedDedicated;
-		DWORD MemoryUsedDynamic;
+		DWORD  GPUClock;
+		DWORD  MEMClock;
+		BYTE   GPULoad;
+		BYTE   VPULoad;
+		BYTE   GPUTemp;
+		DWORD  MemoryUsedGeneral;
+		DWORD  MemoryUsedDedicated;
+		DWORD  MemoryUsedDynamic;
+		BOOL   ReadError;
 	} sensors;
 
 	struct Data
@@ -99,6 +101,7 @@ private:
 CGPUInfo::CGPUInfo()
 {
 	sensors.GPULoad = 0;
+	sensors.ReadError = FALSE;
 	sError = "";
 	pMapAddr = NULL;
 	hMapFile = NULL;
@@ -129,7 +132,7 @@ void CGPUInfo::GPUZInit()
 		return;
 	}
 
-	Sleep(100);
+	Sleep(50);
 
 	if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
 	{
@@ -141,7 +144,7 @@ void CGPUInfo::GPUZInit()
 		return;
 	}
 
-	Sleep(100);
+	Sleep(50);
 	bInitialized = TRUE;
 	ReadData();
 
@@ -209,6 +212,9 @@ void CGPUInfo::ReadData()
 void CGPUInfo::ReadSensors()
 {
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
+
+	if (lpMem->version == 0)
+		sensors.ReadError = TRUE;
 
 	sensors.GPULoad = 0;
 	sensors.MemoryUsedGeneral = 0;

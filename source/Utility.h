@@ -65,6 +65,7 @@ public:
 	string         SysErrorMessage();
 	__int64        FileSize(string s_file);
 	string         GetFileVersion(string s_file);
+	string         GetProductVersion(string s_file);
 	string         GetFileTimeStamp(string s_file);
 	BOOL           FileExists(string s_file);
 	BOOL           DirectoryExists(string s_dir);
@@ -331,9 +332,7 @@ string CUtils::StrFormatTPF(double d_frametime)
 string CUtils::GetFileVersion(string s_file)
 {
 	string sFileVersion = "n/a";
-	string sProductVersion = "n/a";
 	vector<char> szFileName(MAX_PATH + 1);
-
 
 	if (s_file == "")
 	{
@@ -349,7 +348,7 @@ string CUtils::GetFileVersion(string s_file)
 	DWORD dummy;
 	DWORD dwSize = GetFileVersionInfoSize(&szFileName[0], &dummy);
 	if (dwSize == 0)
-		return "n/a";
+		return sFileVersion;
 
 	BYTE* VersionInfoBuffer = new BYTE[dwSize];
 	if (!GetFileVersionInfo(&szFileName[0], 0, dwSize, (VOID*)VersionInfoBuffer))
@@ -366,16 +365,53 @@ string CUtils::GetFileVersion(string s_file)
 		return sFileVersion;
 	}
 
-	sFileVersion =    StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
+	sFileVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
+	delete [] VersionInfoBuffer;
+
+	return sFileVersion;
+}
+
+
+string CUtils::GetProductVersion(string s_file)
+{
+	string sProductVersion = "n/a";
+	vector<char> szFileName(MAX_PATH + 1);
+
+	if (s_file == "")
+	{
+		if (GetModuleFileName(NULL, &szFileName[0], (DWORD)szFileName.size() - 1) == 0)
+			return sProductVersion;
+	}
+	else
+	{
+		if (_snprintf(&szFileName[0], szFileName.size() - 1, "%s", s_file.c_str()) < 0)
+			return sProductVersion;
+	}
+
+	DWORD dummy;
+	DWORD dwSize = GetFileVersionInfoSize(&szFileName[0], &dummy);
+	if (dwSize == 0)
+		return sProductVersion;
+
+	BYTE* VersionInfoBuffer = new BYTE[dwSize];
+	if (!GetFileVersionInfo(&szFileName[0], 0, dwSize, (VOID*)VersionInfoBuffer))
+	{
+		delete [] VersionInfoBuffer;
+		return sProductVersion;
+	}
+
+	UINT uiLen;
+	VS_FIXEDFILEINFO* pFixedInfo = 0;
+	if (!VerQueryValue(VersionInfoBuffer, "\\", (LPVOID*)(&pFixedInfo), &uiLen))
+	{
+		delete [] VersionInfoBuffer;
+		return sProductVersion;
+	}
+
 	sProductVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwProductVersionMS), LOWORD(pFixedInfo->dwProductVersionMS), HIWORD(pFixedInfo->dwProductVersionLS), LOWORD(pFixedInfo->dwProductVersionLS));
 	delete [] VersionInfoBuffer;
 
-	if (sFileVersion != "0.0.0.0")
-		return sFileVersion;
-	if (sProductVersion != "0.0.0.0")
-		return sProductVersion;
-
-	return "n/a";
+	return sProductVersion;
 }
 
 

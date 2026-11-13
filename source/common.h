@@ -48,5 +48,6 @@ using std::getline;
 using std::remove;
 using std::exception;
 
+const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
 
 #endif //_COMMON_H

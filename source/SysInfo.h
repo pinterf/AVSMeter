@@ -27,21 +27,21 @@ class CSysInfo
 {
 public:
 	CSysInfo();
-	virtual        ~CSysInfo();
-	string         GetOSVersion();
-	string         GetFormattedSystemDateTime();
-	BOOL           Is64BitOS();
-	void           GetCPUInfo();
-	string         CPUBrandString;
-	string         CPUVendorString;
-	string         CPUFeatures;
-	BOOL           bCPUIDSuccess;
+	virtual           ~CSysInfo();
+	string            GetOSVersion();
+	string            GetFormattedSystemDateTime();
+	BOOL              Is64BitOS();
+	void              GetCPUInfo();
+	string            CPUBrandString;
+	string            CPUVendorString;
+	string            CPUFeatures;
+	BOOL              bCPUIDSuccess;
 
 private:
 	CUtils            utils;
 	void              cpuid(int *regs, int info_type);
 	unsigned __int64  xgetbv (int ctr);
-	string            GetCPUFeatures();
+	void              GetCPUFeatures();
 	string            RemoveMultipleWhiteSpaces(string s);
 };
 
@@ -173,14 +173,14 @@ void CSysInfo::GetCPUInfo()
 	CPUBrandString.erase(0, CPUBrandString.find_first_not_of(" \t\n\r"));
 	CPUBrandString = RemoveMultipleWhiteSpaces(CPUBrandString);
 
-	CPUFeatures = GetCPUFeatures();
+	GetCPUFeatures();
 	bCPUIDSuccess = TRUE;
 
 	return;
 }
 
 
-string CSysInfo::GetCPUFeatures()
+void CSysInfo::GetCPUFeatures()
 {
 	BOOL CPU_FEATURE_MMX =        FALSE;
 	BOOL CPU_FEATURE_SSE =        FALSE;
@@ -206,6 +206,10 @@ string CSysInfo::GetCPUFeatures()
 	BOOL CPU_FEATURE_MMXEXT =     FALSE;
 	BOOL CPU_FEATURE_FMA3 =       FALSE;
 	BOOL CPU_FEATURE_FMA4 =       FALSE;
+	BOOL CPU_FEATURE_F16C =       FALSE;
+	BOOL CPU_FEATURE_MOVBE =      FALSE;
+	BOOL CPU_FEATURE_POPCNT =     FALSE;
+	BOOL CPU_FEATURE_AES =        FALSE;
 
 	int CPURegs[4];
 	cpuid(CPURegs, 0);
@@ -226,6 +230,10 @@ string CSysInfo::GetCPUFeatures()
 		CPU_FEATURE_SSE42  = (CPURegs[2] & (1 << 20)) != 0;
 		CPU_FEATURE_AVX    = (CPURegs[2] & (1 << 28)) != 0;
 		CPU_FEATURE_FMA3   = (CPURegs[2] & (1 << 12)) != 0;
+		CPU_FEATURE_MOVBE  = (CPURegs[2] & (1 << 22)) != 0;
+		CPU_FEATURE_POPCNT = (CPURegs[2] & (1 << 23)) != 0;
+		CPU_FEATURE_AES    = (CPURegs[2] & (1 << 25)) != 0;
+		CPU_FEATURE_F16C   = (CPURegs[2] & (1 << 29)) != 0;
 	}
 
 	if (nIds >= 0x00000007)
@@ -254,11 +262,8 @@ string CSysInfo::GetCPUFeatures()
 	}
 
 
-	BOOL OS_AVX =        FALSE;
-	BOOL OS_AVX2 =       FALSE;
-	BOOL OS_AVX512 =     FALSE;
-	BOOL OS_FMA3 =       FALSE;
-	BOOL OS_FMA4 =       FALSE;
+	BOOL OS_FEATURE_AVX =        FALSE;
+	BOOL OS_FEATURE_AVX512 =     FALSE;
 
 	#ifndef _XCR_XFEATURE_ENABLED_MASK
 	#define _XCR_XFEATURE_ENABLED_MASK 0
@@ -272,122 +277,111 @@ string CSysInfo::GetCPUFeatures()
 		xcrFeatureMask = xgetbv(_XCR_XFEATURE_ENABLED_MASK);
 
 	if ((xcrFeatureMask & 0x6) == 0x6)
-		OS_AVX = TRUE;
-
-	OS_AVX2 = OS_AVX;
-	OS_FMA3 = OS_AVX;
-	OS_FMA4 = OS_AVX;
+		OS_FEATURE_AVX = TRUE;
 
 	if ((xcrFeatureMask & (0x7 << 5)) && (xcrFeatureMask & (0x3 << 1)))
-		OS_AVX512 = OS_AVX;
+		OS_FEATURE_AVX512 = OS_FEATURE_AVX;
 
-	string sFeatures = "";
-	if (CPU_FEATURE_MMX)                     sFeatures += "MMX, ";
-	if (CPU_FEATURE_SSE)                     sFeatures += "SSE, ";
-	if (CPU_FEATURE_SSE2)                    sFeatures += "SSE2, ";
-	if (CPU_FEATURE_SSE3)                    sFeatures += "SSE3, ";
-	if (CPU_FEATURE_SSSE3)                   sFeatures += "SSSE3, ";
-	if (CPU_FEATURE_SSE41)                   sFeatures += "SSE4.1, ";
-	if (CPU_FEATURE_SSE42)                   sFeatures += "SSE4.2, ";
-	if (CPU_FEATURE_SSE4A)                   sFeatures += "SSE4A, ";
-	if (CPU_FEATURE_3DNOW)                   sFeatures += "3DNOW, ";
-	if (CPU_FEATURE_3DNOWEXT)                sFeatures += "3DNOWEXT, ";
-	if (CPU_FEATURE_MMXEXT)                  sFeatures += "MMXEXT, ";
+	CPUFeatures = "";
+
+	if (CPU_FEATURE_MMX)        CPUFeatures += "MMX, ";
+	if (CPU_FEATURE_SSE)        CPUFeatures += "SSE, ";
+	if (CPU_FEATURE_SSE2)       CPUFeatures += "SSE2, ";
+	if (CPU_FEATURE_SSE3)       CPUFeatures += "SSE3, ";
+	if (CPU_FEATURE_SSSE3)      CPUFeatures += "SSSE3, ";
+	if (CPU_FEATURE_SSE41)      CPUFeatures += "SSE4.1, ";
+	if (CPU_FEATURE_SSE42)      CPUFeatures += "SSE4.2, ";
 
 	if (CPU_FEATURE_AVX)
 	{
-		sFeatures += "AVX";
-		if (!OS_AVX) sFeatures += "*";
-		sFeatures += ", ";
+		if (!OS_FEATURE_AVX) CPUFeatures += "*";
+		CPUFeatures += "AVX, ";
 	}
 
 	if (CPU_FEATURE_AVX2)
 	{
-		sFeatures += "AVX2";
-		if (!OS_AVX2) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512F)
-	{
-		sFeatures += "AVX512F";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512DQ)
-	{
-		sFeatures += "AVX512DQ";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512PF)
-	{
-		sFeatures += "AVX512PF";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512ER)
-	{
-		sFeatures += "AVX512ER";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512CD)
-	{
-		sFeatures += "AVX512CD";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512BW)
-	{
-		sFeatures += "AVX512BW";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512VL)
-	{
-		sFeatures += "AVX512VL";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512IFMA)
-	{
-		sFeatures += "AVX512IFMA";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
-	}
-
-	if (CPU_FEATURE_AVX512VBMI)
-	{
-		sFeatures += "AVX512VBMI";
-		if (!OS_AVX512) sFeatures += "*";
-		sFeatures += ", ";
+		if (!OS_FEATURE_AVX) CPUFeatures += "*";
+		CPUFeatures += "AVX2, ";
 	}
 
 	if (CPU_FEATURE_FMA3)
 	{
-		sFeatures += "FMA3";
-		if (!OS_FMA3) sFeatures += "*";
-		sFeatures += ", ";
+		if (!OS_FEATURE_AVX) CPUFeatures += "*";
+		CPUFeatures += "FMA3, ";
 	}
 
 	if (CPU_FEATURE_FMA4)
 	{
-		sFeatures += "FMA4";
-		if (!OS_FMA4) sFeatures += "*";
-		sFeatures += ", ";
+		if (!OS_FEATURE_AVX) CPUFeatures += "*";
+		CPUFeatures += "FMA4, ";
 	}
 
-	sFeatures.erase(sFeatures.find_last_not_of(", ") + 1);
+	if (CPU_FEATURE_AVX512F)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512F, ";
+	}
 
-	return sFeatures;
+	if (CPU_FEATURE_AVX512DQ)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512DQ, ";
+	}
+
+	if (CPU_FEATURE_AVX512PF)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512PF, ";
+	}
+
+	if (CPU_FEATURE_AVX512ER)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512ER, ";
+	}
+
+	if (CPU_FEATURE_AVX512CD)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512CD, ";
+	}
+
+	if (CPU_FEATURE_AVX512BW)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512BW, ";
+	}
+
+	if (CPU_FEATURE_AVX512VL)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512VL, ";
+	}
+
+	if (CPU_FEATURE_AVX512IFMA)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512IFMA, ";
+	}
+
+	if (CPU_FEATURE_AVX512VBMI)
+	{
+		if (!OS_FEATURE_AVX512) CPUFeatures += "*";
+		CPUFeatures += "AVX512VBMI, ";
+	}
+
+	if (CPU_FEATURE_SSE4A)      CPUFeatures += "SSE4A, ";
+	if (CPU_FEATURE_3DNOW)      CPUFeatures += "3DNOW, ";
+	if (CPU_FEATURE_3DNOWEXT)   CPUFeatures += "3DNOWEXT, ";
+	if (CPU_FEATURE_MMXEXT)     CPUFeatures += "MMXEXT, ";
+	if (CPU_FEATURE_MOVBE)      CPUFeatures += "MOVBE, ";
+	if (CPU_FEATURE_POPCNT)     CPUFeatures += "POPCNT, ";
+	if (CPU_FEATURE_AES)        CPUFeatures += "AES, ";
+	if (CPU_FEATURE_F16C)       CPUFeatures += "F16C, ";
+
+	CPUFeatures.erase(CPUFeatures.find_last_not_of(", ") + 1);
+
+	return;
 }
 
 

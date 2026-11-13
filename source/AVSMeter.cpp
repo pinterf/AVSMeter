@@ -95,7 +95,8 @@ string       Pad(string s_line);
 
 int main(int argc, char* argv[])
 {
-	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
+	DWORD dwPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+	SetErrorMode(dwPrevErrorMode | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 
 	string sINIRet = ParseINIFile();
 
@@ -104,11 +105,10 @@ int main(int argc, char* argv[])
 	if (sAVSMVersion.length() > 5)
 		sAVSMVersion = sAVSMVersion.substr(0, 5);
 
-	#ifdef AVSM64
+	if (PROCESS_64)
 		sAVSMVersion += " (x64)";
-	#else
+	else
 		sAVSMVersion += " (x86)";
-	#endif
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2017, Groucho2004\n");
@@ -416,8 +416,9 @@ int main(int argc, char* argv[])
 
 		if (sys.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.CPUBrandString.c_str());
+			sOutBuf = utils.StrFormat("CPU brand string:           %s\n", sys.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
+
 			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.CPUFeatures.find("*") != std::string::npos)
@@ -447,7 +448,7 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("File version:               %s\n", AvisynthInfo.sFileVersion.c_str());
+		sOutBuf = utils.StrFormat("File / Product version:     %s / %s\n", AvisynthInfo.sFileVersion.c_str(), AvisynthInfo.sProductVersion.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -617,17 +618,19 @@ int main(int argc, char* argv[])
 				if (Settings.sLogDirectory == "")
 				{
 					if (Settings.bLogFileDateTimeSuffix)
-						#ifdef AVSM64
+					{
+						if (PROCESS_64)
 							sInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", szPath, Settings.sSystemDateTime.c_str());
-						#else
+						else
 							sInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", szPath, Settings.sSystemDateTime.c_str());
-						#endif
+					}
 					else
-						#ifdef AVSM64
+					{
+						if (PROCESS_64)
 							sInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", szPath);
-						#else
+						else
 							sInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", szPath);
-						#endif
+					}
 				}
 				else
 				{
@@ -780,8 +783,9 @@ int main(int argc, char* argv[])
 
 		if (sys.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.CPUBrandString.c_str());
+			sOutBuf = utils.StrFormat("CPU brand string:           %s\n", sys.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
+
 			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.CPUFeatures.find("*") != std::string::npos)
@@ -807,10 +811,9 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("VersionNumber:              %s", AvisynthInfo.sVersionNumber.c_str());
-
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("File version:               %s", AvisynthInfo.sFileVersion.c_str());
+		sOutBuf = utils.StrFormat("File / Product version:     %s / %s", AvisynthInfo.sFileVersion.c_str(), AvisynthInfo.sProductVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Interface Version:          %d", AvisynthInfo.iInterfaceVersion);
@@ -858,18 +861,12 @@ int main(int argc, char* argv[])
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
+		string sFrameSize = utils.StrFormat("%u x %u", AVS_vidinfo.width, AVS_vidinfo.height);
+		string spad((27 - sFrameSize.length()), ' ');
 		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Frame width:               %11u", AVS_vidinfo.width);
+			sOutBuf = "Frame size:" + spad + sFrameSize;
 		else
-			sOutBuf = "Frame width:                       n/a";
-
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
-		sLogBuffer += sOutBuf + "\n";
-
-		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Frame height:              %11u", AVS_vidinfo.height);
-		else
-			sOutBuf = "Frame height:                      n/a";
+			sOutBuf = "Frame size:                        n/a";
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
@@ -1126,7 +1123,11 @@ int main(int argc, char* argv[])
 		double dFPSMax = 0.0;
 
 		if (Settings.bGPUInfo)
+		{
 			gpuinfo.ReadSensors();
+			if (gpuinfo.sensors.ReadError)
+				AVS_env->ThrowError("Error reading GPU sensors\n");
+		}
 
 		processinfo.Update();
 
@@ -1138,8 +1139,13 @@ int main(int argc, char* argv[])
 		DWORD dwMaxGPUClock = 0;
 		DWORD dwMaxGPUMemClock = 0;
 
+		if (_kbhit())
+		{
+			if (_getch() == 0x1B) //ESC
+				AVS_env->ThrowError("\'ESC\' pressed, cancelled.\n");
+		}
+
 		unsigned int uiCursorOffset = 0;
-		SetErrorMode(nPrevErrorMode);
 		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
@@ -1157,6 +1163,9 @@ int main(int argc, char* argv[])
 			if (Settings.bGPUInfo)
 			{
 				gpuinfo.ReadSensors();
+				if (gpuinfo.sensors.ReadError)
+					AVS_env->ThrowError("Error reading GPU sensors\n");
+
 				uiGPUUsageCur = (unsigned int)gpuinfo.sensors.GPULoad;
 				uiGPUUsageAcc += uiGPUUsageCur;
 				uiGPUUsageAvg = (unsigned int)(((double)uiGPUUsageAcc / (double)uiIntervalCounter) + 0.5);
@@ -1280,7 +1289,7 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				++uiCursorOffset;
 
-				sOutBuf = utils.StrFormat("GPU core clock | memory clock:  %u | %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
+				sOutBuf = utils.StrFormat("GPU core clock | memory clock:  %u MHz | %u MHz", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				++uiCursorOffset;
 
@@ -1413,7 +1422,7 @@ int main(int argc, char* argv[])
 					PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 					sLogBuffer += "\n";
 
-					sOutBuf = utils.StrFormat("GPU core clock | memory clock:  %u | %u", dwMaxGPUClock, dwMaxGPUMemClock);
+					sOutBuf = utils.StrFormat("GPU core clock | memory clock:  %u MHz | %u MHz", dwMaxGPUClock, dwMaxGPUMemClock);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					sLogBuffer += sOutBuf + "\n";
 
@@ -1602,7 +1611,7 @@ string ParseINIFile()
 
 	string sCurrentLine = "";
 
-	//defaults
+	//establish defaults
 	Settings.sLogDirectory = "";
 	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
@@ -1822,132 +1831,57 @@ string ParseINIFile()
 
 BOOL WriteINIFile(string &s_inifile)
 {
-	string sCurrentLine = "";
+	string sSetting = "";
 	string sComment = "";
 
 	ofstream hINIFile(s_inifile.c_str());
 	if (!hINIFile.is_open())
 		return FALSE;
 
-	sComment =  "# This INI file can be used to set defaults for AVSMeter or configure settings that are not\n";
-	sComment += "# implemented as command line switches.\n";
-	sComment += "# Note: Command line switches override INI file settings.\n";
-	hINIFile << sComment << sCurrentLine << "\n\n";
+	sComment =  "# This INI file can be used to set defaults for AVSMeter or configure\n";
+	sComment += "# settings that are not implemented as command line switches.\n";
+	sComment += "# See \"AVSMeter.html\" for documentation of the various settings\n";
+	sComment += "# Note: Command line switches override INI file settings.\n\n";
+	hINIFile << sComment;
 
-	sComment =  "# \"DisplayFPS\" (0 or 1)\n";
-	sComment += "# If set to \"1\", frames/second is printed to the console.\n";
-	sCurrentLine = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"DisplayTPF\" (0 or 1):\n";
-	sComment += "# If set to \"1\", time/frame (in milliseconds) is printed to the console.\n";
-	sCurrentLine = utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"PauseBeforeExit\" (0 or 1):\n";
-	sComment += "# If set to \"1\", pauses the program at the end and returns to the console prompt only after pressing \"ESC\".\n";
-	sCurrentLine = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"CreateLog\" (0 or 1):\n";
-	sComment += "# Creates a log file with various details about the installed Avisynth version, clip info, runtime\n";
-	sComment += "# results, a copy of the script and a performance data table with the measured details about each\n";
-	sComment += "# frame/frame interval. The log file is created in the same directory as the script unless the INI\n";
-	sComment += "# option \"LogDirectory\" points to a valid directory.\n";
-	sComment += "# Note: The numbering of the frames in the performance data section is not zero-based, i.e. the first\n";
-	sComment += "# frame is 1, not 0.\n";
-	sCurrentLine = utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"CreateCSV\" (0 or 1):\n";
-	sComment += "# Creates a CSV file containing the performance data formatted as comma-separated values for direct\n";
-	sComment += "# import in Excel or a similar spread sheet program (OpenOffice, LibreOffice). The CSV file is created\n";
-	sComment += "# in the same directory as the script unless the INI option \"LogDirectory\" points to a valid\n";
-	sComment += "# directory.\n";
-	sComment += "# Note: The numbering of the frames in the .csv file is not zero-based, i.e. the first frame is 1, not 0.\n";
-	sCurrentLine = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"MonitorGPULoad\" (0 or 1):\n";
-	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
-	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
-	sComment += "# shared memory interface. GPU-Z must be running in order to use this feature\n";
-	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"TimeLimit\" (1 - 999999):\n";
-	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates.\n";
-	sComment += "# Setting this to \"-1\" disables the feature.\n";
-	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"LogDirectory\"\n";
-	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
-	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\" (without the quotes). The default is an empty string\n";
-	sComment += "# which means that all log files are stored in the script directory or, in case the \"-avsinfo\"\n";
-	sComment += "# switch was used, the current (working) directory.\n";
-	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"AVSDLL\"\n";
-	sComment += "# The user can specify the avisynth.dll to be used. This has to be a fully qualified path, for example\n";
-	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\" (without the quotes). The default is an empty string which\n";
-	sComment += "# means that AVSMeter will attempt to load avisynth.dll through the standard Windows search hierarchy.\n";
-	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"DisplayEfficiencyIndex\" (0 or 1):\n";
-	sComment += "# If set to \"1\", the result of (FPS / CPU usage) is printed to the console. This ratio indicates the\n";
-	sComment += "# efficiency of a script (higher = better) and is useful for comparing different versions of a script\n";
-	sComment += "# or scripts that are supposed to do the same thing.\n";
-	sCurrentLine = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"LogFileDateTimeSuffix\" (0 or 1):\n";
-	sComment += "# If set to \"1\", adds a date/time suffix to all .log and .csv files.\n";
-	sCurrentLine = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"FrameRange\" (first,last):\n";
-	sComment += "# Specify the range of frames to be processed. \"FrameRange=0,-1\" processes all frames in the script.\n";
-	sComment += "# \"FrameRange=1500,1999\" processes 500 frames starting at frame 1500.\n";
-	sCurrentLine = utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"AllowOnlyOneInstance\" (0 or 1):\n";
-	sComment += "# If set to \"1\", only one instance of AVSMeter can be started.\n";
-	sCurrentLine = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"ProcessPriority\" (1, 2 or 3):\n";
-	sComment += "# Specify the process priority for AVSMeter and all attached processes (1: low, 2: normal, 3: high).\n";
-	sCurrentLine = utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"InvokeDistributor\" (0 or 1):\n";
-	sComment += "# For users of SEt's Avisynth MT: If set to \"1\", adds the \"Distributor\" call internally if the\n";
-	sComment += "# script uses one of the MT Modes 1~4.\n";
-	sCurrentLine = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"ConUseSTDOUT\" (0 or 1):\n";
-	sComment += "# If set to \"1\", directs all console output to stdout. The default setting \"0\" uses stderr except\n";
-	sComment += "# the \"command line usage\" message which always goes through stdout.\n";
-	sCurrentLine = utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"UseColor\" (0 or 1):\n";
-	sComment += "# If set to \"0\", coloring of the console output is disabled.\n";
-	sCurrentLine = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# Individual request (http://forum.doom9.org/showpost.php?p=1639610&postcount=96)\n";
-	sCurrentLine = utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# Individual request (http://forum.doom9.org/showpost.php?p=1728756&postcount=330)\n";
-	sCurrentLine = utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
-	hINIFile << sComment << sCurrentLine << "\n\n";
+	sSetting = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
+	hINIFile << sSetting;
+	sSetting = utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
+	hINIFile << sSetting;
 
 	hINIFile.flush();
 	hINIFile.close();
@@ -2064,7 +1998,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	}
 
 	if (s_avserror != "")
-		hLogFile << "\n\n[AviSynth error]\n" + s_avserror + "\n";
+		hLogFile << "\n\n[Errors]\n" + s_avserror + "\n";
 
 	hLogFile.flush();
 	hLogFile.close();
@@ -2369,7 +2303,7 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info [-i]          Display clip info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log  [-l]          Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Monitor GPU/VPU usage\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Display GPU/VPU usage (requires GPU-Z)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n\n");

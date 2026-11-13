@@ -1,3 +1,10 @@
+v2.5.5
+- Improved dependency check for FFTW support libraries
+- Updated CPU feature detection
+- Improved error handling for GPU-Z interface
+- Moved documentation for INI settings to AVSMeter.html
+- Cosmetics
+
 v2.5.4
 - Improved error handling for Avisynth core (avisynth.dll)
 - Tweaks to reduce overhead
