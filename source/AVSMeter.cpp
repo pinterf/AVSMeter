@@ -368,14 +368,14 @@ int main(int argc, char* argv[])
 		}
 
 		#ifdef AVS64
-			if (!AvisynthInfo.bIs64BitVersion)
+			if (!AvisynthInfo.bIs64BitAVS)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
 				Pause();
 				return -1;
 			}
 		#else
-			if (AvisynthInfo.bIs64BitVersion)
+			if (AvisynthInfo.bIs64BitAVS)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
 				Pause();
@@ -624,7 +624,7 @@ int main(int argc, char* argv[])
 		//Plugin Dependencies
 		if (AvisynthInfo.vPluginDependencies.size() > 0)
 		{
-			if (AvisynthInfo.bIs64BitVersion)
+			if (AvisynthInfo.bIs64BitAVS)
 				sOutBuf = "[DLL dependencies (x64)]\n\n";
 			else
 				sOutBuf = "[DLL dependencies (x86)]\n\n";

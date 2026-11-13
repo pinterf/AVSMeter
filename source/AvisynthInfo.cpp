@@ -144,7 +144,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 {
 	sDLLPath = "";
-	bIs64BitVersion = FALSE;
+	bIs64BitAVS = FALSE;
 	bIsMTVersion = FALSE;
 	bIsAVSPlus = FALSE;
 	iInterfaceVersion = 0;
@@ -190,7 +190,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		}
 		else //64 Bit Avisynth DLL
 		{
-			bIs64BitVersion = TRUE;
+			bIs64BitAVS = TRUE;
 			#ifndef AVS64
 				UnMapAndLoad(&li);
 				s_ErrorMsg = "Cannot load avisynth.dll";
@@ -451,7 +451,7 @@ void CAvisynthInfo::EnumPluginDirs()
 	LONG lRes;
 	HKEY hKeyResult = 0;
 
-	if (!bIs64BitVersion)
+	if (!bIs64BitAVS)
 	{
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
@@ -1118,7 +1118,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				sNote += StrFormat("\"%s\"\n\nDependencies that could not be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
 				if (sHint != "")
-					sNote += StrFormat("\n\nNote: %s", sHint.c_str());
+						sNote += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 
@@ -1201,7 +1201,20 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			s_dependencies += "  " + sDepDLL;
 
 			if ((sTemp == "msvcm80.dll") || (sTemp == "msvcp80.dll") || (sTemp == "msvcr80.dll"))
+			{
+				if (!IsRuntimeInstalled("2005"))
+					s_failed_dependencies += sDepDLL;
+
 				continue;
+			}
+
+			if ((sTemp == "msvcm90.dll") || (sTemp == "msvcp90.dll") || (sTemp == "msvcr90.dll"))
+			{
+				if (!IsRuntimeInstalled("2008"))
+					s_failed_dependencies += sDepDLL;
+
+				continue;
+			}
 
 			HINSTANCE hDLL = ::LoadLibrary(szDepName);
 			if (!hDLL)
@@ -1270,10 +1283,8 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	StrToLC(sTemp);
 
 	s_hint = "";
-	if ((sTemp.find("msvcm71.dll") != std::string::npos) || (sTemp.find("msvcp71.dll") != std::string::npos) || (sTemp.find("msvcr71.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2003 Runtime Distributable\n";
-	//if ((sTemp.find("msvcm80.dll") != std::string::npos) || (sTemp.find("msvcp80.dll") != std::string::npos) || (sTemp.find("msvcr80.dll") != std::string::npos))
-	//	s_hint += "Microsoft Visual Studio 2005 Runtime Distributable\n";
+	if ((sTemp.find("msvcm80.dll") != std::string::npos) || (sTemp.find("msvcp80.dll") != std::string::npos) || (sTemp.find("msvcr80.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2005 Runtime Distributable\n";
 	if ((sTemp.find("msvcm90.dll") != std::string::npos) || (sTemp.find("msvcp90.dll") != std::string::npos) || (sTemp.find("msvcr90.dll") != std::string::npos))
 		s_hint += "Microsoft Visual Studio 2008 Runtime Distributable\n";
 	if ((sTemp.find("msvcm100.dll") != std::string::npos) || (sTemp.find("msvcp100.dll") != std::string::npos) || (sTemp.find("msvcr100.dll") != std::string::npos))
@@ -1293,6 +1304,72 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
 	return;
+}
+
+
+BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
+{
+	BOOL bInstalled = FALSE;
+	LONG lRes;
+	HKEY hKeyResult = 0;
+	
+	char szSubKey[2048] = "";
+	vector<string> vSubKeys;
+	DWORD dwBytes = 2050;
+	DWORD dwIndex = 0;
+	lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Classes\\Installer\\Products", 0, KEY_READ, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		while (RegEnumKeyEx(hKeyResult, dwIndex, szSubKey, &dwBytes, NULL, NULL, NULL, NULL) == ERROR_SUCCESS)
+		{
+			vSubKeys.push_back(StrFormat("%s", szSubKey));
+			dwBytes = 2050;
+			++dwIndex;
+		}
+	}
+	RegCloseKey(hKeyResult);
+
+	for (unsigned int uiKey = 0; uiKey < vSubKeys.size(); uiKey++)
+	{
+		string sKey = "SOFTWARE\\Classes\\Installer\\Products\\" + vSubKeys[uiKey];
+		hKeyResult = 0;
+		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, sKey.c_str(), 0, KEY_READ, &hKeyResult);
+		if (lRes == ERROR_SUCCESS)
+		{
+			char szValue[2048] = "";
+			DWORD dwType = REG_SZ;
+			DWORD dwBytes = 2050;
+			if (RegQueryValueEx(hKeyResult, "ProductName", NULL, &dwType, (LPBYTE)szValue, &dwBytes) == 0)
+			{
+				string sValue(szValue);
+				StrToLC(sValue);
+				size_t spos = 0;
+				BYTE matchcount = 0;
+
+				spos = sValue.find(s_version);
+				if (spos != std::string::npos) ++matchcount;
+				spos = sValue.find("visual c++");
+				if (spos != std::string::npos) ++matchcount;
+				spos = sValue.find("redistributable");
+				if (spos != std::string::npos) ++matchcount;
+				spos = sValue.find("runtime");
+				if (spos != std::string::npos) ++matchcount;
+
+				if (matchcount >= 3)
+				{
+					spos = sValue.find("x64");
+					if ((spos == std::string::npos) && (!bIs64BitAVS))
+						bInstalled = TRUE;
+
+					if ((spos > 1) && (bIs64BitAVS))
+						bInstalled = TRUE;
+				}
+			}
+		}
+		RegCloseKey(hKeyResult);
+	}
+
+	return bInstalled;
 }
 
 

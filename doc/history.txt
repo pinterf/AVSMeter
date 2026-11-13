@@ -1,3 +1,6 @@
+v2.4.2
+- Fixed dependency check for 2005 & 2008 runtimes
+
 v2.4.1
 - Added "Simple mode" (switch "-s"). This mode just runs the script without
   gathering any runtime/performance data.

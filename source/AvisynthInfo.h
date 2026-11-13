@@ -41,7 +41,7 @@ public:
 	string  sVersionString;
 	string  sVersionNumber;
 	string  sTimeStamp;
-	BOOL    bIs64BitVersion;
+	BOOL    bIs64BitAVS;
 	BOOL    bLoadError;
 	BOOL    bIsAVSPlus;
 	BOOL    bIsMTVersion;	
@@ -58,6 +58,7 @@ private:
 	BOOL           SYSCheckPlugin(string s_dll, string &s_Msg);
 	void           AVSCheckPlugins();
 	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
+	BOOL           IsRuntimeInstalled(string s_version);
 	__int64        FileSize(string s_file);
 	inline string  StrFormat(char const *fmt, ...);
 	void           StrTrim(string &s_string);
