@@ -23,6 +23,7 @@
 #endif
 
 #include "common.h"
+#include "Utility.h"
 
 //test STATUS_FLOAT_DIVIDE_BY_ZERO:
 //	int a = 0;
@@ -40,6 +41,7 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept);
 
 string GetExceptionModule(LPVOID address)
 {
+	CUtils utils;
 	char modulename[2048];
 	HMODULE hModules[2048];
 	DWORD dwSizeNeeded = 0;
@@ -68,7 +70,7 @@ string GetExceptionModule(LPVOID address)
 		return "";
 
 	string sModule(modulename);
-	sModule = GetWOW64FilePath(sModule);
+	sModule = utils.GetWOW64FilePath(sModule);
 
 	return sModule;
 }

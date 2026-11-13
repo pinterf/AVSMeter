@@ -69,7 +69,7 @@ struct stPerfData
 	unsigned int  frame;
 	float         fps_current;
 	float         fps_average;
-	double        cpu_usage;
+	float         cpu_usage;
 	BYTE          gpu_usage;
 	BYTE          vpu_usage;
 	DWORD         process_memory;
@@ -133,6 +133,7 @@ int main(int argc, char* argv[])
 	BOOL bHighPriority = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 1;
+	unsigned int uiLogFrameInterval = 1;
 	string sErrorMsg = "";
 	BOOL bModeAVSInfo = FALSE;
 	BOOL bCustomAVSDLLFromCL = FALSE;
@@ -1271,10 +1272,18 @@ int main(int argc, char* argv[])
 			AVS_env->ThrowError("Invalid frame range specified:\n\"%s\"\n", Settings.sFrameRange.c_str());
 		}
 
-		while ((uiFramesToProcess / uiFrameInterval) > 500000)
-			uiFrameInterval *= 10;
 
-		perfdata.reserve((2 * uiFramesToProcess) / uiFrameInterval);
+		uiLogFrameInterval = uiFrameInterval;
+		while ((uiFramesToProcess / uiLogFrameInterval) > 10000)
+			uiLogFrameInterval *= 10;
+
+		perfdata.reserve((uiFramesToProcess / uiLogFrameInterval) + 100);
+
+		if (bOmitPreScan)
+		{
+			while ((uiFramesToProcess / uiFrameInterval) > 1000000)
+				uiFrameInterval *= 10;
+		}
 
 		unsigned int uiFramesRead = 0;
 		BOOL bFirstScr = TRUE;
@@ -1373,26 +1382,30 @@ int main(int argc, char* argv[])
 			if (dFPSCurrent < dFPSMin)
 				dFPSMin = dFPSCurrent;
 
-			stPerfData pdata;
-			pdata.frame = uiCurrentFrame;
-			pdata.fps_current = (float)dFPSCurrent;
-			pdata.fps_average = (float)dFPSAverage;
-			pdata.cpu_usage = processinfo.dCPUUsage;
 
-			if (Settings.bGPUInfo)
+			if (((uiFramesRead % uiLogFrameInterval) == 0) || (uiFramesRead == uiFramesToProcess))
 			{
-				pdata.gpu_usage = gpuinfo.sensors.GPULoad;
-				pdata.vpu_usage = gpuinfo.sensors.VPULoad;
-			}
-			else
-			{
-				pdata.gpu_usage = 0;
-				pdata.vpu_usage = 0;
-			}
+				stPerfData pdata;
+				pdata.frame = uiCurrentFrame;
+				pdata.fps_current = (float)dFPSCurrent;
+				pdata.fps_average = (float)dFPSAverage;
+				pdata.cpu_usage = (float)processinfo.dCPUUsage;
 
-			pdata.num_threads = processinfo.wThreadCount;
-			pdata.process_memory = dwMemCurrentMB;
-			perfdata.push_back(pdata);
+				if (Settings.bGPUInfo)
+				{
+					pdata.gpu_usage = gpuinfo.sensors.GPULoad;
+					pdata.vpu_usage = gpuinfo.sensors.VPULoad;
+				}
+				else
+				{
+					pdata.gpu_usage = 0;
+					pdata.vpu_usage = 0;
+				}
+
+				pdata.num_threads = processinfo.wThreadCount;
+				pdata.process_memory = dwMemCurrentMB;
+				perfdata.push_back(pdata);
+			}
 
 			dLastIntervalTime = dCurrentTime;
 

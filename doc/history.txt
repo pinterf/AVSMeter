@@ -1,3 +1,8 @@
+v2.9.1
+- Fixed an error reporting bug
+- More accurate memory usage measurements
+- Limit performance data section in log/csv files to 10000 entries
+
 v2.9.0
 - Added Veselin Georgiev's libcpuid (again) for better detection of some CPU features (such as number of physical/logical cores of contemporary CPUs)
 - Minor other fixes

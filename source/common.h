@@ -77,54 +77,5 @@ static BOOL CompareNoCase(string first, string second)
 		return false;
 }
 
-string GetWOW64FilePath(string s_filepath);
-
-string GetWOW64FilePath(string s_filepath)
-{
-	string sRealFilePath = s_filepath;
-
-	BOOL bWoW64Process = FALSE;
-	typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-	LPFN_ISWOW64PROCESS fnIsWow64Process;
-
-	HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-	if (hKernel32 == NULL) return sRealFilePath;
-
-	fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
-	if (fnIsWow64Process != NULL)
-		fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
-	else
-		return sRealFilePath;
-
-	if (bWoW64Process)
-	{
-		char pszWinDir[1026];
-		GetWindowsDirectory(pszWinDir, 1024);
-		string sTestSystem32(pszWinDir);
-		sTestSystem32 = sTestSystem32 + "\\system32\\";
-		transform(sTestSystem32.begin(), sTestSystem32.end(), sTestSystem32.begin(), ::tolower);
-		string sTempDLLPath = s_filepath;
-		transform(sTempDLLPath.begin(), sTempDLLPath.end(), sTempDLLPath.begin(), ::tolower);
-		size_t slen = sTestSystem32.length();
-		if (sTempDLLPath.substr(0, slen) == sTestSystem32)
-		{
-			char szSysWOW64Directory[1026];
-			typedef UINT (WINAPI *LPFN_GETSYSTEMWOW64DIRECTORY)(LPTSTR, UINT);
-			LPFN_GETSYSTEMWOW64DIRECTORY getSystemWow64Directory;
-
-			getSystemWow64Directory = (LPFN_GETSYSTEMWOW64DIRECTORY)GetProcAddress(hKernel32, "GetSystemWow64DirectoryA");
-			if (getSystemWow64Directory == NULL) return sRealFilePath;
-
-			if (getSystemWow64Directory(szSysWOW64Directory, sizeof(szSysWOW64Directory)) > 1)
-			{
-				string sSysWOW64Dir(szSysWOW64Directory);
-				sRealFilePath = sSysWOW64Dir + "\\" + s_filepath.substr(slen);
-			}
-		}
-	}
-
-	return sRealFilePath;
-}
-
 
 #endif //_COMMON_H

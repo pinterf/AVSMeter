@@ -212,15 +212,15 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		string sFileVersion = utils.GetFileVersion(sDLLPath);
 
 		if (sFileVersion.substr(0, 3) == "2.6")
-			s_ErrorMsg = utils.StrFormat("The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", GetWOW64FilePath(sDLLPath).c_str());
+			s_ErrorMsg = utils.StrFormat("The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str());
 		else
-			s_ErrorMsg = utils.StrFormat("Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", GetWOW64FilePath(sDLLPath).c_str(), sFileVersion.c_str());
+			s_ErrorMsg = utils.StrFormat("Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str(), sFileVersion.c_str());
 
 		return FALSE;
 	}
 
 
-	sDLLPath = GetWOW64FilePath(sDLLPath);
+	sDLLPath = utils.GetWOW64FilePath(sDLLPath);
 	sFileVersion = utils.GetFileVersion(sDLLPath);
 	sProductVersion = utils.GetProductVersion(sDLLPath);
 	sTimeStamp = utils.GetFileTimeStamp(sDLLPath);
@@ -830,7 +830,7 @@ void CAvisynthInfo::TestLoadPlugins()
 			if ((sPlugLoadErrorLC.find("proc not found") != string::npos) || (sPlugLoadErrorLC.find("the specified procedure could not be found") != string::npos))
 				sNote += "\n\nNote: You may need a newer OS version in order to use this plugin";
 
-			if (sPluginType.substr(0, 5) == "C 2.5")
+			if ((sPluginType.substr(0, 5) == "C 2.5") && (!bIsAVSPlus))
 				sNote += "\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"";
 
 			if ((sPluginType.substr(0, 5) == "C 2.0") && (bIsAVSPlus))
