@@ -57,7 +57,8 @@ private:
 	void                EnumPluginDLLs();
 	BOOL                GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
 	void                TestLoadPlugins();
-	void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
+	void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, BOOL &fftw_fail);
+	BOOL                CheckFFTW(string s_dll, string &s_failed_deps);
 	BOOL                IsRuntimeInstalled(string s_version);
 	__int64             FileSize(string s_file);
 	BOOL                Is64BitOS();
@@ -229,7 +230,8 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	string sFailedDeps = "";
 	string sNote = "";
 	string sHint = "";
-	GetDLLDependencies(sDLLPath, sDeps, sFailedDeps, sHint);
+	BOOL bFFTWFail = FALSE;
+	GetDLLDependencies(sDLLPath, sDeps, sFailedDeps, sHint, bFFTWFail);
 	if (sDeps != "")
 		vPluginDependencies.push_back(sDeps);
 
@@ -758,6 +760,7 @@ void CAvisynthInfo::TestLoadPlugins()
 	string sHint = "";
 	string sMsg = "";
 	string sTemp = "";
+	BOOL bFFTWFail = FALSE;
 
 	IScriptEnvironment *AVS_env = 0;
 
@@ -809,14 +812,27 @@ void CAvisynthInfo::TestLoadPlugins()
 		sDependencies = "";
 		sFailedDependencies = "";
 		sHint = "";
-		GetDLLDependencies(sPlugin, sDependencies, sFailedDependencies, sHint);
+		bFFTWFail = FALSE;
+		GetDLLDependencies(sPlugin, sDependencies, sFailedDependencies, sHint, bFFTWFail);
 		if (sDependencies != "")
 			vPluginDependencies.push_back(sDependencies);
 
 		sPlugLoadError = "";
 		sNote = "";
+
 		try
 		{
+			if (bFFTWFail)
+			{
+				sPlugLoadError = utils.StrFormat("\"%s\" requires the FFTW library for some functions.", sPlugin.c_str());
+				if (sHint != "")
+					sPlugLoadError += utils.StrFormat("\n\nNote: %s", sHint.c_str());
+
+				vPluginErrors.push_back(sPlugLoadError);
+				sPlugLoadError = "";
+				sNote = "";
+			}
+
 			AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
 		}
 		catch (AvisynthError err)
@@ -872,7 +888,7 @@ void CAvisynthInfo::TestLoadPlugins()
 }
 
 
-void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint)
+void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, BOOL &fftw_fail)
 {
 	HANDLE hFile = NULL;
 	HANDLE hFileMapping = NULL;
@@ -958,6 +974,11 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	if (hFile)
 		CloseHandle(hFile);
 
+	if (!CheckFFTW(s_dll, s_failed_dependencies))
+		fftw_fail = TRUE;
+	else
+		fftw_fail = FALSE;
+
 	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
 	sTemp = s_failed_dependencies;
 	utils.StrToLC(sTemp);
@@ -1000,6 +1021,15 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			(sTemp.find("vcruntime140.dll") != string::npos) ||
 			(sTemp.find("api-ms-win-crt") != string::npos))
 				s_hint += "Visual Studio 2015/2017/2019 Runtime doesn't seem to be installed\n";
+
+	if (fftw_fail)
+	{
+		if (sTemp.find("libfftw3f-3.dll") != string::npos)
+			s_hint += "\'libfftw3f-3.dll\' can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      \'libfftw3f-3.dll\' should be placed in \"System32\" and/or \"SysWoW64\"\n";
+
+		if (sTemp.find("fftw3.dll") != string::npos)
+			s_hint += "\'fftw3.dll\' (aka \'libfftw3f-3.dll\') can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      \'fftw3.dll\' should be placed in \"System32\" and/or \"SysWoW64\"\n";
+	}
 
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
@@ -1076,6 +1106,57 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 	}
 
 	return bInstalled;
+}
+
+
+BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
+{
+	__int64 fsize = FileSize(s_dll);
+	BOOL bSuccess = TRUE;
+
+	if ((fsize < (20 * 1024 * 1024)) && (fsize > 1024 ))
+	{
+		FILE *fp = fopen(s_dll.c_str(), "rb");
+		if (fp)
+		{
+			string filedata;
+			fseek(fp, 0, SEEK_END);
+			filedata.resize(ftell(fp));
+			rewind(fp);
+			fread(&filedata[0], 1, filedata.size(), fp);
+			fclose(fp);
+
+			transform(filedata.begin(), filedata.end(), filedata.begin(), ::tolower);
+
+			if (filedata.find("libfftw3f-3.dll") != std::string::npos)
+			{
+				HINSTANCE hDLL = ::LoadLibrary("libfftw3f-3.dll");
+				if (!hDLL)
+				{
+					s_failed_deps += "  libfftw3f-3.dll\n";
+					bSuccess = FALSE;
+				}
+				else
+					::FreeLibrary(hDLL);
+
+				return bSuccess;
+			}
+
+			if (filedata.find("fftw3.dll") != std::string::npos)
+			{
+				HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
+				if (!hDLL)
+				{
+					s_failed_deps += "  fftw3.dll\n";
+					bSuccess = FALSE;
+				}
+				else
+					::FreeLibrary(hDLL);
+			}
+		}
+	}
+
+	return bSuccess;
 }
 
 

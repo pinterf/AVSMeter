@@ -61,6 +61,7 @@ struct stSettings
 	BOOL      bLogFileDateTimeSuffix;
 	BOOL      bSpecifyCustomPluginDir;
 	BOOL      bLogUseFileSaveDialog;
+	BOOL      bDisableFFTWDLLWarning;
 } Settings;
 
 
@@ -99,6 +100,28 @@ string       Pad(string s_line);
 int main(int argc, char* argv[])
 {
 	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
+
+	//defaults
+	Settings.sLogDirectory = "";
+	Settings.sAVSDLL = "";
+	Settings.bDisplayFPS = TRUE;
+	Settings.bDisplayTPF = FALSE;
+	Settings.bCreateLog = FALSE;
+	Settings.bCreateCSV = FALSE;
+	Settings.bLogFileDateTimeSuffix = FALSE;
+	Settings.bPauseBeforeExit = FALSE;
+	Settings.iStartFrame = 0;
+	Settings.iStopFrame = -1;
+	Settings.bInvokeDistributor = TRUE;
+	Settings.bAllowOnlyOneInstance = TRUE;
+	Settings.bUseColor = TRUE;
+	Settings.bGPUInfo = FALSE;
+	Settings.bConUseStdOut = FALSE;
+	Settings.iTimeLimit = -1;
+	Settings.bLogEstimatedTime = FALSE;
+	Settings.bAutoCompleteExtension = FALSE;
+	Settings.bLogUseFileSaveDialog = FALSE;
+	Settings.bDisableFFTWDLLWarning = FALSE;
 
 	string sINIRet = ParseINIFile();
 
@@ -674,14 +697,18 @@ int main(int argc, char* argv[])
 		//Plugin errors
 		if (AvisynthInfo.vPluginErrors.size() > 0)
 		{
-			string sPluginError = "";
 			unsigned int err = 0;
+			string sPluginError = "";
 			unsigned int errmaxlen = 0;
 			unsigned int cpos = 0;
 
 			for (err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
 			{
 				sPluginError = AvisynthInfo.vPluginErrors[err];
+
+				if ((Settings.bDisableFFTWDLLWarning) && (sPluginError.find("FFTW") != string::npos))
+					AvisynthInfo.vPluginErrors[err] = "";
+
 				for (cpos = 0; cpos < sPluginError.length(); cpos++)
 				{
 					if (sPluginError[cpos] == '\n')
@@ -691,22 +718,35 @@ int main(int argc, char* argv[])
 					errmaxlen = cpos;
 			}
 
-			string sLineSep(errmaxlen, '_');
-
-			sOutBuf = "\n\n\n[Plugin errors/warnings]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-			sOutBuf = sLineSep + "\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
-
+			BOOL bErrorsWarnings = FALSE;
 			for (err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
 			{
 				sPluginError = AvisynthInfo.vPluginErrors[err];
-				sOutBuf = utils.StrFormat("\n%s\n", sPluginError.c_str());
-				sOutBuf += sLineSep + "\n";
+				if (sPluginError != "")
+				{
+					bErrorsWarnings = TRUE;
+					break;
+				}
+			}
+
+			if (bErrorsWarnings)
+			{
+				string sLineSep(errmaxlen, '_');
+				sOutBuf = "\n\n\n[Plugin errors/warnings]\n";
 				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
+				PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+				sOutBuf = sLineSep + "\n";
+				sLogBuffer += sOutBuf;
+				PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
+
+				for (err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
+				{
+					sPluginError = AvisynthInfo.vPluginErrors[err];
+					sOutBuf = utils.StrFormat("\n%s\n", sPluginError.c_str());
+					sOutBuf += sLineSep + "\n";
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
 			}
 		}
 
@@ -1763,27 +1803,6 @@ string ParseINIFile()
 
 	string sCurrentLine = "";
 
-	//defaults
-	Settings.sLogDirectory = "";
-	Settings.sAVSDLL = "";
-	Settings.bDisplayFPS = TRUE;
-	Settings.bDisplayTPF = FALSE;
-	Settings.bCreateLog = FALSE;
-	Settings.bCreateCSV = FALSE;
-	Settings.bLogFileDateTimeSuffix = FALSE;
-	Settings.bPauseBeforeExit = FALSE;
-	Settings.iStartFrame = 0;
-	Settings.iStopFrame = -1;
-	Settings.bInvokeDistributor = TRUE;
-	Settings.bAllowOnlyOneInstance = TRUE;
-	Settings.bUseColor = TRUE;
-	Settings.bGPUInfo = FALSE;
-	Settings.bConUseStdOut = FALSE;
-	Settings.iTimeLimit = -1;
-	Settings.bLogEstimatedTime = FALSE;
-	Settings.bAutoCompleteExtension = FALSE;
-	Settings.bLogUseFileSaveDialog = FALSE;
-
 	if (!utils.FileExists(sINIFile)) //No ini file present, create the file with defaults
 	{
 		if (!WriteINIFile(sINIFile))
@@ -1841,53 +1860,6 @@ string ParseINIFile()
 			continue;
 		}
 
-		if (sCurrentLine.substr(0, 9) == "timelimit")
-		{
-			sTemp = sCurrentLine.substr(10);
-			if (utils.IsNumeric(sTemp))
-			{
-				Settings.iTimeLimit = atoi(sTemp.c_str());
-				if (Settings.iTimeLimit != -1)
-				{
-					if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
-					{
-						sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sOrgLine.c_str());
-						return sRet;
-					}
-				}
-			}
-			else
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			continue;
-		}
-
-		if (sCurrentLine.substr(0, 10) == "framerange")
-		{
-			sCurrentLine.erase(remove(sCurrentLine.begin(), sCurrentLine.end(), ' '), sCurrentLine.end());
-			Settings.sFrameRange = sOrgLine;
-			Settings.iStartFrame = 0xFFFFFFFFFF;
-			Settings.iStopFrame = 0xFFFFFFFFFF;
-
-			sTemp = sCurrentLine.substr(11);
-			if (sTemp.length() < 3)
-				continue;
-
-			spos = sTemp.find(",");
-			if ((spos < 1) || (spos > 27))
-				continue;
-
-			if ((utils.IsNumeric(sTemp.substr(0, spos))) && (utils.IsNumeric(sTemp.substr(spos + 1))))
-			{
-				Settings.iStartFrame = _atoi64(sTemp.substr(0, spos).c_str());
-				Settings.iStopFrame = _atoi64(sTemp.substr(spos + 1).c_str());
-			}
-			continue;
-		}
-
-
 		iBoolValue = -1;
 		if (sCurrentLine.length() > 3)
 		{
@@ -1903,12 +1875,6 @@ string ParseINIFile()
 			if (sCurrentLine.substr(0, 10) == "displaytpf")
 				Settings.bDisplayTPF = (iBoolValue == 0) ? FALSE : TRUE;
 
-			if (sCurrentLine.substr(0, 9) == "createlog")
-				Settings.bCreateLog = (iBoolValue == 0) ? FALSE : TRUE;
-
-			if (sCurrentLine.substr(0, 9) == "createcsv")
-				Settings.bCreateCSV = (iBoolValue == 0) ? FALSE : TRUE;
-
 			if (sCurrentLine.substr(0, 21) == "logfiledatetimesuffix")
 				Settings.bLogFileDateTimeSuffix = (iBoolValue == 0) ? FALSE : TRUE;
 
@@ -1920,9 +1886,6 @@ string ParseINIFile()
 
 			if (sCurrentLine.substr(0, 20) == "allowonlyoneinstance")
 				Settings.bAllowOnlyOneInstance = (iBoolValue == 0) ? FALSE : TRUE;
-
-			if (sCurrentLine.substr(0, 14) == "monitorgpuload")
-				Settings.bGPUInfo = (iBoolValue == 0) ? FALSE : TRUE;
 
 			if (sCurrentLine.substr(0, 8) == "usecolor")
 				Settings.bUseColor = (iBoolValue == 0) ? FALSE : TRUE;
@@ -1938,6 +1901,9 @@ string ParseINIFile()
 
 			if (sCurrentLine.substr(0, 20) == "logusefilesavedialog")
 				Settings.bLogUseFileSaveDialog = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 21) == "disablefftwdllwarning")
+				Settings.bDisableFFTWDLLWarning = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 	}
 
@@ -1971,13 +1937,7 @@ BOOL WriteINIFile(string &s_inifile)
 
 	sSettings = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
 	sSettings += utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
-	sSettings += utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
 
-	sSettings += utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
-	sSettings += utils.StrFormat("FrameRange=%I64d,%I64d\n\n", Settings.iStartFrame, Settings.iStopFrame);
-
-	sSettings += utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
-	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
 	sSettings += utils.StrFormat("LogUseFileSaveDialog=%u\n\n", Settings.bLogUseFileSaveDialog);
@@ -1989,6 +1949,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings += utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
 	sSettings += utils.StrFormat("PauseBeforeExit=%u\n\n", Settings.bPauseBeforeExit);
 
+	sSettings += utils.StrFormat("DisableFFTWDLLWarning=%u\n", Settings.bDisableFFTWDLLWarning);
 	sSettings += utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
 	sSettings += utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
 	sSettings += utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);

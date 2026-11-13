@@ -1,3 +1,9 @@
+v2.9.3
+- Added fftw library dependency check
+- New ini setting: "DisableFFTWDLLWarning". See documentation for more info.
+- Removed some superfluous ini settings which are present as command line switches
+- Cleaned up documentation
+
 v2.9.2
 - Fixed wrong AVISYNTH_INTERFACE_VERSION
 - Updated dates in some messages
