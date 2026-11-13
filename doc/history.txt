@@ -1,3 +1,9 @@
+v1.9.4
+- Added a stream buffer flush to the console text output. Buffered text output through stdout/stderr
+  caused problems with console re-direction for folks who use AVSMeter in their GUIs.
+- Corrected a minor display bug
+- Other minor corrections/refactoring
+
 v1.9.3
 - More GPU info added to the log file
 - Fixed a stupid bug in the command line parser

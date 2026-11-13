@@ -50,7 +50,7 @@ public:
 	BOOL           Is64BitOS();
 	BOOL           FileExists(string s_file);
 	string         OSErrorMessage();
-	void           CursorUp(int iLines);
+	void           CursorUp(unsigned int iLines);
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
@@ -90,7 +90,7 @@ CUtils::~CUtils()
 }
 
 
-void CUtils::CursorUp(int iLines)
+void CUtils::CursorUp(unsigned int iLines)
 {
 	COORD pos;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -219,9 +219,9 @@ string CUtils::StrPad(string s_line)
 	if ((iPadLen <= 0) || (iPadLen > 1000))
 		return s_line;
 
-	string s_padding((iPadLen - 1), ' ');
+	s_line.append(iPadLen - 1, ' ');
 
-	return (s_line + s_padding);
+	return s_line;
 }
 
 

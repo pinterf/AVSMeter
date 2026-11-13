@@ -38,27 +38,33 @@
       <img alt="" src="avsmeter1.png" height="543" width="652"><br>
       <br>
     </b><font face="Fixedsys"><br>
-      Usage:&nbsp; AVSMeter script.avs [switches]<br>
-      Switches:<br>
-      &nbsp;-info
-      [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      Display clip info only<br>
-      &nbsp;-log&nbsp;
-      [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      Create log file<br>
-      &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    </font><b><code>Usage:&nbsp; AVSMeter script.avs [switches]</code></b><b><code><br>
+      </code></b><b><code> Switches:</code></b><b><code><br>
+      </code></b><b><code> &nbsp;-info
+        [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Display clip info only</code></b><b><code><br>
+      </code></b><b><code> &nbsp;-log&nbsp;
+        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Create log file</code></b><b><code><br>
+      </code></b><b><code>
+        &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
-      Monitor GPU usage<br>
-      &nbsp;-range=first,last&nbsp;&nbsp;&nbsp; Specify frame range (See
-      also "FrameRange" INI setting below)<br>
-      &nbsp;-timeout=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
-      Specify timeout (seconds) (See also "ReadTimeout" INI setting
-      below)<br>
-      &nbsp;-help
-      [-h]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      Display command line usage<br>
-    </font><br>
+
+        Monitor GPU usage</code></b><b><code><br>
+      </code></b><b><code> &nbsp;-range=first,last&nbsp;&nbsp;&nbsp;
+        Specify frame range (See also "FrameRange" INI setting below)</code></b><b><code><br>
+      </code></b><b><code>
+        &nbsp;-timeout=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+        Specify timeout (seconds) (See also "ReadTimeout" INI setting
+        below)</code></b><b><code><br>
+      </code></b><b><code> &nbsp;-help
+        [-h]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Display command line usage</code></b><b><code><br>
+      </code></b><b><code> </code></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
     the default settings.<br>
@@ -79,9 +85,7 @@
     Specify the range of frames to be processed. "FrameRange=<font
       color="Red"><b>0,-1</b></font>" processes all frames in the
     script. "FrameRange=1500,1999" processes 500 frames starting at
-    frame 1500. The smallest supported interval depends on how many
-    frames/second are processed. The script has to run for at least ~200
-    ms, otherwise no data is captured.<br>
+    frame 1500.<br>
     <b><i>Note:</i></b> The command line switch "-range" overrides the
     INI setting.<br>
     <b><br>
@@ -117,7 +121,7 @@
           3600</b></b>):</b><br>
     In some rare cases, Avisynth gets stuck on reading a single frame,
     mostly the first frame due to an extremely slow script, buggy
-    decoder, etc. There is now a configurable timeout for these cases in
+    plugin, etc. There is now a configurable timeout for these cases in
     AVSMeter.ini:<br>
     "ReadTimeout=<font color="#ff0000"><b>120</b></font>" sets the
     timeout to 120 seconds which is also the default. Once the

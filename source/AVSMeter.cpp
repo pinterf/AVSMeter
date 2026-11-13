@@ -20,10 +20,13 @@
 #define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
 #define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
+#define COLOR_INFO              FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
 #define STD_OUT 0
 #define STD_ERR 1
+
+#define REFRESH_INTERVAL 0.4
 
 struct stAvisynthInfo
 {
@@ -166,9 +169,9 @@ int main(int argc, char* argv[])
 
 	PrintFmt(STD_ERR, COLOR_AVISYNTH_VERSION, "\r%s", AvisynthInfo.sVersionString.c_str());
 	if (AvisynthInfo.bIsMTVersion)
-		PrintFmt(STD_ERR, COLOR_EMPHASIS, " (%s) (MT)\n", AvisynthInfo.sVersion.c_str());
+		PrintFmt(STD_ERR, COLOR_AVISYNTH_VERSION, " (%s) (MT)\n", AvisynthInfo.sVersion.c_str());
 	else
-		PrintFmt(STD_ERR, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sVersion.c_str());
+		PrintFmt(STD_ERR, COLOR_AVISYNTH_VERSION, " (%s)\n", AvisynthInfo.sVersion.c_str());
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -495,27 +498,27 @@ int main(int argc, char* argv[])
 		sLogBuffer += "\n\n[Clip info]\n";
 
 		sOutBuf = utils.StrFormat("Number of frames:          %11u", AVS_vidinfo.num_frames);
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Length (hh:mm:ss.ms):  %s", timer.FormatTimeString(iMilliSeconds, TRUE).c_str());
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Frame width:               %11u", AVS_vidinfo.width);
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Frame height:              %11u", AVS_vidinfo.height);
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = "Colorspace:                    ";
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf;
 
 		if (AVS_vidinfo.IsYV411())
@@ -537,7 +540,7 @@ int main(int argc, char* argv[])
 		else
 			sOutBuf = "Unknown";
 
-		PrintFmt(STD_ERR, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
+		PrintFmt(STD_ERR, COLOR_INFO, "%s\n", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = "Audio channels:    ";
@@ -695,10 +698,6 @@ int main(int argc, char* argv[])
 
 		while ((uiFramesToProcess / uiFrameInterval) > 1000000)
 		{
-			if (uiFrameInterval == 50000)
-				uiFrameInterval = 100000;
-			if (uiFrameInterval == 20000)
-				uiFrameInterval = 50000;
 			if (uiFrameInterval == 10000)
 				uiFrameInterval = 20000;
 			if (uiFrameInterval == 5000)
@@ -766,6 +765,8 @@ int main(int argc, char* argv[])
 		double dLastDisplayTime = dStartTime;
 		double dLastIntervalTime = dStartTime;
 
+		unsigned int uiCursorOffset = 0;
+
 		if (Settings.bMonitorGPULoad)
 			gpuinfo.ReadSensors();
 
@@ -782,18 +783,18 @@ int main(int argc, char* argv[])
 				process_info.Update();
 				++uiCounter;
 
-				iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
-				iEstimatedMS = (__int64)((double)uiFramesToProcess * (double)iElapsedMS / (double)n);
-
-				uiCPUUsageAcc += (unsigned int)process_info.wCPUUsage;
-				uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiCounter) + 0.5);
-
 				if (Settings.bMonitorGPULoad)
 				{
 					gpuinfo.ReadSensors();
 					uiGPUUsageAcc += (unsigned int)gpuinfo.sensors.GPULoad;
 					uiGPUUsageAvg = (unsigned int)(((double)uiGPUUsageAcc / (double)uiCounter) + 0.5);
 				}
+
+				iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
+				iEstimatedMS = (__int64)((double)uiFramesToProcess * (double)iElapsedMS / (double)n);
+
+				uiCPUUsageAcc += (unsigned int)process_info.wCPUUsage;
+				uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiCounter) + 0.5);
 
 				dwPhysicalMemCurrentMB = process_info.dwPhysicalMemMB;
 				dwVirtualMemCurrentMB = process_info.dwVirtualMemMB;
@@ -805,12 +806,13 @@ int main(int argc, char* argv[])
 
 				dFPSAverage = (double)n / (dCurrentTime - dStartTime);
 
+
 				if ((n % uiFrameInterval) == 0)
 				{
-					if ((dCurrentTime - dLastIntervalTime) > 0.0000001)
+					if ((dCurrentTime - dLastIntervalTime) > 0.000001)
 						dFPSCurrent = (double)uiFrameInterval / (dCurrentTime - dLastIntervalTime);
 					else
-						dFPSCurrent = (double)uiFrameInterval / 0.0000001;
+						dFPSCurrent = (double)uiFrameInterval / 0.000001;
 
 					if (dFPSCurrent > dFPSMax)
 						dFPSMax = dFPSCurrent;
@@ -821,10 +823,12 @@ int main(int argc, char* argv[])
 					PerformanceData[uiPDIndex].frame_high = uiCurrentFrame;
 					PerformanceData[uiPDIndex].fps = dFPSCurrent;
 					PerformanceData[uiPDIndex].cpu_usage = process_info.wCPUUsage;
+
 					if (Settings.bMonitorGPULoad)
 						PerformanceData[uiPDIndex].gpu_usage = gpuinfo.sensors.GPULoad;
 					else
 						PerformanceData[uiPDIndex].gpu_usage = 0;
+
 					PerformanceData[uiPDIndex].num_threads = process_info.wThreadCount;
 					PerformanceData[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
 					PerformanceData[uiPDIndex].virt_mem = dwVirtualMemCurrentMB;
@@ -833,40 +837,54 @@ int main(int argc, char* argv[])
 					dLastIntervalTime = dCurrentTime;
 				}
 
-				if ((dCurrentTime - dLastDisplayTime) >= (1.0 / 3.0))
+
+				if ((dCurrentTime - dLastDisplayTime) >= REFRESH_INTERVAL)
 				{
 					dLastDisplayTime = dCurrentTime;
 
 					if (!bFirstScr)
 					{
-						if (Settings.bMonitorGPULoad)
-							utils.CursorUp(10);
-						else
-							utils.CursorUp(9);
+						utils.CursorUp(uiCursorOffset);
+						uiCursorOffset = 0;
 					}
 
 					bFirstScr = FALSE;
+
 					sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame, uiLastFrame);
 					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+
 					sOutBuf = utils.StrFormat("FPS (cur | min | max | avg):    %s | %s | %s | %s", utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
 					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+
 					sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", process_info.wCPUUsage, uiCPUUsageAvg);
 					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
 
 					if (Settings.bMonitorGPULoad)
 					{
 						sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", gpuinfo.sensors.GPULoad, uiGPUUsageAvg);
-						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+						PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+						++uiCursorOffset;
 					}
 
 					sOutBuf = utils.StrFormat("Thread count:                   %u", process_info.wThreadCount);
 					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+
 					sOutBuf = utils.StrFormat("Memory usage (phys | virt):     %u | %u MB", dwPhysicalMemCurrentMB, dwVirtualMemCurrentMB);
 					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+
 					sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
 					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
 
 					PrintFmt(STD_ERR, COLOR_DEFAULT, "\nPress \'Esc\' to cancel the process...\n\n");
+					++uiCursorOffset;
+					++uiCursorOffset;
+					++uiCursorOffset;
 
 					if (_kbhit())
 					{
@@ -898,12 +916,7 @@ int main(int argc, char* argv[])
 		if (n >= uiFrameInterval)
 		{
 			if (!bFirstScr)
-			{
-				if (Settings.bMonitorGPULoad)
-					utils.CursorUp(10);
-				else
-					utils.CursorUp(9);
-			}
+				utils.CursorUp(uiCursorOffset);
 
 			if (uiFirstFrame == uiLastFrame)
 			{
@@ -1239,13 +1252,19 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, perfdata * cs_pdata
 				{
 					stemp1 = utils.StrFormat("%u", cs_pdata[i].frame_low);
 					string spad((12 - stemp1.length()), ' ');
-					stemp2 = utils.StrFormat("%s%u %13.3f %16.4f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					if (Settings.bMonitorGPULoad)
+						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					else
+						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8s %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, "n/a", cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 				else
 				{
 					stemp1 = utils.StrFormat("%u-%u", cs_pdata[i].frame_low, cs_pdata[i].frame_high);
 					string spad((21 - stemp1.length()), ' ');
-					stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.4f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					if (Settings.bMonitorGPULoad)
+						stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					else
+						stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %8s %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, "n/a", cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 
 				hLogFile << stemp2 + "\n";
@@ -1374,30 +1393,32 @@ void CalculateFrameInterval(PVOID pParam)
 				break;
 		}
 
-		p->uiFrameInterval = 10000;
+		p->uiFrameInterval = 20000;
 		double dAverageFrameTime = 0.0;
 		if (TDelta > 0.2)
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uif; //ms
 
-		if (dAverageFrameTime > 0.0010)
+		if (dAverageFrameTime >  0.001)
+			p->uiFrameInterval = 10000;
+		if (dAverageFrameTime >  0.002)
 			p->uiFrameInterval = 5000;
-		if (dAverageFrameTime > 0.0025)
+		if (dAverageFrameTime >  0.005)
 			p->uiFrameInterval = 2000;
-		if (dAverageFrameTime > 0.0050)
+		if (dAverageFrameTime >  0.010)
 			p->uiFrameInterval = 1000;
-		if (dAverageFrameTime > 0.0100)
+		if (dAverageFrameTime >  0.020)
 			p->uiFrameInterval = 500;
-		if (dAverageFrameTime > 0.0250)
+		if (dAverageFrameTime >  0.050)
 			p->uiFrameInterval = 200;
-		if (dAverageFrameTime > 0.0500)
+		if (dAverageFrameTime >  0.100)
 			p->uiFrameInterval = 100;
-		if (dAverageFrameTime > 0.1000)
+		if (dAverageFrameTime >  0.200)
 			p->uiFrameInterval = 50;
-		if (dAverageFrameTime > 0.2500)
+		if (dAverageFrameTime >  0.500)
 			p->uiFrameInterval = 20;
-		if (dAverageFrameTime > 0.5000)
+		if (dAverageFrameTime >  1.000)
 			p->uiFrameInterval = 10;
-		if (dAverageFrameTime > 5.0000)
+		if (dAverageFrameTime > 10.000)
 			p->uiFrameInterval = 1;
 
 		AVS_clip = 0;
@@ -1577,16 +1598,22 @@ void PrintFmt(BYTE bStream, WORD wAttributes, const char *fmt, ...)  //bStream: 
 	if (wAttributes)
 		utils.SetRGB(wAttributes, Settings.bUseColor);
 
-	if (bStream == 0)
+	if (bStream == STD_OUT)
+	{
 		vfprintf(stdout, fmt, args);
-	if (bStream == 1)
+		fflush(stdout);
+	}
+	if (bStream == STD_ERR)
+	{
 		vfprintf(stderr, fmt, args);
+		fflush(stderr);
+	}
 
 	if (wAttributes)
 		utils.ResetRGB(Settings.bUseColor);
 
 	va_end(args);
-
+	
 	return;
 }
 

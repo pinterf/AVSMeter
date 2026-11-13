@@ -102,7 +102,7 @@ void CProcessInfo::Update()
 	else
 		wCPUUsage = (WORD)btCPUUsage;
 
-	if ((::GetTickCount() - dwLastTimeRunThreadCount) > 1000)
+	if ((::GetTickCount() - dwLastTimeRunThreadCount) > 5000)
 	{
 		wThreadCount = GetCurrentThreadCount();
 		dwLastTimeRunThreadCount = GetTickCount();
