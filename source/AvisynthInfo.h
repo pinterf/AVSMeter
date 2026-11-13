@@ -1271,7 +1271,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 
 void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint)
 {
-	if (FileSize(s_dll) > (50 * 1024 * 1024))
+	if ((FileSize(s_dll) > (50 * 1024 * 1024)) || (FileSize(s_dll) < 32 ))
 		return;
 
 	size_t pos = 0;

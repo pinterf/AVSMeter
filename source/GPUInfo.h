@@ -38,8 +38,8 @@ public:
 	{
 		DWORD GPUClock;
 		DWORD MEMClock;
-		WORD  GPULoad;
-		WORD  VPULoad;
+		BYTE  GPULoad;
+		BYTE  VPULoad;
 		DWORD MemoryUsedGeneral;
 		DWORD MemoryUsedDedicated;
 		DWORD MemoryUsedDynamic;
@@ -274,9 +274,9 @@ void CGPUInfo::ReadSensors()
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
 		char DefChar = ' ';
-		char szsensor[512];
-		WideCharToMultiByte(CP_ACP, 0, lpMem->sensors[i].name, -1, szsensor, 511, &DefChar, NULL);
-		string sSensor(szsensor);
+		char szSensor[512];
+		WideCharToMultiByte(CP_ACP, 0, lpMem->sensors[i].name, -1, szSensor, 511, &DefChar, NULL);
+		string sSensor(szSensor);
 		sSensor.erase(sSensor.find_last_not_of(" \t\n\r") + 1);
 		sSensor.erase(0, sSensor.find_first_not_of(" \t\n\r"));
 		StrToUC(sSensor);
@@ -286,9 +286,9 @@ void CGPUInfo::ReadSensors()
 		if (sSensor == "GPU MEMORY CLOCK")
 			sensors.MEMClock = (WORD)(lpMem->sensors[i].value + 0.5);
 		if (sSensor == "GPU LOAD")
-			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
+			sensors.GPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
 		if ((data.NVVPU) && (sSensor == "VIDEO ENGINE LOAD"))
-			sensors.VPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
+			sensors.VPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
 		if (sSensor == "MEMORY USED")
 		{
 			data.GeneralMem = TRUE;

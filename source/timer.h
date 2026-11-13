@@ -24,11 +24,11 @@ class CTimer
 {
 public:
 	CTimer();
-	virtual      ~CTimer();
-	double       GetTimer();
-	double       GetSTDTimer();
-	BOOL         TestTimer();
-	string       FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
+	virtual       ~CTimer();
+	double        GetTimer();
+	double        GetSTDTimer();
+	BOOL          TestTimer();
+	string        FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 private:
 };
 

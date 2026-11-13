@@ -30,7 +30,6 @@
 
 #define REFRESH_INTERVAL 0.333333333333333
 
-
 class CSettings
 {
 public:
@@ -64,11 +63,11 @@ class CPerformanceData
 {
 public:
 	unsigned int  current_frame;
-	double        fps_current;
-	double        fps_average;
-	WORD          cpu_usage;
-	WORD          gpu_usage;
-	WORD          vpu_usage;
+	float         fps_current;
+	float         fps_average;
+	BYTE          cpu_usage;
+	BYTE          gpu_usage;
+	BYTE          vpu_usage;
 	DWORD         phys_mem;
 	DWORD         virt_mem;
 	WORD          num_threads;
@@ -81,8 +80,8 @@ CTimer timer;
 CSettings Settings;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
-string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
-string       CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP);
+string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
+string       CreateCSVFile(string &s_avsfile, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, unsigned int ui_frameinterval, BOOL bNVVP);
 string       ParseINIFile();
 void         PrintUsage();
 void         Pause();
@@ -126,8 +125,7 @@ int main(int argc, char* argv[])
 	string sAVSFile = "";
 	string sLogBuffer = "";
 	string sGPUInfo = "";
-	CPerformanceData * perfdata = 0;
-	unsigned int uiPDIndex = 0;
+	vector<CPerformanceData> perfdata;
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
 	string sAVSError = "";
@@ -462,79 +460,77 @@ int main(int argc, char* argv[])
 
 	if (bPrintAVSInfo)
 	{
-		sOutBuf = utils.StrFormat("Log created with:             AVSMeter %s\n", sAVSMVersion.c_str());
+		sOutBuf = utils.StrFormat("Log created with:           AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
 
 		sLogBuffer += "\n[OS/Hardware info]\n";
-		sOutBuf = utils.StrFormat("OS version:                   %s\n", utils.GetOSVersion().c_str());
+		sOutBuf = utils.StrFormat("Operating system:           %s\n", utils.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
 		if (utils.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU (brand string):           %s\n", utils.cpudata.CPUBrandString.c_str());
-			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU (code name):              %s\n", utils.cpudata.CPUCodeName.c_str());
+			sOutBuf = utils.StrFormat("CPU:                        %s\n                            %s\n", utils.cpudata.CPUBrandString.c_str(), utils.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
 			if (utils.cpudata.CPURealClock > 500)
 			{
-				sOutBuf = utils.StrFormat("CPU clock (measured):         %u MHz\n", utils.cpudata.CPURealClock);
+				sOutBuf = utils.StrFormat("CPU clock (measured):       %u MHz\n", utils.cpudata.CPURealClock);
 				sLogBuffer += sOutBuf;
 			}
-			sOutBuf = utils.StrFormat("CPU cores / Logical cores:    %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
+			sOutBuf = utils.StrFormat("CPU cores / Logical cores:  %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
 
 
 		if (Settings.bMonitorGPULoad)
 		{
-			sOutBuf = utils.StrFormat("Video card:                   %s", gpuinfo.data.CardName.c_str());
+			sOutBuf = utils.StrFormat("Video card:                 %s", gpuinfo.data.CardName.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("GPU name:                     %s", gpuinfo.data.GPUName.c_str());
+			sOutBuf = utils.StrFormat("GPU name:                   %s", gpuinfo.data.GPUName.c_str());
 			sLogBuffer += sOutBuf + "\n";
 			if (gpuinfo.data.VPEngineName != "")
 			{
-				sOutBuf = utils.StrFormat("NVIDIA VPU version:           %s", gpuinfo.data.VPEngineName.c_str());
+				sOutBuf = utils.StrFormat("NVIDIA VPU version:         %s", gpuinfo.data.VPEngineName.c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
-			sOutBuf = utils.StrFormat("Video memory size:            %s", gpuinfo.data.MemSize.c_str());
+			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("OpenCL version:               %s", gpuinfo.data.OpenCLVersion.c_str());
+			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Graphics driver version:      %s\n", gpuinfo.data.DriverVersion.c_str());
+			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
 			sLogBuffer += sOutBuf;
 		}
 
 
-		sLogBuffer += "\n\n[Avisynth info]";
-		sOutBuf = utils.StrFormat("\nAvisynth VersionString:       %s\n", AvisynthInfo.sVersionString.c_str());
+		sLogBuffer += "\n\n[Avisynth core info]";
+		sOutBuf = utils.StrFormat("\nVersionString:              %s\n", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth VersionNumber:       %s\n", AvisynthInfo.sVersionNumber.c_str());
+		sOutBuf = utils.StrFormat("VersionNumber:              %s\n", AvisynthInfo.sVersionNumber.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("File version:                 %s\n", AvisynthInfo.sFileVersion.c_str());
+		sOutBuf = utils.StrFormat("File version:               %s\n", AvisynthInfo.sFileVersion.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth Interface Version:   %d\n", AvisynthInfo.iInterfaceVersion);
+		sOutBuf = utils.StrFormat("Interface Version:          %d\n", AvisynthInfo.iInterfaceVersion);
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Multi-threading support:      %s\n", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
+		sOutBuf = utils.StrFormat("Multi-threading support:    %s\n", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Linker/compiler version:      %s\n", AvisynthInfo.sLinkerVersion.c_str());
+		sOutBuf = utils.StrFormat("Linker/compiler version:    %s\n", AvisynthInfo.sLinkerVersion.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth DLL location:        %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth DLL time stamp:      %s\n", AvisynthInfo.sTimeStamp.c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -545,7 +541,7 @@ int main(int argc, char* argv[])
 			if (sPluginDir != "")
 			{
 				size_t spos = sPluginDir.find(":\t");
-				sPluginDir = sPluginDir.substr(0, spos + 1) + "    " + sPluginDir.substr(spos + 2);
+				sPluginDir = sPluginDir.substr(0, spos + 1) + "  " + sPluginDir.substr(spos + 2);
 
 				sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
 				sLogBuffer += sOutBuf;
@@ -884,89 +880,87 @@ int main(int argc, char* argv[])
 			iMilliSeconds = (__int64)((((double)uiFrames * (double)AVS_vidinfo.fps_denominator * 1000.0) / (double)AVS_vidinfo.fps_numerator) + 0.5);
 		}
 
-		sOutBuf = utils.StrFormat("Log created with:             AVSMeter %s", sAVSMVersion.c_str());
+		sOutBuf = utils.StrFormat("Log created with:           AVSMeter %s", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Script file:                  %s", sAVSFile.c_str());
+		sOutBuf = utils.StrFormat("Script file:                %s", sAVSFile.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		if (sCommandLine != "")
 		{
-			sOutBuf = utils.StrFormat("Command line switches:        %s", sCommandLine.c_str());
+			sOutBuf = utils.StrFormat("Command line switches:      %s", sCommandLine.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
 
 		if (Settings.sLogDirectory != "")
 		{
-			sOutBuf = utils.StrFormat("Log file directory:           %s", Settings.sLogDirectory.c_str());
+			sOutBuf = utils.StrFormat("Log file directory:         %s", Settings.sLogDirectory.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
 
 
 		sLogBuffer += "\n\n[OS/Hardware info]\n";
-		sOutBuf = utils.StrFormat("OS version:                   %s\n", utils.GetOSVersion().c_str());
+		sOutBuf = utils.StrFormat("Operating system:           %s\n", utils.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
 		if (utils.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU (brand string):           %s\n", utils.cpudata.CPUBrandString.c_str());
-			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU (code name):              %s\n", utils.cpudata.CPUCodeName.c_str());
+			sOutBuf = utils.StrFormat("CPU:                        %s\n                            %s\n", utils.cpudata.CPUBrandString.c_str(), utils.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
 			if (utils.cpudata.CPURealClock > 500)
 			{
-				sOutBuf = utils.StrFormat("CPU clock (measured):         %u MHz\n", utils.cpudata.CPURealClock);
+				sOutBuf = utils.StrFormat("CPU clock (measured):       %u MHz\n", utils.cpudata.CPURealClock);
 				sLogBuffer += sOutBuf;
 			}
-			sOutBuf = utils.StrFormat("CPU cores / Logical cores:    %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
+			sOutBuf = utils.StrFormat("CPU cores / Logical cores:  %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
 
 
 		if (Settings.bMonitorGPULoad)
 		{
-			sOutBuf = utils.StrFormat("Video card:                   %s", gpuinfo.data.CardName.c_str());
+			sOutBuf = utils.StrFormat("Video card:                 %s", gpuinfo.data.CardName.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("GPU name:                     %s", gpuinfo.data.GPUName.c_str());
+			sOutBuf = utils.StrFormat("GPU name:                   %s", gpuinfo.data.GPUName.c_str());
 			sLogBuffer += sOutBuf + "\n";
 			if (gpuinfo.data.VPEngineName != "")
 			{
-				sOutBuf = utils.StrFormat("NVIDIA VPU version:           %s", gpuinfo.data.VPEngineName.c_str());
+				sOutBuf = utils.StrFormat("NVIDIA VPU version:         %s", gpuinfo.data.VPEngineName.c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
-			sOutBuf = utils.StrFormat("Video memory size:            %s", gpuinfo.data.MemSize.c_str());
+			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("OpenCL version:               %s", gpuinfo.data.OpenCLVersion.c_str());
+			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Graphics driver version:      %s\n", gpuinfo.data.DriverVersion.c_str());
+			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
 			sLogBuffer += sOutBuf;
 		}
 
 
-		sLogBuffer += "\n\n[Avisynth info]";
-		sOutBuf = utils.StrFormat("\nAvisynth VersionString:       %s", AvisynthInfo.sVersionString.c_str());
+		sLogBuffer += "\n\n[Avisynth core info]";
+		sOutBuf = utils.StrFormat("\nVersionString:              %s", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth VersionNumber:       %s", AvisynthInfo.sVersionNumber.c_str());
+		sOutBuf = utils.StrFormat("VersionNumber:              %s", AvisynthInfo.sVersionNumber.c_str());
 
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("File version:                 %s", AvisynthInfo.sFileVersion.c_str());
+		sOutBuf = utils.StrFormat("File version:               %s", AvisynthInfo.sFileVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth Interface Version:   %d", AvisynthInfo.iInterfaceVersion);
+		sOutBuf = utils.StrFormat("Interface Version:          %d", AvisynthInfo.iInterfaceVersion);
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Multi-threading support:      %s", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
+		sOutBuf = utils.StrFormat("Multi-threading support:    %s", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Linker/compiler version:      %s", AvisynthInfo.sLinkerVersion.c_str());
+		sOutBuf = utils.StrFormat("Linker/compiler version:    %s", AvisynthInfo.sLinkerVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth DLL location:        %s", AvisynthInfo.sDLLPath.c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s", AvisynthInfo.sDLLPath.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth DLL time stamp:      %s", AvisynthInfo.sTimeStamp.c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
@@ -975,7 +969,7 @@ int main(int argc, char* argv[])
 			if (sTemp != "")
 			{
 				size_t spos = sTemp.find(":\t");
-				sTemp = sTemp.substr(0, spos + 1) + "    " + sTemp.substr(spos + 2);
+				sTemp = sTemp.substr(0, spos + 1) + "  " + sTemp.substr(spos + 2);
 
 				sOutBuf = utils.StrFormat("%s", sTemp.c_str());
 				sLogBuffer += sOutBuf + "\n";
@@ -1047,70 +1041,68 @@ int main(int argc, char* argv[])
 		{
 			switch (AVS_vidinfo.pixel_type)
 			{
-				case VideoInfo::CS_YV411:           sOutBuf = "     YV411"; break;
-				case VideoInfo::CS_YV24:            sOutBuf = "      YV24"; break;
-				case VideoInfo::CS_YV16:            sOutBuf = "      YV16"; break;
-				case VideoInfo::CS_Y8:              sOutBuf = "        Y8"; break;
-				case VideoInfo::CS_YV12:            sOutBuf = "      YV12"; break;
-				case VideoInfo::CS_I420:            sOutBuf = "      i420"; break;
-				case VideoInfo::CS_YUY2:            sOutBuf = "      YUY2"; break;
-				case VideoInfo::CS_RAW32:           sOutBuf = "     RAW32"; break;
-				case VideoInfo::CS_BGR24:           sOutBuf = "     RGB24"; break;
-				case VideoInfo::CS_BGR32:           sOutBuf = "     RGB32"; break;
-				case VideoInfo::CS_YUV444P16:       sOutBuf = " YUV444P16"; break;
-				case VideoInfo::CS_YUV422P16:       sOutBuf = " YUV422P16"; break;
-				case VideoInfo::CS_YUV420P16:       sOutBuf = " YUV420P16"; break;
-				case VideoInfo::CS_YUV444PS:        sOutBuf = "  YUV444PS"; break;
-				case VideoInfo::CS_YUV422PS:        sOutBuf = "  YUV422PS"; break;
-				case VideoInfo::CS_YUV420PS:        sOutBuf = "  YUV420PS"; break;
-				case VideoInfo::CS_YUV9:            sOutBuf = "      YUV9"; break;
-				case VideoInfo::CS_Y16:             sOutBuf = "       Y16"; break;
-				case VideoInfo::CS_Y32:             sOutBuf = "       Y32"; break;
-				case VideoInfo::CS_YUV444P10:       sOutBuf = " YUV444P10"; break;
-				case VideoInfo::CS_YUV422P10:       sOutBuf = " YUV422P10"; break;
-				case VideoInfo::CS_YUV420P10:       sOutBuf = " YUV420P10"; break;
-				case VideoInfo::CS_Y10:             sOutBuf = "       Y10"; break;
-				case VideoInfo::CS_YUV444P12:       sOutBuf = " YUV444P12"; break;
-				case VideoInfo::CS_YUV422P12:       sOutBuf = " YUV422P12"; break;
-				case VideoInfo::CS_YUV420P12:       sOutBuf = " YUV420P12"; break;
-				case VideoInfo::CS_Y12:             sOutBuf = "       Y12"; break;
-				case VideoInfo::CS_YUV444P14:       sOutBuf = " YUV444P14"; break;
-				case VideoInfo::CS_YUV422P14:       sOutBuf = " YUV422P14"; break;
-				case VideoInfo::CS_YUV420P14:       sOutBuf = " YUV420P14"; break;
-				case VideoInfo::CS_Y14:             sOutBuf = "       Y14"; break;
-				case VideoInfo::CS_BGR48:           sOutBuf = "     BGR48"; break;
-				case VideoInfo::CS_BGR64:           sOutBuf = "     BGR64"; break;
-				case VideoInfo::CS_RGBP:            sOutBuf = "      RGBP"; break;
-				case VideoInfo::CS_RGBP10:          sOutBuf = "    RGBP10"; break;
-				case VideoInfo::CS_RGBP12:          sOutBuf = "    RGBP12"; break;
-				case VideoInfo::CS_RGBP14:          sOutBuf = "    RGBP14"; break;
-				case VideoInfo::CS_RGBP16:          sOutBuf = "    RGBP16"; break;
-				case VideoInfo::CS_RGBPS:           sOutBuf = "     RGBPS"; break;
-				case VideoInfo::CS_RGBAP:           sOutBuf = "     RGBAP"; break;
-				case VideoInfo::CS_RGBAP10:         sOutBuf = "   RGBAP10"; break;
-				case VideoInfo::CS_RGBAP12:         sOutBuf = "   RGBAP12"; break;
-				case VideoInfo::CS_RGBAP14:         sOutBuf = "   RGBAP14"; break;
-				case VideoInfo::CS_RGBAP16:         sOutBuf = "   RGBAP16"; break;
-				case VideoInfo::CS_RGBAPS:          sOutBuf = "    RGBAPS"; break;
-				case VideoInfo::CS_YUVA444:         sOutBuf = "   YUVA444"; break;
-				case VideoInfo::CS_YUVA422:         sOutBuf = "   YUVA422"; break;
-				case VideoInfo::CS_YUVA420:         sOutBuf = "   YUVA420"; break;
-				case VideoInfo::CS_YUVA444P10:      sOutBuf = "YUVA444P10"; break;
-				case VideoInfo::CS_YUVA422P10:      sOutBuf = "YUVA422P10"; break;
-				case VideoInfo::CS_YUVA420P10:      sOutBuf = "YUVA420P10"; break;
-				case VideoInfo::CS_YUVA444P12:      sOutBuf = "YUVA444P12"; break;
-				case VideoInfo::CS_YUVA422P12:      sOutBuf = "YUVA422P12"; break;
-				case VideoInfo::CS_YUVA420P12:      sOutBuf = "YUVA420P12"; break;
-				case VideoInfo::CS_YUVA444P14:      sOutBuf = "YUVA444P14"; break;
-				case VideoInfo::CS_YUVA422P14:      sOutBuf = "YUVA422P14"; break;
-				case VideoInfo::CS_YUVA420P14:      sOutBuf = "YUVA420P14"; break;
-				case VideoInfo::CS_YUVA444P16:      sOutBuf = "YUVA444P16"; break;
-				case VideoInfo::CS_YUVA422P16:      sOutBuf = "YUVA422P16"; break;
-				case VideoInfo::CS_YUVA420P16:      sOutBuf = "YUVA420P16"; break;
-				case VideoInfo::CS_YUVA444PS:       sOutBuf = " YUVA444PS"; break;
-				case VideoInfo::CS_YUVA422PS:       sOutBuf = " YUVA422PS"; break;
-				case VideoInfo::CS_YUVA420PS:       sOutBuf = " YUVA420PS"; break;
-				default:                            sOutBuf = "  Unknown";
+				case VideoInfo::CS_YV411:       sOutBuf = "     YV411"; break;
+				case VideoInfo::CS_YV24:        sOutBuf = "      YV24"; break;
+				case VideoInfo::CS_YV16:        sOutBuf = "      YV16"; break;
+				case VideoInfo::CS_Y8:          sOutBuf = "        Y8"; break;
+				case VideoInfo::CS_YV12:        sOutBuf = "      YV12"; break;
+				case VideoInfo::CS_I420:        sOutBuf = "      i420"; break;
+				case VideoInfo::CS_YUY2:        sOutBuf = "      YUY2"; break;
+				case VideoInfo::CS_BGR24:       sOutBuf = "     RGB24"; break;
+				case VideoInfo::CS_BGR32:       sOutBuf = "     RGB32"; break;
+				case VideoInfo::CS_YUV444P16:   sOutBuf = " YUV444P16"; break;
+				case VideoInfo::CS_YUV422P16:   sOutBuf = " YUV422P16"; break;
+				case VideoInfo::CS_YUV420P16:   sOutBuf = " YUV420P16"; break;
+				case VideoInfo::CS_YUV444PS:    sOutBuf = "  YUV444PS"; break;
+				case VideoInfo::CS_YUV422PS:    sOutBuf = "  YUV422PS"; break;
+				case VideoInfo::CS_YUV420PS:    sOutBuf = "  YUV420PS"; break;
+				case VideoInfo::CS_Y16:         sOutBuf = "       Y16"; break;
+				case VideoInfo::CS_Y32:         sOutBuf = "       Y32"; break;
+				case VideoInfo::CS_YUV444P10:   sOutBuf = " YUV444P10"; break;
+				case VideoInfo::CS_YUV422P10:   sOutBuf = " YUV422P10"; break;
+				case VideoInfo::CS_YUV420P10:   sOutBuf = " YUV420P10"; break;
+				case VideoInfo::CS_Y10:         sOutBuf = "       Y10"; break;
+				case VideoInfo::CS_YUV444P12:   sOutBuf = " YUV444P12"; break;
+				case VideoInfo::CS_YUV422P12:   sOutBuf = " YUV422P12"; break;
+				case VideoInfo::CS_YUV420P12:   sOutBuf = " YUV420P12"; break;
+				case VideoInfo::CS_Y12:         sOutBuf = "       Y12"; break;
+				case VideoInfo::CS_YUV444P14:   sOutBuf = " YUV444P14"; break;
+				case VideoInfo::CS_YUV422P14:   sOutBuf = " YUV422P14"; break;
+				case VideoInfo::CS_YUV420P14:   sOutBuf = " YUV420P14"; break;
+				case VideoInfo::CS_Y14:         sOutBuf = "       Y14"; break;
+				case VideoInfo::CS_BGR48:       sOutBuf = "     BGR48"; break;
+				case VideoInfo::CS_BGR64:       sOutBuf = "     BGR64"; break;
+				case VideoInfo::CS_RGBP:        sOutBuf = "      RGBP"; break;
+				case VideoInfo::CS_RGBP10:      sOutBuf = "    RGBP10"; break;
+				case VideoInfo::CS_RGBP12:      sOutBuf = "    RGBP12"; break;
+				case VideoInfo::CS_RGBP14:      sOutBuf = "    RGBP14"; break;
+				case VideoInfo::CS_RGBP16:      sOutBuf = "    RGBP16"; break;
+				case VideoInfo::CS_RGBPS:       sOutBuf = "     RGBPS"; break;
+				case VideoInfo::CS_RGBAP:       sOutBuf = "     RGBAP"; break;
+				case VideoInfo::CS_RGBAP10:     sOutBuf = "   RGBAP10"; break;
+				case VideoInfo::CS_RGBAP12:     sOutBuf = "   RGBAP12"; break;
+				case VideoInfo::CS_RGBAP14:     sOutBuf = "   RGBAP14"; break;
+				case VideoInfo::CS_RGBAP16:     sOutBuf = "   RGBAP16"; break;
+				case VideoInfo::CS_RGBAPS:      sOutBuf = "    RGBAPS"; break;
+				case VideoInfo::CS_YUVA444:     sOutBuf = "   YUVA444"; break;
+				case VideoInfo::CS_YUVA422:     sOutBuf = "   YUVA422"; break;
+				case VideoInfo::CS_YUVA420:     sOutBuf = "   YUVA420"; break;
+				case VideoInfo::CS_YUVA444P10:  sOutBuf = "YUVA444P10"; break;
+				case VideoInfo::CS_YUVA422P10:  sOutBuf = "YUVA422P10"; break;
+				case VideoInfo::CS_YUVA420P10:  sOutBuf = "YUVA420P10"; break;
+				case VideoInfo::CS_YUVA444P12:  sOutBuf = "YUVA444P12"; break;
+				case VideoInfo::CS_YUVA422P12:  sOutBuf = "YUVA422P12"; break;
+				case VideoInfo::CS_YUVA420P12:  sOutBuf = "YUVA420P12"; break;
+				case VideoInfo::CS_YUVA444P14:  sOutBuf = "YUVA444P14"; break;
+				case VideoInfo::CS_YUVA422P14:  sOutBuf = "YUVA422P14"; break;
+				case VideoInfo::CS_YUVA420P14:  sOutBuf = "YUVA420P14"; break;
+				case VideoInfo::CS_YUVA444P16:  sOutBuf = "YUVA444P16"; break;
+				case VideoInfo::CS_YUVA422P16:  sOutBuf = "YUVA422P16"; break;
+				case VideoInfo::CS_YUVA420P16:  sOutBuf = "YUVA420P16"; break;
+				case VideoInfo::CS_YUVA444PS:   sOutBuf = " YUVA444PS"; break;
+				case VideoInfo::CS_YUVA422PS:   sOutBuf = " YUVA422PS"; break;
+				case VideoInfo::CS_YUVA420PS:   sOutBuf = " YUVA420PS"; break;
+				default:                        sOutBuf = "  Unknown";
 			}
 		}
 
@@ -1171,12 +1163,9 @@ int main(int argc, char* argv[])
 
 			if (Settings.bCreateLog)
 			{
-				perfdata = new CPerformanceData[1];
-				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, FALSE);
+				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, uiFrameInterval, FALSE);
 				if (sLogRet != "")
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sLogRet.c_str());
-
-				delete [] perfdata;
 			}
 
 			AVS_linkage = 0;
@@ -1254,12 +1243,9 @@ int main(int argc, char* argv[])
 
 						if (Settings.bCreateLog)
 						{
-							perfdata = new CPerformanceData[1];
-							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, FALSE);
+							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, uiFrameInterval, FALSE);
 							if (sLogRet != "")
 								PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, sLogRet.c_str());
-
-							delete [] perfdata;
 						}
 
 						AVS_linkage = 0;
@@ -1278,26 +1264,11 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
-		while ((uiFramesToProcess / uiFrameInterval) > 500000)
+		while ((uiFramesToProcess / uiFrameInterval) > 100000)
 			uiFrameInterval *= 10;
 
-		unsigned int uiArraySize = (uiFramesToProcess / uiFrameInterval) + 2;
-		unsigned int uiArrayMemSize = (unsigned int)(((double)(sizeof(CPerformanceData) * uiArraySize) / 1048576.0) + 0.5);
-		perfdata = new CPerformanceData[uiArraySize];
-		for (unsigned int x = 0; x < uiArraySize; x++)
-		{
-			perfdata[x].current_frame = 0;
-			perfdata[x].fps_current = 0.0;
-			perfdata[x].fps_average = 0.0;
-			perfdata[x].cpu_usage = 0;
-			perfdata[x].gpu_usage = 0;
-			perfdata[x].vpu_usage = 0;
-			perfdata[x].phys_mem = 0;
-			perfdata[x].virt_mem = 0;
-			perfdata[x].num_threads = 0;
-		}
+		perfdata.reserve((uiFramesToProcess / uiFrameInterval) + 2);
 
-		bEarlyExit = FALSE;
 		unsigned int n = 0;
 		BOOL bFirstScr = TRUE;
 		__int64 iElapsedMS = 0;
@@ -1366,7 +1337,7 @@ int main(int argc, char* argv[])
 			iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
 			iEstimatedMS = (__int64)((double)uiFramesToProcess * (double)iElapsedMS / (double)n);
 
-			uiCPUUsageAcc += (unsigned int)processinfo.wCPUUsage;
+			uiCPUUsageAcc += (unsigned int)processinfo.btCPUUsage;
 			uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiCounter) + 0.5);
 
 			dwPhysicalMemCurrentMB = processinfo.dwPhysicalMemMB;
@@ -1392,26 +1363,27 @@ int main(int argc, char* argv[])
 			if (dFPSCurrent < dFPSMin)
 				dFPSMin = dFPSCurrent;
 
-			perfdata[uiPDIndex].current_frame = uiCurrentFrame;
-			perfdata[uiPDIndex].fps_current = dFPSCurrent;
-			perfdata[uiPDIndex].fps_average = dFPSAverage;
-			perfdata[uiPDIndex].cpu_usage = processinfo.wCPUUsage;
+			CPerformanceData pdata;
+			pdata.current_frame = uiCurrentFrame;
+			pdata.fps_current = (float)dFPSCurrent;
+			pdata.fps_average = (float)dFPSAverage;
+			pdata.cpu_usage = processinfo.btCPUUsage;
 
 			if (Settings.bMonitorGPULoad)
 			{
-				perfdata[uiPDIndex].gpu_usage = gpuinfo.sensors.GPULoad;
-				perfdata[uiPDIndex].vpu_usage = gpuinfo.sensors.VPULoad;
+				pdata.gpu_usage = gpuinfo.sensors.GPULoad;
+				pdata.vpu_usage = gpuinfo.sensors.VPULoad;
 			}
 			else
 			{
-				perfdata[uiPDIndex].gpu_usage = 0;
-				perfdata[uiPDIndex].vpu_usage = 0;
+				pdata.gpu_usage = 0;
+				pdata.vpu_usage = 0;
 			}
 
-			perfdata[uiPDIndex].num_threads = processinfo.wThreadCount;
-			perfdata[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
-			perfdata[uiPDIndex].virt_mem = dwVirtualMemCurrentMB;
-			++uiPDIndex;
+			pdata.num_threads = processinfo.wThreadCount;
+			pdata.phys_mem = dwPhysicalMemCurrentMB;
+			pdata.virt_mem = dwVirtualMemCurrentMB;
+			perfdata.push_back(pdata);
 
 			dLastIntervalTime = dCurrentTime;
 
@@ -1427,6 +1399,7 @@ int main(int argc, char* argv[])
 			}
 
 			bFirstScr = FALSE;
+			bEarlyExit = FALSE;
 
 			sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame, uiLastFrame);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
@@ -1454,7 +1427,7 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			++uiCursorOffset;
 
-			sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", processinfo.wCPUUsage, uiCPUUsageAvg);
+			sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", processinfo.btCPUUsage, uiCPUUsageAvg);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			++uiCursorOffset;
 
@@ -1674,7 +1647,6 @@ int main(int argc, char* argv[])
 			sOutBuf = "Script runtime is too short for meaningful measurements";
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf;
-			uiPDIndex = 0;
 		}
 	}
 	catch (AvisynthError err)
@@ -1740,7 +1712,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateLog)
 	{
-		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, gpuinfo.data.NVVPU);
+		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, uiFrameInterval, gpuinfo.data.NVVPU);
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
@@ -1751,7 +1723,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateCSV)
 	{
-		string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiPDIndex, uiFrameInterval, gpuinfo.data.NVVPU);
+		string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiFrameInterval, gpuinfo.data.NVVPU);
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
@@ -1759,8 +1731,6 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 	}
-
-	delete [] perfdata;
 
 	Pause();
 
@@ -2146,7 +2116,7 @@ string ParseINIFile()
 }
 
 
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP)
+string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP)
 {
 	string sRet = "";
 	string sAVSBuffer = "";
@@ -2216,7 +2186,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	if (Settings.bMonitorGPULoad)
 		hLogFile << s_gpuinfo;
 
-	if (ui_index > 0)
+	if (cs_pdata.size() > 0)
 	{
 		if (Settings.bMonitorGPULoad)
 		{
@@ -2234,25 +2204,22 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 		string stemp1 = "";
 		string stemp2 = "";
 		unsigned int uiFrame = 0;
-		if (ui_index > 0)
+		for (unsigned int i = 0; i < cs_pdata.size(); i++)
 		{
-			for (unsigned int i = 0; i < ui_index; i++)
+			uiFrame = cs_pdata[i].current_frame + 1;
+			stemp1 = utils.StrFormat("%u", uiFrame);
+			string spad((12 - stemp1.length()), ' ');
+			if (Settings.bMonitorGPULoad)
 			{
-				uiFrame = cs_pdata[i].current_frame + 1;
-				stemp1 = utils.StrFormat("%u", uiFrame);
-				string spad((12 - stemp1.length()), ' ');
-				if (Settings.bMonitorGPULoad)
-				{
-					if (bNVVP)
-						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-					else
-						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-				}
+				if (bNVVP)
+					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				else
-					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-
-				hLogFile << stemp2 + "\n";
+					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 			}
+			else
+				stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+
+			hLogFile << stemp2 + "\n";
 		}
 	}
 
@@ -2266,7 +2233,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 }
 
 
-string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP)
+string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, unsigned int ui_frameinterval, BOOL bNVVP)
 {
 	string sRet = "";
 	string sCurrentLine = "";
@@ -2316,7 +2283,7 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs
 
 	string sCSV = "";
 
-	if (ui_index > 0)
+	if (cs_pdata.size() > 0)
 	{
 		if (Settings.bMonitorGPULoad)
 		{
@@ -2332,23 +2299,20 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs
 
 		string stemp = "";
 		unsigned int uiFrame = 0;
-		if (ui_index > 0)
+		for (unsigned int i = 0; i < cs_pdata.size(); i++)
 		{
-			for (unsigned int i = 0; i < ui_index; i++)
+			uiFrame = cs_pdata[i].current_frame + 1;
+			if (Settings.bMonitorGPULoad)
 			{
-				uiFrame = cs_pdata[i].current_frame + 1;
-				if (Settings.bMonitorGPULoad)
-				{
-					if (bNVVP)
-						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-					else
-						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-				}
+				if (bNVVP)
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				else
-					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-
-				hCSVFile << stemp + "\n";
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 			}
+			else
+				stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+
+			hCSVFile << stemp + "\n";
 		}
 	}
 

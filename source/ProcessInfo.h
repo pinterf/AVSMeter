@@ -32,16 +32,15 @@ public:
 	void CloseProcess();
 
 	//public variables:
-	WORD  wCPUUsage;
+	BYTE  btCPUUsage;
 	WORD  wThreadCount;
 	DWORD dwPhysicalMemMB;
 	DWORD dwVirtualMemMB;
 
 private:
 	WORD GetCurrentThreadCount();
-	BYTE GetCPUUsage();
+	void GetCPUUsage();
 	unsigned __int64 SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
-	BYTE btCPUUsage;
 	BOOL bFirstRun;
 	unsigned __int64 GetSTDTimer();
 
@@ -93,17 +92,15 @@ void CProcessInfo::Update()
 	static unsigned __int64 uiLastTimeRunCPU;
 	static unsigned __int64 uiLastTimeRunThreadCount;
 
-	//Min. update interval 200ms
+	//Min. update interval 100ms
 	if ((GetSTDTimer() - uiLastTimeRunCPU) < 100)
 		return;
 
-	btCPUUsage = GetCPUUsage();
+	GetCPUUsage();
 	bFirstRun = FALSE;
 
-	if ((btCPUUsage < 1) || (btCPUUsage > 100))
-		wCPUUsage = 0;
-	else
-		wCPUUsage = (WORD)btCPUUsage;
+	if (btCPUUsage > 100)
+		btCPUUsage = 100;
 
 	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
 	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
@@ -122,18 +119,15 @@ void CProcessInfo::Update()
 }
 
 
-BYTE CProcessInfo::GetCPUUsage()
+void CProcessInfo::GetCPUUsage()
 {
-	//create a local copy to protect against race conditions in setting the member variable
-	BYTE btCPUUsageCopy = btCPUUsage;
-
 	if (::InterlockedIncrement(&lRunCount) == 1)
 	{
 		FILETIME ftSysIdle, ftSysKernel, ftSysUser, ftProcCreation, ftProcExit, ftProcKernel, ftProcUser;
 		if (!::GetSystemTimes(&ftSysIdle, &ftSysKernel, &ftSysUser) || !::GetProcessTimes(::GetCurrentProcess(), &ftProcCreation, &ftProcExit, &ftProcKernel, &ftProcUser))
 		{
 			::InterlockedDecrement(&lRunCount);
-			return btCPUUsageCopy;
+			return;
 		}
 
 		if (!bFirstRun)
@@ -156,13 +150,11 @@ BYTE CProcessInfo::GetCPUUsage()
 		ftPrevSysUser = ftSysUser;
 		ftPrevProcKernel = ftProcKernel;
 		ftPrevProcUser = ftProcUser;
-
-		btCPUUsageCopy = btCPUUsage;
 	}
 
 	::InterlockedDecrement(&lRunCount);
 
-	return btCPUUsageCopy;
+	return;
 }
 
 

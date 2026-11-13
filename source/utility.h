@@ -86,7 +86,7 @@ public:
 	} cpudata;
 
 	//string functions
-	inline string  StrFormat(char const *fmt, ...);
+	string         StrFormat(char const *fmt, ...);
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);
 	void           StrTrim(string &s_string);
@@ -96,6 +96,7 @@ public:
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatFrameTime(double d_frametime);
 	string         StrAnsiToOEM(string s_string);
+	string         RemoveMultipleWhiteSpaces(string s);
 	BOOL           IsNumeric(string s_string);
 
 private:
@@ -198,7 +199,7 @@ string CUtils::GetFormattedSystemTime()
 }
 
 
-inline string CUtils::StrFormat(char const *fmt, ...)
+string CUtils::StrFormat(char const *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -310,6 +311,17 @@ string CUtils::StrFormatFrameTime(double d_frametime)
 		sRet = StrFormat("%u", (unsigned int)(d_frametime + 0.5));
 
 	return sRet;
+}
+
+
+string CUtils::RemoveMultipleWhiteSpaces(string s)
+{
+	string search = "  ";
+	size_t index;
+	while((index = s.find(search)) != string::npos )
+		s.erase(index,1);
+
+	return s;
 }
 
 
@@ -506,7 +518,9 @@ void CUtils::GetCPUID()
 	cpudata.CPUCores = (BYTE)data.num_cores * cpudata.NumCPUs;
 	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus * cpudata.NumCPUs;
 	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
+	cpudata.CPUCodeName = RemoveMultipleWhiteSpaces(cpudata.CPUCodeName);
 	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
+	cpudata.CPUBrandString = RemoveMultipleWhiteSpaces(cpudata.CPUBrandString);
 
 	int clk = cpu_clock_by_ic(100, 15);
 	if (clk > 100)
@@ -521,3 +535,4 @@ void CUtils::GetCPUID()
 
 
 #endif //_UTILITY_H
+

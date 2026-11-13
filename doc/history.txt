@@ -1,3 +1,10 @@
+v2.3.8
+- Updated Avisynth headers
+- Updated libcpuid
+- Refactoring and cosmetics
+- Perfdata -> std::vector
+- Optimisation of some helper functions
+
 v2.3.7
 - Updated Avisynth header to the latest AVS+ version (r2151)
 - Updated color space detection accordingly

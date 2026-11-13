@@ -43,7 +43,18 @@
 #include "avs_headers\avisynth.h"
 const AVS_Linkage *AVS_linkage = 0;
 
-using namespace std;
+
+using std::string;
+using std::ifstream;
+using std::ofstream;
+using std::vector;
+using std::map;
+using std::sort;
+using std::set;
+using std::transform;
+using std::getline;
+using std::remove;
+using std::exception;
 
 HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName);
 BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName);
