@@ -1,3 +1,6 @@
+v2.9.9.1
+- Increased range for  AVISYNTH_INTERFACE_VERSION detection
+
 v2.9.9
 - Added GPU power consumption sensor readout
 - Put back 'CreateLog' and 'CreateCSV' ini options

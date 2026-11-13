@@ -272,7 +272,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 			return FALSE;
 		}
 
-		iInterfaceVersion = 8;
+		iInterfaceVersion = 16;
 		while (!AVS_env)
 		{
 			iInterfaceVersion--;
