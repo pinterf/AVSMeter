@@ -38,7 +38,6 @@ public:
 	vector  <string> vInternalFunctions;
 	vector  <string> vPluginFunctions;
 	vector  <string> vPlugins;
-	vector  <string> vPluginDependencies;
 	vector  <string> vPluginErrors;
 	string  sDLLPath;
 	string  sFileVersion;
@@ -232,8 +231,6 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	string sHint = "";
 	BOOL bFFTWFail = FALSE;
 	GetDLLDependencies(sDLLPath, sDeps, sFailedDeps, sHint, bFFTWFail);
-	if (sDeps != "")
-		vPluginDependencies.push_back(sDeps);
 
 	if (sFailedDeps != "")
 	{
@@ -816,8 +813,6 @@ void CAvisynthInfo::TestLoadPlugins()
 		sHint = "";
 		bFFTWFail = FALSE;
 		GetDLLDependencies(sPlugin, sDependencies, sFailedDependencies, sHint, bFFTWFail);
-		if (sDependencies != "")
-			vPluginDependencies.push_back(sDependencies);
 
 		sPlugLoadError = "";
 		sNote = "";

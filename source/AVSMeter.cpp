@@ -757,24 +757,6 @@ int main(int argc, char* argv[])
 		}
 
 
-		//Plugin Dependencies
-		if (AvisynthInfo.vPluginDependencies.size() > 0)
-		{
-			if (AvisynthInfo.bIs64BitAVSDLL)
-				sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
-			else
-				sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
-
-			sLogBuffer += sOutBuf;
-
-			for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
-			{
-				sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
-				sLogBuffer += sOutBuf;
-			}
-		}
-
-
 		if (bLogFunctions)
 		{
 			//Internal Functions
@@ -1088,33 +1070,33 @@ int main(int argc, char* argv[])
 		sLogBuffer += "\n\n[Clip info]\n";
 
 		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Number of frames:          %11u", AVS_vidinfo.num_frames);
+			sOutBuf = utils.StrFormat("Number of frames:              %11u", AVS_vidinfo.num_frames);
 		else
-			sOutBuf = "Number of frames:                  n/a";
+			sOutBuf = "Number of frames:                      n/a";
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Length (hh:mm:ss.ms):  %s", timer.FormatTimeString(iMilliSeconds, TRUE).c_str());
+			sOutBuf = utils.StrFormat("Length (hh:mm:ss.ms):      %s", timer.FormatTimeString(iMilliSeconds, TRUE).c_str());
 		else
-			sOutBuf = "Length (hh:mm:ss.ms):              n/a";
+			sOutBuf = "Length (hh:mm:ss.ms):                  n/a";
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Frame width:               %11u", AVS_vidinfo.width);
+			sOutBuf = utils.StrFormat("Frame width:                   %11u", AVS_vidinfo.width);
 		else
-			sOutBuf = "Frame width:                       n/a";
+			sOutBuf = "Frame width:                           n/a";
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Frame height:              %11u", AVS_vidinfo.height);
+			sOutBuf = utils.StrFormat("Frame height:                  %11u", AVS_vidinfo.height);
 		else
-			sOutBuf = "Frame height:                      n/a";
+			sOutBuf = "Frame height:                          n/a";
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
@@ -1124,27 +1106,27 @@ int main(int argc, char* argv[])
 			if (AVS_vidinfo.IsFieldBased())
 			{
 				if (AVS_vidinfo.IsTFF())
-					sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u, TFF)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+					sOutBuf = utils.StrFormat("Framerate:                     %11.3f (%u/%u, TFF)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
 				else if (AVS_vidinfo.IsBFF())
-					sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u, BFF)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+					sOutBuf = utils.StrFormat("Framerate:                     %11.3f (%u/%u, BFF)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
 				else
-					sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+					sOutBuf = utils.StrFormat("Framerate:                     %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
 			}
 			else
-				sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+				sOutBuf = utils.StrFormat("Framerate:                     %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
 		}
 		else
-			sOutBuf = "Framerate:                         n/a";
+			sOutBuf = "Framerate:                             n/a";
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = "Colorspace:                 ";
+		sOutBuf = "Colorspace:                     ";
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf;
 
 		if (!AVS_vidinfo.HasVideo())
-			sOutBuf = "       n/a";
+			sOutBuf = "           n/a";
 		else
 		{
 			switch (AVS_vidinfo.pixel_type)
@@ -1221,12 +1203,12 @@ int main(int argc, char* argv[])
 
 		if (bIsSETMTVersion)
 		{
-			sOutBuf = utils.StrFormat("Active MT Mode:                      %d", iMTMode);
+			sOutBuf = utils.StrFormat("Active MT Mode:                          %d", iMTMode);
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-		sOutBuf = "Audio channels:    ";
+		sOutBuf = "Audio channels:        ";
 		sLogBuffer += sOutBuf;
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
@@ -1240,7 +1222,7 @@ int main(int argc, char* argv[])
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
-		sOutBuf = "Audio bits/sample: ";
+		sOutBuf = "Audio bits/sample:     ";
 		sLogBuffer += sOutBuf;
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
@@ -1259,7 +1241,7 @@ int main(int argc, char* argv[])
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
-		sOutBuf = "Audio sample rate: ";
+		sOutBuf = "Audio sample rate:     ";
 		sLogBuffer += sOutBuf;
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
@@ -1273,7 +1255,7 @@ int main(int argc, char* argv[])
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
-		sOutBuf = "Audio samples:     ";
+		sOutBuf = "Audio samples:         ";
 		sLogBuffer += sOutBuf;
 		if (AVS_vidinfo.HasAudio())
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
@@ -1368,6 +1350,10 @@ int main(int argc, char* argv[])
 		unsigned int uiVPUUsageCur = 0;
 		unsigned int uiVPUUsageAcc = 0;
 		unsigned int uiVPUUsageAvg = 0;
+		double dGPUPowerConsumptionCur = 0.0;
+		double dGPUPowerConsumptionAcc = 0.0;
+		double dGPUPowerConsumptionAvg = 0.0;
+
 		unsigned int uiIntervalCounter = 0;
 
 		unsigned int uiCurrentFrame = 0;
@@ -1417,6 +1403,10 @@ int main(int argc, char* argv[])
 				uiVPUUsageCur = (unsigned int)gpuinfo.sensors.VPULoad;
 				uiVPUUsageAcc += uiVPUUsageCur;
 				uiVPUUsageAvg = (unsigned int)(((double)uiVPUUsageAcc / (double)uiIntervalCounter) + 0.5);
+
+				dGPUPowerConsumptionCur = gpuinfo.sensors.PowerConsumption;
+				dGPUPowerConsumptionAcc += dGPUPowerConsumptionCur;
+				dGPUPowerConsumptionAvg = (dGPUPowerConsumptionAcc / (double)uiIntervalCounter) + 0.5;
 			}
 
 			iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
@@ -1487,33 +1477,33 @@ int main(int argc, char* argv[])
 			bFirstScr = FALSE;
 			bEarlyExit = FALSE;
 
-			sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame + 1, uiLastFrame);
+			sOutBuf = utils.StrFormat("Frame (current | last):             %u | %u", uiCurrentFrame + 1, uiLastFrame);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
 			if (Settings.bDisplayFPS)
 			{
-				sOutBuf = utils.StrFormat("FPS (cur | min | max | avg):    %s | %s | %s | %s", utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
+				sOutBuf = utils.StrFormat("FPS (cur | min | max | avg):        %s | %s | %s | %s", utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				++uiCursorOffset;
 			}
 
 			if (Settings.bDisplayTPF)
 			{
-				sOutBuf = utils.StrFormat("TPF (cur | max | min | avg):    %s | %s | %s | %s ms", utils.StrFormatTPF(1000.0 / dFPSCurrent).c_str(), utils.StrFormatTPF(1000.0 / dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / dFPSAverage).c_str());
+				sOutBuf = utils.StrFormat("TPF (cur | max | min | avg):        %s | %s | %s | %s ms", utils.StrFormatTPF(1000.0 / dFPSCurrent).c_str(), utils.StrFormatTPF(1000.0 / dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / dFPSAverage).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				++uiCursorOffset;
 			}
 
-			sOutBuf = utils.StrFormat("Process memory usage:           %u MiB", dwMemCurrentMB);
+			sOutBuf = utils.StrFormat("Process memory usage:               %u MiB", dwMemCurrentMB);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
-			sOutBuf = utils.StrFormat("Thread count:                   %u", processinfo.wThreadCount);
+			sOutBuf = utils.StrFormat("Thread count:                       %u", processinfo.wThreadCount);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
-			sOutBuf = utils.StrFormat("CPU usage (current | average):  %.1f%% | %.1f%%", dCPUUsageCur, dCPUUsageAvg);
+			sOutBuf = utils.StrFormat("CPU usage (current | average):      %.1f%% | %.1f%%", dCPUUsageCur, dCPUUsageAvg);
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
@@ -1522,43 +1512,47 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				++uiCursorOffset;
 
-				sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", uiGPUUsageCur, uiGPUUsageAvg);
+				sOutBuf = utils.StrFormat("GPU usage (current | average):      %u%% | %u%%", uiGPUUsageCur, uiGPUUsageAvg);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				++uiCursorOffset;
 
 				if (gpuinfo.data.NVVPU)
 				{
-					sOutBuf = utils.StrFormat("VPU usage (current | average):  %u%% | %u%%", uiVPUUsageCur, uiVPUUsageAvg);
+					sOutBuf = utils.StrFormat("VPU usage (current | average):      %u%% | %u%%", uiVPUUsageCur, uiVPUUsageAvg);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					++uiCursorOffset;
 				}
 
 				if (gpuinfo.data.GeneralMem)
 				{
-					sOutBuf = utils.StrFormat("GPU memory usage:               %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
+					sOutBuf = utils.StrFormat("GPU memory usage:                   %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					++uiCursorOffset;
 				}
 
 				if (gpuinfo.data.DedicatedMem)
 				{
-					sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):   %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
+					sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):       %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					++uiCursorOffset;
 				}
 
 				if (gpuinfo.data.DynamicMem)
 				{
-					sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):     %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
+					sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):         %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					++uiCursorOffset;
 				}
+
+				sOutBuf = utils.StrFormat("GPU Power Consumption (cur | avg):  %.1f W | %.1f W", dGPUPowerConsumptionCur, dGPUPowerConsumptionAvg);
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+				++uiCursorOffset;
 			}
 
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 			++uiCursorOffset;
 
-			sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
+			sOutBuf = utils.StrFormat("Time (elapsed | estimated):         %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			++uiCursorOffset;
 
@@ -1601,12 +1595,12 @@ int main(int argc, char* argv[])
 			if (uiFirstFrame == uiLastFrame)
 			{
 				if (uiFirstFrame == 0)
-					sOutBuf = utils.StrFormat("Frames processed:               %u", uiFramesRead);
+					sOutBuf = utils.StrFormat("Frames processed:                   %u", uiFramesRead);
 				else
-					sOutBuf = utils.StrFormat("Frames processed:               %u (%u)", uiFramesRead, uiFirstFrame);
+					sOutBuf = utils.StrFormat("Frames processed:                   %u (%u)", uiFramesRead, uiFirstFrame);
 			}
 			else
-				sOutBuf = utils.StrFormat("Frames processed:               %u (%u - %u)", uiFramesRead, uiFirstFrame, uiLastFrame);
+				sOutBuf = utils.StrFormat("Frames processed:                   %u (%u - %u)", uiFramesRead, uiFirstFrame, uiLastFrame);
 
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf + "\n";
@@ -1615,27 +1609,27 @@ int main(int argc, char* argv[])
 			{
 				if (Settings.bDisplayFPS)
 				{
-					sOutBuf = utils.StrFormat("FPS (min | max | average):      %s | %s | %s", utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
+					sOutBuf = utils.StrFormat("FPS (min | max | average):          %s | %s | %s", utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					sLogBuffer += sOutBuf + "\n";
 				}
 
 				if (Settings.bDisplayTPF)
 				{
-					sOutBuf = utils.StrFormat("TPF (max | min | average):      %s | %s | %s ms", utils.StrFormatTPF(1000.0 / dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / dFPSAverage).c_str());
+					sOutBuf = utils.StrFormat("TPF (max | min | average):          %s | %s | %s ms", utils.StrFormatTPF(1000.0 / dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / dFPSAverage).c_str());
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					sLogBuffer += sOutBuf + "\n";
 				}
 
-				sOutBuf = utils.StrFormat("Process memory usage (max):     %u MiB", dwMemPeakMB);
+				sOutBuf = utils.StrFormat("Process memory usage (max):         %u MiB", dwMemPeakMB);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
-				sOutBuf = utils.StrFormat("Thread count:                   %u", processinfo.wThreadCount);
+				sOutBuf = utils.StrFormat("Thread count:                       %u", processinfo.wThreadCount);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
-				sOutBuf = utils.StrFormat("CPU usage (average):            %.1f%%", dCPUUsageAvg);
+				sOutBuf = utils.StrFormat("CPU usage (average):                %.1f%%", dCPUUsageAvg);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
@@ -1644,37 +1638,41 @@ int main(int argc, char* argv[])
 					PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 					sLogBuffer += "\n";
 
-					sOutBuf = utils.StrFormat("GPU usage (average):            %u%%", uiGPUUsageAvg);
+					sOutBuf = utils.StrFormat("GPU usage (average):                %u%%", uiGPUUsageAvg);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 					sLogBuffer += sOutBuf + "\n";
 
 					if (gpuinfo.data.NVVPU)
 					{
-						sOutBuf = utils.StrFormat("VPU usage (average):            %u%%", uiVPUUsageAvg);
+						sOutBuf = utils.StrFormat("VPU usage (average):                %u%%", uiVPUUsageAvg);
 						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 						sLogBuffer += sOutBuf + "\n";
 					}
 
 					if (gpuinfo.data.GeneralMem)
 					{
-						sOutBuf = utils.StrFormat("GPU memory usage:               %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
+						sOutBuf = utils.StrFormat("GPU memory usage:                   %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
 						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 						sLogBuffer += sOutBuf + "\n";
 					}
 
 					if (gpuinfo.data.DedicatedMem)
 					{
-						sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):   %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
+						sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):       %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
 						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 						sLogBuffer += sOutBuf + "\n";
 					}
 
 					if (gpuinfo.data.DynamicMem)
 					{
-						sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):     %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
+						sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):         %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
 						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 						sLogBuffer += sOutBuf + "\n";
 					}
+
+					sOutBuf = utils.StrFormat("GPU Power Consumption (average):    %.1f W", dGPUPowerConsumptionAvg);
+					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+					sLogBuffer += sOutBuf + "\n";
 				}
 
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
@@ -1682,9 +1680,9 @@ int main(int argc, char* argv[])
 			}
 
 			if ((Settings.bLogEstimatedTime) && (uiFramesRead < uiFramesToProcess))
-				sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
+				sOutBuf = utils.StrFormat("Time (elapsed | estimated):         %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
 			else
-				sOutBuf = utils.StrFormat("Time (elapsed):                 %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str());
+				sOutBuf = utils.StrFormat("Time (elapsed):                     %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str());
 
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf + "\n";
@@ -1915,6 +1913,12 @@ string ParseINIFile()
 
 		if (iBoolValue != -1)
 		{
+			if (sCurrentLine.substr(0, 9) == "createlog")
+				Settings.bCreateLog = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 9) == "createcsv")
+				Settings.bCreateCSV = (iBoolValue == 0) ? FALSE : TRUE;
+
 			if (sCurrentLine.substr(0, 10) == "displayfps")
 				Settings.bDisplayFPS = (iBoolValue == 0) ? FALSE : TRUE;
 
@@ -1982,8 +1986,10 @@ BOOL WriteINIFile(string &s_inifile)
 	hINIFile << sComment;
 
 	sSettings = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
-	sSettings += utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
+	sSettings += utils.StrFormat("DisplayTPF=%u\n\n", Settings.bDisplayTPF);
 
+	sSettings += utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
+	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
 	sSettings += utils.StrFormat("LogUseFileSaveDialog=%u\n\n", Settings.bLogUseFileSaveDialog);

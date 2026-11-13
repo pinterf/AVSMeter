@@ -37,6 +37,7 @@ public:
 		BYTE   GPULoad;
 		BYTE   VPULoad;
 		BYTE   GPUTemp;
+		double PowerConsumption;
 		DWORD  MemoryUsedGeneral;
 		DWORD  MemoryUsedDedicated;
 		DWORD  MemoryUsedDynamic;
@@ -101,6 +102,11 @@ private:
 CGPUInfo::CGPUInfo()
 {
 	sensors.GPULoad = 0;
+	sensors.VPULoad = 0;
+	sensors.PowerConsumption = 0.0;
+	sensors.MemoryUsedGeneral = 0;
+	sensors.MemoryUsedDedicated = 0;
+	sensors.MemoryUsedDynamic = 0;
 	sensors.ReadError = FALSE;
 	sError = "";
 	pMapAddr = NULL;
@@ -211,22 +217,29 @@ void CGPUInfo::ReadData()
 
 void CGPUInfo::ReadSensors()
 {
-	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
-
-	if (lpMem->version == 0)
-		sensors.ReadError = TRUE;
-
 	sensors.GPULoad = 0;
+	sensors.VPULoad = 0;
+	sensors.PowerConsumption = 0.0;
 	sensors.MemoryUsedGeneral = 0;
 	sensors.MemoryUsedDedicated = 0;
 	sensors.MemoryUsedDynamic = 0;
-	sensors.VPULoad = 0;
+
+
+	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
+	if (lpMem->version == 0)
+		sensors.ReadError = TRUE;
+
 
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
 		if (wcslen(lpMem->sensors[i].name) < 2)
 			continue;
 
+		if (_wcsicmp(lpMem->sensors[i].name, L"Power Consumption (W)") == 0)
+		{
+			sensors.PowerConsumption = (double)(lpMem->sensors[i].value + 0.5);
+			continue;
+		}
 		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Load") == 0)
 		{
 			sensors.GPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
