@@ -40,7 +40,7 @@ public:
 private:
 	WORD GetCurrentThreadCount();
 	BYTE GetCPUUsage();
-	inline unsigned __int64 SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
+	unsigned __int64 SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
 	BYTE btCPUUsage;
 	BOOL bFirstRun;
 	unsigned __int64 GetSTDTimer();
@@ -91,7 +91,6 @@ void CProcessInfo::CloseProcess()
 void CProcessInfo::Update()
 {
 	static unsigned __int64 uiLastTimeRunCPU;
-	static unsigned __int64 uiLastTimeRunTC;
 
 	//Min. update interval 100ms
 	if ((GetSTDTimer() - uiLastTimeRunCPU) < 100)
@@ -105,12 +104,7 @@ void CProcessInfo::Update()
 	else
 		wCPUUsage = (WORD)btCPUUsage;
 
-	//Min. update interval 5000ms
-	if ((GetSTDTimer() - uiLastTimeRunTC) > 5000)
-	{
-		wThreadCount = GetCurrentThreadCount();
-		uiLastTimeRunTC = GetSTDTimer();
-	}
+	wThreadCount = GetCurrentThreadCount();
 
 	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
 	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
@@ -166,7 +160,7 @@ BYTE CProcessInfo::GetCPUUsage()
 }
 
 
-inline unsigned __int64 CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
+unsigned __int64 CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
 {
 	unsigned __int64 a = (((unsigned __int64)ftA.dwHighDateTime) << 32) + (unsigned __int64)ftA.dwLowDateTime;
 	unsigned __int64 b = (((unsigned __int64)ftB.dwHighDateTime) << 32) + (unsigned __int64)ftB.dwLowDateTime;

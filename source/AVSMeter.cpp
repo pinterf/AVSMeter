@@ -76,7 +76,6 @@ CUtils utils;
 CTimer timer;
 CSettings Settings;
 
-unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
 string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP);
 string ParseINIFile();
@@ -124,9 +123,9 @@ int main(int argc, char* argv[])
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
 	string sAVSError = "";
-	unsigned int uiFrameInterval = 0;
+	unsigned int uiFrameInterval = 1;
 	string sErrorMsg = "";
-	BOOL bAVSInfo = FALSE;
+	BOOL bPrintAVSInfo = FALSE;
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
 
@@ -213,7 +212,7 @@ int main(int argc, char* argv[])
 		if (sArgTest == "-avsinfo")
 		{
 			sCommandLine += sCmdToken + " ";
-			bAVSInfo = TRUE;
+			bPrintAVSInfo = TRUE;
 			continue;
 		}
 
@@ -381,7 +380,7 @@ int main(int argc, char* argv[])
 
 	utils.StrTrim(sCommandLine);
 
-	if (bAVSInfo)
+	if (bPrintAVSInfo)
 	{
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
@@ -395,9 +394,9 @@ int main(int argc, char* argv[])
 		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth DLL location:       %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
 		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth DLL time stamp:     %s\n", AvisynthInfo.sTimeStamp.c_str());
 
-		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
+		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirRefs; uiPlugDir++)
 		{
-			sTemp = AvisynthInfo.saPluginDirs[uiPlugDir];
+			sTemp = AvisynthInfo.saPluginDirRefs[uiPlugDir];
 			if (sTemp != "")
 			{
 				size_t spos = sTemp.find(":\t");
@@ -405,7 +404,17 @@ int main(int argc, char* argv[])
 				PrintConsole(TRUE, COLOR_EMPHASIS, "%s\n", utils.StrAnsiToOEM(sTemp).c_str());
 			}
 		}
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+
+		PrintConsole(TRUE, COLOR_DEFAULT, "\n");
+		PrintConsole(TRUE, COLOR_AVSM_VERSION, "Auto-load plugin DLLs:\n");
+
+		for (map<string, BYTE>::iterator it = AvisynthInfo.mPluginDLLs.begin(); it != AvisynthInfo.mPluginDLLs.end(); ++it)
+		{
+			sTemp = it->first;
+			PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
+			PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+		}
+		PrintConsole(TRUE, COLOR_DEFAULT, "\n");
 
 		Pause();
 		return 0;
@@ -475,21 +484,6 @@ int main(int argc, char* argv[])
 				Pause();
 				return -1;
 			}
-		}
-	}
-
-
-	if (!bInfoOnly)
-	{
-		sAVSError = "";
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
-		uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
-		if ((uiFrameInterval == 0) || (sAVSError != ""))
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
-			Pause();
-			return -1;
 		}
 	}
 
@@ -602,9 +596,9 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:               %s", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
+		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirRefs; uiPlugDir++)
 		{
-			sTemp = AvisynthInfo.saPluginDirs[uiPlugDir];
+			sTemp = AvisynthInfo.saPluginDirRefs[uiPlugDir];
 			if (sTemp != "")
 			{
 				size_t spos = sTemp.find(":\t");
@@ -872,6 +866,9 @@ int main(int argc, char* argv[])
 			uiLastFrame = uiFrames - 1;
 			uiFramesToProcess = uiFrames;
 		}
+
+		if (uiFramesToProcess > 10000)
+			uiFrameInterval = 10;
 
 		while ((uiFramesToProcess / uiFrameInterval) > 500000)
 			uiFrameInterval *= 10;
@@ -1786,166 +1783,6 @@ void Pause()
 }
 
 
-unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
-{
-	unsigned int uiFrameInterval = 0;
-	s_avserror = "";
-
-	if (!timer.TestTimer())
-	{
-		s_avserror = "QueryPerformanceCounter() is not supported";
-		return uiFrameInterval;
-	}
-
-	HINSTANCE hDLL;
-	if (Settings.sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
-
-	if (!hDLL)
-	{
-		s_avserror = "Failed to load avisynth.dll";
-		return uiFrameInterval;
-	}
-
-	try
-	{
-		_set_se_translator(SE_Translator);
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			s_avserror = "Failed to load CreateScriptEnvironment()";
-			::FreeLibrary(hDLL);
-			return uiFrameInterval;
-		}
-
-		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
-		if (!AVS_env)
-		{
-			s_avserror = "Could not create IScriptenvironment";
-			::FreeLibrary(hDLL);
-			return uiFrameInterval;
-		}
-
-		AVS_linkage = AVS_env->GetAVSLinkage();
-
-		AVSValue AVS_main;
-		AVS_main = AVS_env->Invoke("Import", s_avsfile.c_str());
-
-		if (!AVS_main.IsClip()) //not a clip
-			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
-
-		AVSValue AVS_temp;
-		PClip AVS_clip;
-		VideoInfo	AVS_vidinfo;
-
-		int iMTMode = 0;
-		try
-		{
-			AVS_temp = AVS_env->Invoke("GetMTMode", false);
-			iMTMode = AVS_temp.IsInt() ? AVS_temp.AsInt() : 0;
-			if ((iMTMode > 0) && (iMTMode < 5) && Settings.bInvokeDistributor)
-				AVS_main = AVS_env->Invoke("Distributor", AVS_main);
-		}
-		catch (IScriptEnvironment::NotFound)
-		{
-		}
-
-		AVS_clip = AVS_main.AsClip();
-		AVS_vidinfo = AVS_clip->GetVideoInfo();
-
-		unsigned int uiTotalFrames = (unsigned int)AVS_vidinfo.num_frames;
-
-		if (!AVS_vidinfo.HasVideo())
-			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
-
-		unsigned int uiFrame = 0;
-		double TDelta = 0.0;
-
-		double T0 = timer.GetSTDTimer();
-		for (;;)
-		{
-			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
-			++uiFrame;
-			TDelta = timer.GetSTDTimer() - T0;
-			if ((TDelta >= 5.0) || (uiFrame == uiTotalFrames))
-				break;
-		}
-
-		double dAverageFrameTime = 0.0;
-		if (TDelta > 0.5)
-			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //ms
-		else
-			s_avserror = "Script runtime is too short for accurate measurements";
-
-		uiFrameInterval = 20000;
-		if (dAverageFrameTime >   0.001)
-			uiFrameInterval = 10000;
-		if (dAverageFrameTime >   0.002)
-			uiFrameInterval = 5000;
-		if (dAverageFrameTime >   0.005)
-			uiFrameInterval = 2000;
-		if (dAverageFrameTime >   0.010)
-			uiFrameInterval = 1000;
-		if (dAverageFrameTime >   0.020)
-			uiFrameInterval = 500;
-		if (dAverageFrameTime >   0.050)
-			uiFrameInterval = 200;
-		if (dAverageFrameTime >   0.100)
-			uiFrameInterval = 100;
-		if (dAverageFrameTime >   0.200)
-			uiFrameInterval = 50;
-		if (dAverageFrameTime >   0.500)
-			uiFrameInterval = 20;
-		if (dAverageFrameTime >   1.000)
-			uiFrameInterval = 10;
-		if (dAverageFrameTime >  10.000)
-			uiFrameInterval = 1;
-
-		AVS_clip = 0;
-		AVS_main = 0;
-		AVS_temp = 0;
-		Sleep(100);
-		AVS_env->DeleteScriptEnvironment();
-		AVS_env = 0;
-	}
-	catch (AvisynthError err)
-	{
-		s_avserror = utils.StrFormat("%s", (PCSTR)err.msg);
-		uiFrameInterval = 0;
-	}
-	catch (SE_Exception ep)
-	{
-		s_avserror = SE_ErrorMessage(ep.GetCode());
-		uiFrameInterval = 0;
-	}
-	catch (...)
-	{
-		s_avserror = SysErrorMessage();
-		if (s_avserror == "")
-			s_avserror = "Unknown exception";
-
-		uiFrameInterval = 0;
-	}
-
-	AVS_linkage = 0;
-
-	if (!::FreeLibrary(hDLL))
-	{
-		uiFrameInterval = 0;
-		s_avserror = SysErrorMessage();
-		if (s_avserror != "")
-			s_avserror = "Cannot unload avisynth.dll\n" + s_avserror;
-		else
-			s_avserror = "Cannot unload avisynth.dll";
-	}
-	Sleep(50);
-
-	return uiFrameInterval;
-}
-
-
 void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 {
 	if (!fmt)	return;
@@ -1980,7 +1817,7 @@ void PrintUsage()
 {
 	PrintConsole(TRUE, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display Avisynth info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display extended Avisynth info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info [-i]          Display clip info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log  [-l]          Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
@@ -1989,10 +1826,11 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  options, read the documentation (AVSMeter.html) included\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  options read the documentation (AVSMeter.html) included\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  in the distribution package.\n");
 
 	PrintConsole(TRUE, COLOR_DEFAULT, "\n");
 	return;
 }
+
 

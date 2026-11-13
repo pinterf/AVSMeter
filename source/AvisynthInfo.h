@@ -21,7 +21,7 @@
 #include "common.h"
 
 #define BUFSIZE 2048
-#define NUM_PLUG_DIRS 8
+#define NUM_PLUG_DIR_REFS 8
 
 class CAvisynthInfo
 {
@@ -31,8 +31,10 @@ public:
 	virtual ~CAvisynthInfo();
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
-	string  saPluginDirs[NUM_PLUG_DIRS];
-	BYTE    NumPlugDirs;
+	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
+	map     <string, BYTE> mPluginDirs;
+	map     <string, BYTE> mPluginDLLs;
+	BYTE    NumPlugDirRefs;
 	string  sDLLPath;
 	string  sLinkerVersion;
 	string  sVersionNumber;
@@ -47,13 +49,16 @@ private:
 	string  GetTimeStamp(string s_file);
 	int     GetInterfaceVersion(string &s_ErrorMsg, string s_avsdll);
   void    EnumPluginDirs();
+	void    EnumPluginDLLs();
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
+	void    StrToLC(string &s_string);
 };
+
 
 CAvisynthInfo::CAvisynthInfo()
 {
-	NumPlugDirs = NUM_PLUG_DIRS;
+	NumPlugDirRefs = NUM_PLUG_DIR_REFS;
 }
 
 CAvisynthInfo::~CAvisynthInfo()
@@ -263,7 +268,8 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 		return FALSE;
 
 
-	//This seems to be the only reliable way to determine the real path of avisynth.dll (System32/SysWoW64) across OS versions
+	//This seems to be the only reliable way to determine the real path of avisynth.dll (System32/SysWoW64)
+	//across OS versions without having the file system redirector interfere
 	try
 	{
 		_set_se_translator(SE_Translator);
@@ -399,6 +405,8 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 	Sleep(50);
 
 	EnumPluginDirs();
+	EnumPluginDLLs();
+
 
 	return bRet;
 }
@@ -406,15 +414,15 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 
 void CAvisynthInfo::EnumPluginDirs()
 {
-	for (unsigned int n = 0; n < NUM_PLUG_DIRS; n++)
-		saPluginDirs[n] = "";
+	for (unsigned int n = 0; n < NUM_PLUG_DIR_REFS; n++)
+		saPluginDirRefs[n] = "";
 
 	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
 	//- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
 
-
+	map <string, BYTE> mDuplicates;
 	LONG lRes;
 	HKEY hKeyResult = 0;
 
@@ -431,8 +439,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[0] = "PluginDir+    (HKCU, x86):\t" + sTemp;
+				{
+					saPluginDirRefs[0] = "PluginDir+    (HKCU, x86):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -449,8 +468,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[1] = "PluginDir+    (HKLM, x86):\t" + sTemp;
+				{
+					saPluginDirRefs[1] = "PluginDir+    (HKLM, x86):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -467,8 +497,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[2] = "PluginDir2_5  (HKCU, x86):\t" + sTemp;
+				{
+					saPluginDirRefs[2] = "PluginDir2_5  (HKCU, x86):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -485,14 +526,25 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[3] = "PluginDir2_5  (HKLM, x86):\t" + sTemp;
+				{
+					saPluginDirRefs[3] = "PluginDir2_5  (HKLM, x86):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
 		}
 	}	
-	else
+	else //64 Bit
 	{
 		hKeyResult = 0;
 		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
@@ -505,8 +557,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[4] = "PluginDir+    (HKCU, x64):\t" + sTemp;
+				{
+					saPluginDirRefs[4] = "PluginDir+    (HKCU, x64):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -523,8 +586,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[5] = "PluginDir+    (HKLM, x64):\t" + sTemp;
+				{
+					saPluginDirRefs[5] = "PluginDir+    (HKLM, x64):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -541,8 +615,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[6] = "PluginDir2_5  (HKCU, x64):\t" + sTemp;
+				{
+					saPluginDirRefs[6] = "PluginDir2_5  (HKCU, x64):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -559,8 +644,19 @@ void CAvisynthInfo::EnumPluginDirs()
 			{
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
+				string sTempLower = sTemp;
+				StrToLC(sTempLower);
+
 				if (sTemp != "")
-					saPluginDirs[7] = "PluginDir2_5  (HKLM, x64):\t" + sTemp;
+				{
+					saPluginDirRefs[7] = "PluginDir2_5  (HKLM, x64):\t" + sTemp;
+
+					if (mDuplicates.find(sTempLower) == mDuplicates.end())
+					{
+						mDuplicates[sTempLower] = 1;
+						mPluginDirs[sTemp] = 1;
+					}
+				}
 			}
 
 			RegCloseKey(hKeyResult);
@@ -741,6 +837,46 @@ void CAvisynthInfo::StrTrim(string &s_string)
 
 	return;
 }
+
+
+void CAvisynthInfo::StrToLC(string &s_string)
+{
+	for (unsigned int i = 0; i < s_string.length(); i++)
+		s_string[i] = tolower(s_string[i]);
+
+	return;
+}
+
+
+void CAvisynthInfo::EnumPluginDLLs()
+{
+	string sDir = "";
+	for (map<string, BYTE>::iterator it = mPluginDirs.begin(); it != mPluginDirs.end(); ++it)
+	{
+		sDir = it->first;
+
+		WIN32_FIND_DATA fd;
+		HANDLE hFind;
+		string sFind =  sDir + "\\*.dll";
+		BOOL bRet = TRUE;
+		string sCurrentFile = "";
+		hFind = FindFirstFile (sFind.c_str(), &fd);
+		while (hFind != INVALID_HANDLE_VALUE && bRet)
+		{
+			if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+			{
+				sCurrentFile = sDir + "\\" + fd.cFileName;
+				mPluginDLLs[sCurrentFile] = 1;
+			}
+			bRet = FindNextFile(hFind, &fd);
+		}
+
+		FindClose (hFind);
+	}
+
+	return;
+}
+
 
 
 #endif //_AVISYNTHINFO_H

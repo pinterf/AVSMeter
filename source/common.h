@@ -34,7 +34,9 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <map>
 #include <eh.h>
+
 
 using namespace std;
 

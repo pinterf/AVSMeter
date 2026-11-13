@@ -275,10 +275,10 @@ string CUtils::StrFormatFrameTime(double d_frametime)
 }
 
 
-
 string CUtils::GetFileVersion(string s_file)
 {
-	string sFileVersion = "0.0.0.0";
+	string sFileVersion = "n/a";
+	string sProductVersion = "n/a";
 	char szFilename[MAX_PATH + 1] = {0};
 
 	if (s_file == "")
@@ -292,7 +292,7 @@ string CUtils::GetFileVersion(string s_file)
 	DWORD dummy;
 	DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
 	if (dwSize == 0)
-		return sFileVersion;
+		return "n/a";
 
 	BYTE* VersionInfoBuffer = new BYTE[dwSize];
 	if (!GetFileVersionInfo(szFilename, 0, dwSize, (VOID*)VersionInfoBuffer))
@@ -309,10 +309,17 @@ string CUtils::GetFileVersion(string s_file)
 		return sFileVersion;
 	}
 
-	sFileVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
+	sFileVersion =    StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
+	sProductVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwProductVersionMS), LOWORD(pFixedInfo->dwProductVersionMS), HIWORD(pFixedInfo->dwProductVersionLS), LOWORD(pFixedInfo->dwProductVersionLS));
 	delete [] VersionInfoBuffer;
 
-	return sFileVersion;
+	if (sFileVersion != "0.0.0.0")
+		return sFileVersion;
+
+	if (sProductVersion != "0.0.0.0")
+		return sProductVersion;
+
+	return "n/a";
 }
 
 

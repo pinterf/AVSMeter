@@ -210,7 +210,7 @@ void CGPUInfo::ReadSensors()
 {
 	//Min. update interval 300ms
 	static unsigned __int64 uiLastTimeRun;
-	if ((GetSTDTimer() - uiLastTimeRun) < 300)
+	if ((GetSTDTimer() - uiLastTimeRun) < 100)
 		return;
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;

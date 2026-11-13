@@ -1,3 +1,8 @@
+v2.1.7
+- Removed the initial speed test. After some tests it turned out to be unnecessary
+- The switch "-avsinfo" now also lists all plugin DLLs (with version info if present)
+  found in the directory/directories which are referenced in the registry
+
 v2.1.6
 - "Efficiency index" ini setting disabled by default
 - Minor tweaks
