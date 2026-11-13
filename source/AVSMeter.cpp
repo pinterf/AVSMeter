@@ -80,6 +80,7 @@ CUtils utils;
 CTimer timer;
 CSettings Settings;
 
+unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
 string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP);
 string ParseINIFile();
@@ -106,7 +107,8 @@ int main(int argc, char* argv[])
 		sAVSMVersion += " (x86)";
 	#endif
 
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s\n", sAVSMVersion.c_str());
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2016 Groucho2004\n");
 
 	string sRet = ParseINIFile();
 	if (sRet != "")
@@ -389,10 +391,6 @@ int main(int argc, char* argv[])
 	{
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-		utils.CursorUp(1);
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-		utils.CursorUp(1);
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
 		sOutBuf = utils.StrFormat("Log created with:            AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
@@ -442,11 +440,6 @@ int main(int argc, char* argv[])
 				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
 			}
 		}
-
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n\r%s\r", utils.StrPad("Query Plugins...").c_str());
-		AvisynthInfo.EnumPluginDLLs();
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-		utils.CursorUp(1);
 
 		string sPluginDLL = "";
 
@@ -685,6 +678,29 @@ int main(int argc, char* argv[])
 				Pause();
 				return -1;
 			}
+		}
+	}
+
+
+	if ((!bInfoOnly) && (!Settings.bSkipSpeedTest))
+	{
+		sAVSError = "";
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
+
+		if (!timer.TestTimer())
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
+			Pause();
+			return -1;
+		}
+
+		uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+		if ((uiFrameInterval == 0) || (sAVSError != ""))
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
+			Pause();
+			return -1;
 		}
 	}
 
@@ -1080,50 +1096,9 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
-		if ((uiFrames > 199) && (!Settings.bSkipSpeedTest))
-		{		
-			double dFrameTime = 0.0;
-			double dElapsedTime = 0.0;
-			unsigned int uiFramesRead = 0;
-			double d1 = timer.GetTimer();
-			for (unsigned int fr = 100; fr <= 199; fr++)
-			{
-				PVideoFrame test = AVS_clip->GetFrame(fr, AVS_env);
-				++uiFramesRead;
-				dElapsedTime = (timer.GetTimer() - d1) * 1000.0; //ms
-				if (dElapsedTime >= 1000.0)
-					break;
-			}
-
-			dFrameTime = dElapsedTime / (double)uiFramesRead;
-
-			uiFrameInterval = 20000;
-			if (dFrameTime >   0.001)
-				uiFrameInterval = 10000;
-			if (dFrameTime >   0.002)
-				uiFrameInterval = 5000;
-			if (dFrameTime >   0.005)
-				uiFrameInterval = 2000;
-			if (dFrameTime >   0.010)
-				uiFrameInterval = 1000;
-			if (dFrameTime >   0.020)
-				uiFrameInterval = 500;
-			if (dFrameTime >   0.050)
-				uiFrameInterval = 200;
-			if (dFrameTime >   0.100)
-				uiFrameInterval = 100;
-			if (dFrameTime >   0.200)
-				uiFrameInterval = 50;
-			if (dFrameTime >   0.500)
-				uiFrameInterval = 20;
-			if (dFrameTime >   1.000)
-				uiFrameInterval = 10;
-			if (dFrameTime >  10.000)
-				uiFrameInterval = 1;
-		}
-		else
+		if (Settings.bSkipSpeedTest)
 		{
-			if (uiFramesToProcess >= 1000)
+			if (uiFramesToProcess >= 2000)
 				uiFrameInterval = 10;
 		}
 
@@ -1181,6 +1156,9 @@ int main(int argc, char* argv[])
 		double dLastDisplayTime = dStartTime;
 		double dLastIntervalTime = dStartTime;
 
+		DWORD dwMaxGPUClock = 0;
+		DWORD dwMaxGPUMemClock = 0;
+
 		unsigned int uiCursorOffset = 0;
 		SetErrorMode(nPrevErrorMode);
 		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
@@ -1202,6 +1180,11 @@ int main(int argc, char* argv[])
 				uiGPUUsageAvg = (unsigned int)(((double)uiGPUUsageAcc / (double)uiCounter) + 0.5);
 				uiVPUUsageAcc += (unsigned int)gpuinfo.sensors.VPULoad;
 				uiVPUUsageAvg = (unsigned int)(((double)uiVPUUsageAcc / (double)uiCounter) + 0.5);
+
+				if (gpuinfo.sensors.GPUClock > dwMaxGPUClock)
+					dwMaxGPUClock = gpuinfo.sensors.GPUClock;
+				if (gpuinfo.sensors.MEMClock > dwMaxGPUMemClock)
+					dwMaxGPUMemClock = gpuinfo.sensors.MEMClock;
 			}
 
 			iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
@@ -1309,6 +1292,14 @@ int main(int argc, char* argv[])
 			if (Settings.bMonitorGPULoad)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+				++uiCursorOffset;
+
+				sOutBuf = utils.StrFormat("Graphics card name / GPU:       %s / %s", gpuinfo.data.CardName.c_str(), gpuinfo.data.GPUName.c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				++uiCursorOffset;
+
+				sOutBuf = utils.StrFormat("GPU core clock / Memory clock:  %u / %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 
 				sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", gpuinfo.sensors.GPULoad, uiGPUUsageAvg);
@@ -1443,6 +1434,15 @@ int main(int argc, char* argv[])
 			if (Settings.bMonitorGPULoad)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+				sLogBuffer += "\n";
+
+				sOutBuf = utils.StrFormat("Graphics card name / GPU:       %s / %s", gpuinfo.data.CardName.c_str(), gpuinfo.data.GPUName.c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				sLogBuffer += sOutBuf + "\n";
+
+				sOutBuf = utils.StrFormat("GPU core clock / Memory clock:  %u / %u", dwMaxGPUClock, dwMaxGPUMemClock);
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				sLogBuffer += sOutBuf + "\n";
 
 				sOutBuf = utils.StrFormat("GPU usage (average):            %u%%", uiGPUUsageAvg);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
@@ -1478,6 +1478,7 @@ int main(int argc, char* argv[])
 			}
 
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+			sLogBuffer += "\n";
 
 			if ((Settings.bLogEstimatedTime) && (n < uiFramesToProcess))
 				sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
@@ -2235,6 +2236,160 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 	va_end(args);
 	
 	return;
+}
+
+
+unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
+{
+	unsigned int uiFrameInterval = 0;
+	s_avserror = "";
+
+	HINSTANCE hDLL;
+	if (Settings.sAVSDLL == "")
+		hDLL = ::LoadLibrary("avisynth");
+	else
+		hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
+
+	if (!hDLL)
+	{
+		s_avserror = "Failed to load avisynth.dll";
+		return uiFrameInterval;
+	}
+
+	try
+	{
+		_set_se_translator(SE_Translator);
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			s_avserror = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return uiFrameInterval;
+		}
+
+		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		if (!AVS_env)
+		{
+			s_avserror = "Could not create IScriptenvironment";
+			::FreeLibrary(hDLL);
+			return uiFrameInterval;
+		}
+
+		AVS_linkage = AVS_env->GetAVSLinkage();
+
+		AVSValue AVS_main;
+		AVS_main = AVS_env->Invoke("Import", s_avsfile.c_str());
+
+		if (!AVS_main.IsClip()) //not a clip
+			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
+
+		AVSValue AVS_temp;
+		PClip AVS_clip;
+		VideoInfo	AVS_vidinfo;
+
+		int iMTMode = 0;
+		try
+		{
+			AVS_temp = AVS_env->Invoke("GetMTMode", false);
+			iMTMode = AVS_temp.IsInt() ? AVS_temp.AsInt() : 0;
+			if ((iMTMode > 0) && (iMTMode < 5) && Settings.bInvokeDistributor)
+				AVS_main = AVS_env->Invoke("Distributor", AVS_main);
+		}
+		catch (IScriptEnvironment::NotFound)
+		{
+		}
+
+		AVS_clip = AVS_main.AsClip();
+		AVS_vidinfo = AVS_clip->GetVideoInfo();
+
+		unsigned int uiTotalFrames = (unsigned int)AVS_vidinfo.num_frames;
+
+		if (!AVS_vidinfo.HasVideo())
+			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
+
+		unsigned int uiFrame = 0;
+		double TDelta = 0.0;
+
+		double T0 = timer.GetSTDTimer();
+		for (;;)
+		{
+			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
+			++uiFrame;
+			TDelta = timer.GetSTDTimer() - T0;
+			if ((TDelta >= 5.0) || (uiFrame == uiTotalFrames))
+				break;
+		}
+
+		double dAverageFrameTime = 0.0;
+		if (TDelta > 0.5)
+			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //ms
+		else
+			s_avserror = "Script runtime is too short for accurate measurements";
+
+		uiFrameInterval = 20000;
+		if (dAverageFrameTime >   0.001)
+			uiFrameInterval = 10000;
+		if (dAverageFrameTime >   0.002)
+			uiFrameInterval = 5000;
+		if (dAverageFrameTime >   0.005)
+			uiFrameInterval = 2000;
+		if (dAverageFrameTime >   0.010)
+			uiFrameInterval = 1000;
+		if (dAverageFrameTime >   0.020)
+			uiFrameInterval = 500;
+		if (dAverageFrameTime >   0.050)
+			uiFrameInterval = 200;
+		if (dAverageFrameTime >   0.100)
+			uiFrameInterval = 100;
+		if (dAverageFrameTime >   0.200)
+			uiFrameInterval = 50;
+		if (dAverageFrameTime >   0.500)
+			uiFrameInterval = 20;
+		if (dAverageFrameTime >   1.000)
+			uiFrameInterval = 10;
+		if (dAverageFrameTime >  10.000)
+			uiFrameInterval = 1;
+
+		AVS_clip = 0;
+		AVS_main = 0;
+		AVS_temp = 0;
+		Sleep(50);
+		AVS_env->DeleteScriptEnvironment();
+		AVS_env = 0;
+	}
+	catch (AvisynthError err)
+	{
+		s_avserror = utils.StrFormat("%s", (PCSTR)err.msg);
+		uiFrameInterval = 0;
+	}
+	catch (std::exception& ex)
+	{
+		s_avserror = ex.what();
+		uiFrameInterval = 0;
+	}
+	catch (...)
+	{
+		s_avserror = SysErrorMessage();
+		if (s_avserror == "")
+			s_avserror = "Unknown exception";
+
+		uiFrameInterval = 0;
+	}
+
+	AVS_linkage = 0;
+
+	if (!::FreeLibrary(hDLL))
+	{
+		uiFrameInterval = 0;
+		s_avserror = SysErrorMessage();
+		if (s_avserror != "")
+			s_avserror = "Cannot unload avisynth.dll\n" + s_avserror;
+		else
+			s_avserror = "Cannot unload avisynth.dll";
+	}
+	Sleep(50);
+
+	return uiFrameInterval;
 }
 
 

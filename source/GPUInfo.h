@@ -34,8 +34,10 @@ public:
 
 	struct Sensors
 	{
-		WORD GPULoad;
-		WORD VPULoad;
+		DWORD GPUClock;
+		DWORD MEMClock;
+		WORD  GPULoad;
+		WORD  VPULoad;
 		DWORD MemoryUsedGeneral;
 		DWORD MemoryUsedDedicated;
 		DWORD MemoryUsedDynamic;
@@ -222,6 +224,10 @@ void CGPUInfo::ReadSensors()
 
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
+		if (wcscmp(lpMem->sensors[i].name, L"GPU Core Clock") == 0)
+			sensors.GPUClock = (WORD)(lpMem->sensors[i].value + 0.5);
+		if (wcscmp(lpMem->sensors[i].name, L"GPU Memory Clock") == 0)
+			sensors.MEMClock = (WORD)(lpMem->sensors[i].value + 0.5);
 		if (wcscmp(lpMem->sensors[i].name, L"GPU Load") == 0)
 			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
 		if ((data.NVVP) && (wcscmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))

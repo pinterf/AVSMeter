@@ -1,3 +1,8 @@
+v2.2.9
+- Added hints to plugin error messages relating to missing support DLLs (fftw3.dll, etc.)
+- Added graphics card / GPU model info to the console output and log file
+- Added GPU clock / GPU memory clock info to the console output and log file
+
 v2.2.8
 - Improved Exception handling. Module names in which exceptions occur and address are reported
 

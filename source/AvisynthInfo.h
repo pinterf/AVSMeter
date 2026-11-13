@@ -60,7 +60,7 @@ private:
 	BOOL    SYSCheckPlugin(string s_dll, string &s_Msg);
 	void    AVSCheckPlugins();
 	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
-	void    FindStrings(string s_dll, string &s_failed_deps);
+	void    FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint);
 	__int64 FileSize(string s_file);
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
@@ -104,9 +104,9 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		GetDLLDependencies(sDLLPath, sFailedDependencies, sHint);
 		if (sFailedDependencies != "")
 		{
-			s_ErrorMsg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+			s_ErrorMsg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 			if (sHint != "")
-				s_ErrorMsg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+				s_ErrorMsg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
 		}
 
 		return 0;
@@ -221,18 +221,18 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	{
 		_set_se_translator(SE_Translator);
 		sTempDLLPath = StrFormat("%s", li.ModuleName);
-		if ((li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_IA64) || (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64))
+		if (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_I386)
 		{
-			bIs64BitVersion = TRUE;
-			#ifndef AVS64
+			#ifdef AVS64
 				UnMapAndLoad(&li);
 				s_ErrorMsg = "Cannot load avisynth.dll";
 				return FALSE;
 			#endif
 		}
-		else //32 Bit Avisynth DLL
+		else //64 Bit Avisynth DLL
 		{
-			#ifdef AVS64
+			bIs64BitVersion = TRUE;
+			#ifndef AVS64
 				UnMapAndLoad(&li);
 				s_ErrorMsg = "Cannot load avisynth.dll";
 				return FALSE;
@@ -441,6 +441,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	Sleep(50);
 
 	EnumPluginDirs();
+	EnumPluginDLLs();
 
 	return bRet;
 }
@@ -958,20 +959,20 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 	{
 		_set_se_translator(SE_Translator);
 
-		if ((li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_IA64) || (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64))
+		if (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_I386)
 		{
-			bIs64BitDLL = TRUE;
-			#ifndef AVS64
+			#ifdef AVS64
 				UnMapAndLoad(&li);
-				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
+				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
 				return FALSE;
 			#endif
 		}
 		else
 		{
-			#ifdef AVS64
+			bIs64BitDLL = TRUE;
+			#ifndef AVS64
 				UnMapAndLoad(&li);
-				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
+				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
 				return FALSE;
 			#endif
 		}
@@ -1121,18 +1122,23 @@ void CAvisynthInfo::AVSCheckPlugins()
 			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
 			{
-				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
 		{
 			//Look for delay-load dependencies
 			sFailedDependencies = "";
-			FindStrings(sPlugin, sFailedDependencies);
+			sHint = "";
+			FindStrings(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
-				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
+			{
+				s_Msg += StrFormat("\"%s\"\n\nDependencies that couldn't be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: %s", sHint.c_str());
+			}
 		}
 
 		if (s_Msg != "")
@@ -1165,18 +1171,23 @@ void CAvisynthInfo::AVSCheckPlugins()
 			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
 			{
-				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
 		{
 			//Look for delay-load dependencies
 			sFailedDependencies = "";
-			FindStrings(sPlugin, sFailedDependencies);
+			sHint = "";
+			FindStrings(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
-				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
+			{
+				s_Msg += StrFormat("\"%s\"\n\nDependencies that couldn't be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: %s", sHint.c_str());
+			}
 		}
 
 		if (s_Msg != "")
@@ -1209,18 +1220,23 @@ void CAvisynthInfo::AVSCheckPlugins()
 			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
 			{
-				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
 		{
 			//Look for delay-load dependencies
 			sFailedDependencies = "";
-			FindStrings(sPlugin, sFailedDependencies);
+			sHint = "";
+			FindStrings(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
-				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
+			{
+				s_Msg += StrFormat("\"%s\"\n\nDependencies that couldn't be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: %s", sHint.c_str());
+			}
 		}
 
 		if (s_Msg != "")
@@ -1252,18 +1268,23 @@ void CAvisynthInfo::AVSCheckPlugins()
 			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
 			{
-				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
 		{
 			//Look for delay-load dependencies
 			sFailedDependencies = "";
-			FindStrings(sPlugin, sFailedDependencies);
+			sHint = "";
+			FindStrings(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
-				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
+			{
+				s_Msg += StrFormat("\"%s\"\n\nDependencies that couldn't be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: %s", sHint.c_str());
+			}
 		}
 
 		if (s_Msg != "")
@@ -1295,18 +1316,23 @@ void CAvisynthInfo::AVSCheckPlugins()
 			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
 			{
-				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
 		{
 			//Look for delay-load dependencies
 			sFailedDependencies = "";
-			FindStrings(sPlugin, sFailedDependencies);
+			sHint = "";
+			FindStrings(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
-				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
+			{
+				s_Msg += StrFormat("\"%s\"\n\nDependencies that couldn't be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: %s", sHint.c_str());
+			}
 		}
 
 		if (s_Msg != "")
@@ -1424,7 +1450,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 }
 
 
-void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
+void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint)
 {
 	if (FileSize(s_dll) > (50 * 1024 * 1024))
 		return;
@@ -1448,7 +1474,10 @@ void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 		{
 			HINSTANCE hDLL = ::LoadLibrary("libfftw3f-3.dll");
 			if (!hDLL)
-				s_failed_deps += "  libfftw3f-3.dll";
+			{
+				s_failed_dependencies += "libfftw3f-3.dll";
+				s_hint += "libfftw3f-3.dll can be downloaded here:\n      http://www.fftw.org/install/windows.html\n";
+			}
 			else
 				::FreeLibrary(hDLL);
 
@@ -1460,7 +1489,10 @@ void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 		{
 			HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
 			if (!hDLL)
-				s_failed_deps += "  fftw3.dll";
+			{
+				s_failed_dependencies += "fftw3.dll";
+				s_hint += "fftw3.dll (libfftw3f-3.dll) can be downloaded here:\n      http://www.fftw.org/install/windows.html\n";
+			}
 			else
 				::FreeLibrary(hDLL);
 
