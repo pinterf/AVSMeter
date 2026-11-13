@@ -1,3 +1,7 @@
+v2.2.4
+- Added DLL dependency checking
+- Various fixes
+
 v2.2.3
 - New ini setting "SkipSpeedTest", see documentation.
   I put back the script test at the start because it is the best method to determine a suitable

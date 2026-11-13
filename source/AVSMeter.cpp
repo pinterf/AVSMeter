@@ -393,6 +393,8 @@ int main(int argc, char* argv[])
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
 
+		sOutBuf = utils.StrFormat("Log created with AVSMeter %s\n\n", sAVSMVersion.c_str());
+		sLogBuffer += sOutBuf;
 
 		sOutBuf = utils.StrFormat("Avisynth version string:     %s\n", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf;
@@ -1352,7 +1354,7 @@ int main(int argc, char* argv[])
 
 		sLogBuffer += "\n\n[Runtime info]\n";
 
-		if (n >= uiFrameInterval)
+		if ((n >= uiFrameInterval) && (iElapsedMS > 100))
 		{
 			if (!bFirstScr)
 				utils.CursorUp(uiCursorOffset);
@@ -1465,9 +1467,10 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			sOutBuf = "The specified frame range is too short for accurate measurements.";
+			sOutBuf = "The running time of the script is too short for meaningful measurements.";
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf;
+			uiPDIndex = 0;
 		}
 	}
 	catch (AvisynthError err)
