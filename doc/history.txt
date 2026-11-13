@@ -1,3 +1,7 @@
+v1.8.0
+- Made sure all return paths in "main" return the correct value ("-1" -> error; "0" -> OK)
+- Other error handling improvements
+
 v1.7.9
 - Improved exception handling
 - More accurate timing functionality for very fast scripts

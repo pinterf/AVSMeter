@@ -15,6 +15,7 @@ using namespace std;
 #define CANNOT_LOAD_AVSDLL 0x02
 #define NO_AVS_LINKAGE 0x03
 
+
 #if defined(AVS26_32) || defined(AVS26_64)
 	#include "avisynth26.h"
 	const AVS_Linkage *AVS_linkage = 0;
@@ -58,6 +59,7 @@ void Pause();
 
 int main(int argc, char* argv[])
 {
+	int iRet = 0;
 	string sAVSMVersion = "";
 	if (!utils.GetProductVersion(sAVSMVersion))
 	{
@@ -89,11 +91,19 @@ int main(int argc, char* argv[])
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 0;
 
+	string sRet = ParseINIFile();
+	if (sRet != "")
+	{
+		printf(sRet.c_str());
+		Pause();
+		return -1;
+	}
+
 	BYTE bRet = CheckAvisynth();
 
 	if (bRet == CANNOT_LOAD_AVSDLL)
 	{
-		printf("\nCannot load avisynth.dll.\n");
+		printf("\nCannot load avisynth.dll:\n%s\n", utils.ErrorMessage().c_str());
 		Pause();
 		return -1;
 	}
@@ -132,14 +142,6 @@ int main(int argc, char* argv[])
 		sAvisynthVersion += " (MT)";
 
 	printf("\r%s\n", sAvisynthVersion.c_str());
-
-	string sRet = ParseINIFile();
-	if (sRet != "")
-	{
-		printf(sRet.c_str());
-		Pause();
-		return -1;
-	}
 
 	if (settings.bAllowOnlyOneInstance)
 	{
@@ -672,6 +674,7 @@ int main(int argc, char* argv[])
 	catch (AvisynthError err)
 	{
 		sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
+		iRet = -1;
 
 		if (bEarlyExit == FALSE)
 		{
@@ -686,6 +689,7 @@ int main(int argc, char* argv[])
 	}
 	catch (...)
 	{
+		iRet = -1;
 		if (bEarlyExit == FALSE)
 		{
 			utils.CursorUp(2);
@@ -719,7 +723,7 @@ int main(int argc, char* argv[])
 
 	Pause();
 
-	return 0;
+	return iRet;
 }
 
 

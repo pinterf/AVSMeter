@@ -16,6 +16,7 @@ public:
 	CUtils();
 	virtual      ~CUtils();
 	BOOL         FileExists(string s_file);
+	string       ErrorMessage();
 	void         CursorUp(int iLines);
 	unsigned int GetConsoleWidth();
 	BOOL GetProductVersion(string &s_version);
@@ -219,6 +220,16 @@ BOOL CUtils::GetProductVersion(string &s_version)
 	bRet = TRUE;
 
 	return bRet;
+}
+
+
+string CUtils::ErrorMessage()
+{
+	LPVOID lpf;
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(),
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR) &lpf, 0,	NULL);
+	
+	return (LPCTSTR)lpf;
 }
 
 
