@@ -1,6 +1,5 @@
 /*
-	This file is part of AVSMeter,
-	Copyright(C) Groucho2004.
+	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
 	AVSMeter is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -22,13 +21,13 @@
 #include "common.h"
 
 #define BUFSIZE 2048
-#define NUM_PLUG_DIRS 6
+#define NUM_PLUG_DIRS 8
 
 class CAvisynthInfo
 {
 public:
 	CAvisynthInfo();
-	BOOL    GetInfo(string &s_ErrorMsg, string &s_avsdll);
+	BOOL    GetInfo(string &s_ErrorMsg, string s_avsdll);
 	virtual ~CAvisynthInfo();
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
@@ -38,21 +37,26 @@ public:
 	string  sLinkerVersion;
 	string  sVersionNumber;
 	string  sVersionString;
+	string  sTimeStamp;
+	string  *ExternalFunctions;
 	BOOL    bIs64BitVersion;
 	BOOL    bLoadError;
 
 private:
 	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
-	string  GetFileVersion(string &s_file);
-	int     GetInterfaceVersion(string &s_ErrorMsg, string &s_avsdll);
+	string  GetFileVersion(string s_file);
+	string  GetTimeStamp(string s_file);
+	int     GetInterfaceVersion(string &s_ErrorMsg, string s_avsdll);
   void    EnumPluginDirs();
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
+	void    TokenizeFunctions(string &s_functions);
 };
 
 CAvisynthInfo::CAvisynthInfo()
 {
 	NumPlugDirs = NUM_PLUG_DIRS;
+	ExternalFunctions = 0;
 }
 
 CAvisynthInfo::~CAvisynthInfo()
@@ -60,7 +64,7 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg, string &s_avsdll)
+int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg, string s_avsdll)
 {
 	int iInterfaceVersion = 0;
 	s_ErrorMsg = "";
@@ -152,7 +156,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg, string &s_avsdll)
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string &s_avsdll)
+BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 {
 	sDLLPath = "";
 	bIs64BitVersion = FALSE;
@@ -279,12 +283,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string &s_avsdll)
 	if (!bRet)
 		return FALSE;
 
-	if (!bAVSLinkage)
-	{
-		s_ErrorMsg = "Avisynth version is too old. Please update to at least\nAvisynth 2.6 Alpha4 or Avisynth+ r1576.";
-		return FALSE;
-	}
-
 
 	//This seems to be the only reliable way to determine the real path of avisynth.dll (System32/SysWoW64) across OS versions
 	try
@@ -317,7 +315,17 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string &s_avsdll)
 	if (!bRet)
 		return FALSE;
 
+
 	sVersionNumber = GetFileVersion(sDLLPath);
+
+	if (!bAVSLinkage)
+	{
+		s_ErrorMsg = StrFormat("Avisynth version is too old (%s).\nPlease update to Avisynth 2.6 or Avisynth+.", sVersionNumber.c_str());
+		return FALSE;
+	}
+
+
+	sTimeStamp = GetTimeStamp(sDLLPath);
 
 	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg, s_avsdll);
 	if (iInterfaceVersion == 0)
@@ -377,6 +385,32 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string &s_avsdll)
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
 
+		try
+		{
+			foo = AVS_env->Invoke("Version", 0);
+		}
+		catch (IScriptEnvironment::NotFound)
+		{
+		}
+
+		string sExternalFunctions = "";
+		size_t Elements = 0;
+		try
+		{
+			foo = AVS_env->GetVar("$PluginFunctions$");
+			sExternalFunctions = foo.AsString();
+			if (sExternalFunctions != "")
+			{
+				Elements = std::count(sExternalFunctions.begin(), sExternalFunctions.end(), ' ');
+				ExternalFunctions = new string[Elements + 1];
+				TokenizeFunctions(sExternalFunctions);
+			}
+		}
+		catch(...)
+		{
+			sExternalFunctions = "";
+		}
+
 		foo = 0;
 		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
@@ -425,14 +459,10 @@ void CAvisynthInfo::EnumPluginDirs()
 	for (unsigned int n = 0; n < NUM_PLUG_DIRS; n++)
 		saPluginDirs[n] = "";
 
-	//32 Bit
 	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
 	//- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
-	//64 Bit
-	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
-	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
 
 
 	LONG lRes;
@@ -549,6 +579,42 @@ void CAvisynthInfo::EnumPluginDirs()
 
 			RegCloseKey(hKeyResult);
 		}
+
+		hKeyResult = 0;
+		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
+		if (lRes == ERROR_SUCCESS)
+		{
+			char szPlugDir[2050] = "";
+			DWORD dwType = REG_SZ;
+			DWORD dwBytes = 2048;
+			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[6] = "PluginDir2_5  (HKCU, x64):\t" + sTemp;
+			}
+
+			RegCloseKey(hKeyResult);
+		}
+	
+		hKeyResult = 0;
+		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
+		if (lRes == ERROR_SUCCESS)
+		{
+			char szPlugDir[2050] = "";
+			DWORD dwType = REG_SZ;
+			DWORD dwBytes = 2048;
+			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[7] = "PluginDir2_5  (HKLM, x64):\t" + sTemp;
+			}
+
+			RegCloseKey(hKeyResult);
+		}
 	}
 
 	return;
@@ -611,7 +677,7 @@ BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 }
 
 
-string CAvisynthInfo::GetFileVersion(string &s_file)
+string CAvisynthInfo::GetFileVersion(string s_file)
 {
 	string sFileVersion = "0.0.0.0";
 	char szFilename[MAX_PATH + 1] = {0};
@@ -648,6 +714,74 @@ string CAvisynthInfo::GetFileVersion(string &s_file)
 	delete [] VersionInfoBuffer;
 
 	return sFileVersion;
+}
+
+
+string CAvisynthInfo::GetTimeStamp(string s_file)
+{
+	HANDLE hFile;
+	FILETIME ftCreate, ftLastAccess, ftModified;
+
+	hFile = ::CreateFile(s_file.c_str(),	GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+					FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM,	NULL);
+
+	if (hFile == INVALID_HANDLE_VALUE)
+		return "???";
+
+	GetFileTime(hFile, &ftCreate, &ftLastAccess, &ftModified);
+
+	if (!::CloseHandle(hFile))
+		return "???";
+
+	FILETIME localTime;
+	FileTimeToLocalFileTime(&ftModified, &localTime);
+	SYSTEMTIME sysTime;
+	FileTimeToSystemTime(&localTime, &sysTime);
+
+	string sMonth = "";
+	switch (sysTime.wMonth)
+	{
+		case 1:
+			sMonth = "January";
+			break;
+		case 2:
+			sMonth = "Febuary";
+			break;
+		case 3:
+			sMonth = "March";
+			break;
+		case 4:
+			sMonth = "April";
+			break;
+		case 5:
+			sMonth = "May";
+			break;
+		case 6:
+			sMonth = "June";
+			break;
+		case 7:
+			sMonth = "July";
+			break;
+		case 8:
+			sMonth = "August";
+			break;
+		case 9:
+			sMonth = "September";
+			break;
+		case 10:
+			sMonth = "October";
+			break;
+		case 11:
+			sMonth = "November";
+			break;
+		case 12:
+			sMonth = "December";
+			break;
+		default:
+			sMonth = "???";
+	}
+
+	return StrFormat("%s %u, %u, %02u:%02u:%02u", sMonth.c_str(), sysTime.wDay, sysTime.wYear, sysTime.wHour, sysTime.wMinute, sysTime.wSecond);
 }
 
 
@@ -689,6 +823,38 @@ void CAvisynthInfo::StrTrim(string &s_string)
 {
 	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
 	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
+
+	return;
+}
+
+
+void CAvisynthInfo::TokenizeFunctions(string &s_functions)
+{
+	StrTrim(s_functions);
+	size_t LastChar = s_functions.length() - 1;
+	int iNumFunctions = 0;
+	size_t curpos = 0;
+	size_t lastpos = 0;
+
+	string sFunction = "";
+	size_t Element = 0;
+	for (curpos = 0; curpos <= LastChar; curpos++)
+	{
+		if ((s_functions[curpos] == ' ') || (curpos == LastChar))
+		{
+			if (curpos == LastChar)
+				sFunction = s_functions.substr(lastpos + 1, (curpos - lastpos));
+			else if (lastpos == 0)
+				sFunction = s_functions.substr(lastpos, (curpos - lastpos));
+			else
+				sFunction = s_functions.substr(lastpos + 1, (curpos - lastpos - 1));
+
+			lastpos = curpos;
+			StrTrim(sFunction);
+			ExternalFunctions[Element] = sFunction;
+			++Element;
+		}
+	}
 
 	return;
 }

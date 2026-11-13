@@ -1,6 +1,5 @@
 /*
-	This file is part of AVSMeter,
-	Copyright(C) Groucho2004.
+	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
 	AVSMeter is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by

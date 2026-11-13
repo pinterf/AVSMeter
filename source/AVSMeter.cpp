@@ -1,6 +1,5 @@
 /*
-	This file is part of AVSMeter,
-	Copyright(C) Groucho2004.
+	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
 	AVSMeter is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -24,8 +23,13 @@
 #include "timer.h"
 
 #define COLOR_DEFAULT           0
-#define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
-#define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
+
+//#define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
+//#define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
+
+#define COLOR_AVISYNTH_VERSION  FG_HRED | BG_BLACK
+#define COLOR_AVSM_VERSION      FG_HGREEN | BG_BLACK
+
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
@@ -176,7 +180,9 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVISYNTH_VERSION, "\r%s (%s)\n", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
+
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVISYNTH_VERSION, "\r%s", AvisynthInfo.sVersionString.c_str());
+	PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sVersionNumber.c_str());
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -207,17 +213,17 @@ int main(int argc, char* argv[])
 		utils.StrToLC(sArgTest);
 		arg_len = sArgTest.length();
 
-		if ((sArgTest == "-h") || (sArgTest == "-help"))
-		{
-			PrintUsage();
-			Pause();
-			return -1;
-		}
-
 		if (sArgTest == "-avsinfo")
 		{
 			sCommandLine += sCmdToken + " ";
 			bAVSInfo = TRUE;
+			continue;
+		}
+
+		if ((sArgTest == "-i") || (sArgTest == "-info"))
+		{
+			sCommandLine += sCmdToken + " ";
+			bInfoOnly = TRUE;
 			continue;
 		}
 
@@ -228,17 +234,10 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if ((sArgTest == "-c") || (sArgTest == "-csv"))
+		if (sArgTest == "-csv")
 		{
 			sCommandLine += sCmdToken + " ";
 			Settings.bCreateCSV = TRUE;
-			continue;
-		}
-
-		if ((sArgTest == "-i") || (sArgTest == "-info"))
-		{
-			sCommandLine += sCmdToken + " ";
-			bInfoOnly = TRUE;
 			continue;
 		}
 
@@ -391,10 +390,13 @@ int main(int argc, char* argv[])
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
-		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth version:            %s (%s)\n", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth version string:     %s\n", AvisynthInfo.sVersionString.c_str());
+		PrintConsole(TRUE, COLOR_EMPHASIS, "File version:                %s\n", AvisynthInfo.sVersionNumber.c_str());		
 		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth Interface Version:  %d\n", AvisynthInfo.iInterfaceVersion);
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Muli-threading support:      %s\n", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
 		PrintConsole(TRUE, COLOR_EMPHASIS, "Linker/compiler version:     %s\n", AvisynthInfo.sLinkerVersion.c_str());
 		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth DLL location:       %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth DLL time stamp:     %s\n", AvisynthInfo.sTimeStamp.c_str());
 
 		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
 		{
@@ -579,16 +581,25 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-		sOutBuf = utils.StrFormat("Avisynth version:                      %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
+		sOutBuf = utils.StrFormat("Avisynth version string:               %s", AvisynthInfo.sVersionString.c_str());
+		sLogBuffer += sOutBuf + "\n";
+
+		sOutBuf = utils.StrFormat("Avisynth file version:                 %s", AvisynthInfo.sVersionNumber.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		sOutBuf = utils.StrFormat("Avisynth Interface Version:            %d", AvisynthInfo.iInterfaceVersion);
 		sLogBuffer += sOutBuf + "\n";
 
+		sOutBuf = utils.StrFormat("Avisynth MT support:                   %s", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
+		sLogBuffer += sOutBuf + "\n";
+
 		sOutBuf = utils.StrFormat("Avisynth.dll linker/compiler version:  %s", AvisynthInfo.sLinkerVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth DLL location:                 %s", AvisynthInfo.sDLLPath.c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll location:                 %s", AvisynthInfo.sDLLPath.c_str());
+		sLogBuffer += sOutBuf + "\n";
+
+		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:               %s", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
@@ -1138,7 +1149,7 @@ int main(int argc, char* argv[])
 
 			if (Settings.bDisplayTPF)
 			{
-				sOutBuf = utils.StrFormat("TPF (max | min | avg):          %s | %s | %s ms", utils.StrFormatFrameTime(1000.0 / dFPSMin).c_str(), utils.StrFormatFrameTime(1000.0 / dFPSMax).c_str(), utils.StrFormatFrameTime(1000.0 / dFPSAverage).c_str());
+				sOutBuf = utils.StrFormat("TPF (max | min | average):      %s | %s | %s ms", utils.StrFormatFrameTime(1000.0 / dFPSMin).c_str(), utils.StrFormatFrameTime(1000.0 / dFPSMax).c_str(), utils.StrFormatFrameTime(1000.0 / dFPSAverage).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
@@ -1940,14 +1951,16 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display Avisynth info\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info  [-i]         Display clip info\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log   [-l]         Create log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv   [-c]         Create csv file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info [-i]          Display clip info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log  [-l]          Create log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Monitor GPU/VPU usage\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Specify frame range\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Specify time (sec) after which the process will exit\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Specify process priority (1:low, 2:normal, 3:high)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -help [-h]          Display command line usage\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  options, read the documentation (AVSMeter.html) included\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  in the distribution package.\n");
 
 	PrintConsole(TRUE, COLOR_DEFAULT, "\n");
 	return;

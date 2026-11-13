@@ -1,6 +1,5 @@
 /*
-	This file is part of AVSMeter,
-	Copyright(C) Groucho2004.
+	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
 	AVSMeter is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -67,7 +66,7 @@ public:
 
 private:
 	unsigned __int64 GetSTDTimer();
-	BOOL IsValidVersionNumber(string &s_string);
+	BOOL IsValidVersionNumber(string s_string);
 
 	#pragma pack(push, 1)
 		typedef struct GPUZ_RECORD 
@@ -253,9 +252,9 @@ void CGPUInfo::ReadSensors()
 
 static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
 {
-	char lpAppTitle[256];
-	GetWindowText(hwnd, lpAppTitle, sizeof(lpAppTitle));	
-	string sAppTitle(lpAppTitle);
+	char szAppTitle[64];
+	GetWindowText(hwnd, szAppTitle, sizeof(szAppTitle));	
+	string sAppTitle(szAppTitle);
 
 	for (unsigned int i = 0; i < sAppTitle.length(); i++)
 		sAppTitle[i] = tolower(sAppTitle[i]);
@@ -283,7 +282,7 @@ unsigned __int64 CGPUInfo::GetSTDTimer()
 }
 
 
-BOOL CGPUInfo::IsValidVersionNumber(string &s_string)
+BOOL CGPUInfo::IsValidVersionNumber(string s_string)
 {
 	if (s_string == "")
 		return FALSE;

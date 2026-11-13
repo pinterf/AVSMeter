@@ -38,20 +38,23 @@
       <img alt="" src="avsmeter.png" width="652" height="543"><br>
       <br>
     </b><br>
-    <b><big><font face="Courier New">Usage:&nbsp; AVSMeter script.avs
-          [switches]<br>
-          Switches<br>
-          &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Display Avisynth info (<font color="#ff0000">1</font>)<br>
-          &nbsp;-info&nbsp;
-          [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Display
-          clip info<br>
-          &nbsp;-log&nbsp;&nbsp;
-          [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create
-          log file<br>
-          &nbsp;-csv&nbsp;&nbsp;
-          [-c]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create
-          csv file (<font color="#ff0000">2</font>)<br>
+    <font face="Fixedsys"><big>Usage:&nbsp; AVSMeter script.avs
+        [switches]<br>
+        Switches<br>
+        &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+        Display Avisynth info (<font color="#ff0000">1</font>)<br>
+        &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Display clip info<br>
+        &nbsp;-log&nbsp; [-l]&nbsp; &nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log fil</big></font><big><font
+        face="Courier New"><font face="Fixedsys"><big><small>e (<font
+                color="#ff0000">2</font>)</small></big><br>
+          &nbsp;-csv&nbsp; &nbsp; &nbsp; &nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
+            color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
@@ -69,11 +72,14 @@
 
 
 
-          Monitor GPU/VPU usage (<font color="#ff0000">3</font>)<br>
-          &nbsp;-range=first,last&nbsp;&nbsp; Specify frame range (<font
-            color="#ff0000">4</font>)<br>
+
+
+
+          Monitor GPU/VPU usage (<font color="#ff0000">4</font>)<br>
+          &nbsp;-range=first,last&nbsp;&nbsp; Set frame range (<font
+            color="#ff0000">5</font>)<br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Specify time (sec) after which the process will exit<br>
+          Set time limit(seconds) (<font color="#ff0000">6</font>)<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
@@ -91,10 +97,11 @@
 
 
 
-          Specify process priority (1:low, 2:normal, 3:high)<br>
-          &nbsp;-help
-          [-h]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Display command line usage<br>
+
+
+
+          Set process priority (1:low, 2:normal, 3:high)<br>
+        </font></font></big><b><big><font face="Courier New"><br>
         </font></big></b><br>
     (<b><b><b><font color="Red">1</font></b></b></b>) Displays extended
     info about the installed Avisynth version. If a custom avisynth.dll
@@ -102,24 +109,35 @@
     displayed.<br>
     <br>
     (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
+    Creates a log file with various details about the installed Avisynth
+    version, clip details, runtime results, a copy of the script and a
+    performance data table with the measured details about each
+    frame/frame interval. <br>
+    <b><i>Note:</i></b> The numbering of the frames in the performance
+    data section is not zero-based, i.e. the first frame is 1, not 0.<br>
+    <br>
+    (<b><code><font color="#ff0000"><big>3</big></font></code></b>)
     Creates a .csv file containing the performance data formatted as
     comma-separated values for direct import in Excel or a similar
     spread sheet program (OpenOffice, LibreOffice).<br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
-    (<b><code><font color="#ff0000"><big>3</big></font></code></b>)
+    (<b><code><font color="#ff0000"><big>4</big></font></code></b>)
     Enables display of the GPU/VPU usage which of course is only useful
     if a filter that uses the GPU is in the chain. AVSMeter uses GPU-Z
     to access the graphics card sensors through a shared memory space.
     GPU-Z has to be running (the window can be minimized to the system
     tray) before running AVSMeter.<br>
     <br>
-    (<b><code><font color="#ff0000"><big>4</big></font></code></b>)
+    (<b><code><font color="#ff0000"><big>5</big></font></code></b>)
     Specify the range of frames to be processed. For example,
     "-range=1500,1999" processes 500 frames starting at frame 1500.
     Without "-range" AVSMeter processes all frames of the script.<br>
     <br>
+    (<b><code><font color="#ff0000"><big>6</big></font></code></b>)
+    Specify a time limit (in seconds) after which the program stops
+    reading frames and terminates.<br>
     <b><br>
       <br>
       <u> INI file settings</u></b><br>
