@@ -40,6 +40,7 @@
 struct stSettings
 {
 	string    sLogDirectory;
+	string    sAVSDLL;
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
 	BOOL      bCreateLog;
@@ -101,6 +102,7 @@ int main(int argc, char* argv[])
 
 	//defaults
 	Settings.sLogDirectory = "";
+	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
 	Settings.bCreateLog = FALSE;
@@ -143,6 +145,8 @@ int main(int argc, char* argv[])
 	}
 
 	vector<stPerfData> perfdata;
+	string sCommandLine = "";
+	string sCmdToken = "";
 	string sOutBuf = "";
 	string sAVSFile = "";
 	string sLogBuffer = "";
@@ -158,6 +162,7 @@ int main(int argc, char* argv[])
 	unsigned int uiLogFrameInterval = 1;
 	string sErrorMsg = "";
 	BOOL bModeAVSInfo = FALSE;
+	BOOL bCustomAVSDLLFromCL = FALSE;
 
 	Settings.sSystemDateTime = "";
 
@@ -201,17 +206,20 @@ int main(int argc, char* argv[])
 		sArg = argv[iArg];
 		sArgTest = sArg;
 		utils.StrTrim(sArgTest);
+		sCmdToken = sArgTest;
 		utils.StrToLC(sArgTest);
 		arg_len = sArgTest.length();
 
 		if (sArgTest == "-avsinfo")
 		{
+			sCommandLine += sCmdToken + " ";
 			bModeAVSInfo = TRUE;
 			continue;
 		}
 
 		if (sArgTest == "-o")
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_o = TRUE;
 			bOmitPreScan = TRUE;
 			continue;
@@ -219,6 +227,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "-lf")
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_lf = TRUE;
 			bLogFunctions = TRUE;
 			Settings.bCreateLog = TRUE;
@@ -227,12 +236,14 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "-p")
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.bPauseBeforeExit = TRUE;
 			continue;
 		}
 
 		if ((sArgTest == "-i") || (sArgTest == "-info"))
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_info = TRUE;
 			bInfoOnly = TRUE;
 			continue;
@@ -240,12 +251,14 @@ int main(int argc, char* argv[])
 
 		if ((sArgTest == "-l") || (sArgTest == "-log"))
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.bCreateLog = TRUE;
 			continue;
 		}
 
 		if (sArgTest == "-csv")
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_csv = TRUE;
 			Settings.bCreateCSV = TRUE;
 			continue;
@@ -253,12 +266,14 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "-gpu")
 		{
+			sCommandLine += sCmdToken + " ";
 			Settings.bGPUInfo = TRUE;
 			continue;
 		}
 
 		if (sArgTest.substr(0, 7) == "-range=")
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_range = TRUE;
 			Settings.iStartFrame = 0xFFFFFFFFFF;
 			Settings.iStopFrame = 0xFFFFFFFFFF;
@@ -300,6 +315,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest == "-hp")
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_highpriority = TRUE;
 			bHighPriority = TRUE;
 			continue;
@@ -307,6 +323,7 @@ int main(int argc, char* argv[])
 
 		if (sArgTest.substr(0, 11) == "-timelimit=")
 		{
+			sCommandLine += sCmdToken + " ";
 			CLSwitches_timelimit = TRUE;
 			sTemp = sArgTest.substr(11);
 			if (utils.IsNumeric(sTemp))
@@ -377,6 +394,8 @@ int main(int argc, char* argv[])
 		PollKeys();
 		return -1;
 	}
+
+	utils.StrTrim(sCommandLine);
 
 
 	if (bModeAVSInfo)
@@ -452,10 +471,49 @@ int main(int argc, char* argv[])
 	if (bHighPriority)
 		::SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
+	if (bCustomAVSDLLFromCL)
+	{
+		char szCustomAVSDLL[MAX_PATH + 1] = "";
+
+		OPENFILENAME ofn;
+		ofn.lStructSize       = sizeof(OPENFILENAME);
+		ofn.hwndOwner         = ConsoleHWND;
+		ofn.hInstance         = NULL;
+		ofn.lpstrFilter       = "*.dll";
+		ofn.lpstrCustomFilter = NULL;
+		ofn.nMaxCustFilter    = 0;
+		ofn.nFilterIndex      = 1;
+		ofn.lpstrFile         = szCustomAVSDLL;
+		ofn.nMaxFile          = MAX_PATH;
+		ofn.lpstrFileTitle    = NULL;
+		ofn.nMaxFileTitle     = NULL;
+		ofn.lpstrInitialDir   = ".";
+		ofn.lpstrTitle        = "Select Avisynth DLL";
+		ofn.nFileOffset       = 0;
+		ofn.nFileExtension    = 0;
+		ofn.lpstrDefExt       = NULL;
+		ofn.lCustData         = 0;
+		ofn.lpfnHook          = NULL;
+		ofn.lpTemplateName    = NULL;
+		ofn.Flags             = OFN_HIDEREADONLY | OFN_EXPLORER;
+			
+		if (GetOpenFileName(&ofn) == 0)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot open file or no avisynth.dll selected.\n");
+			PollKeys();
+			return -1;
+		}
+
+		Settings.sAVSDLL.assign(szCustomAVSDLL);
+	}
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
 	BOOL bRet = FALSE;
-	bRet = AvisynthInfo.GetInfo(sErrorMsg, TRUE);
+	if (bModeAVSInfo)
+		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, sErrorMsg, TRUE);
+	else
+		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, sErrorMsg, FALSE);
 
 	sys.GetCPUID();
 
@@ -500,6 +558,13 @@ int main(int argc, char* argv[])
 	{
 		sOutBuf = utils.StrFormat("Log file created with:      AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
+
+		if (sCommandLine != "")
+		{
+			sOutBuf = utils.StrFormat("Command line switches:      %s", sCommandLine.c_str());
+			sLogBuffer += sOutBuf + "\n";
+		}
+
 
 		sLogBuffer += "\n[OS/Hardware info]\n";
 		sOutBuf = utils.StrFormat("Operating system:           %s\n\n", sys.GetOSVersion().c_str());
@@ -752,9 +817,9 @@ int main(int argc, char* argv[])
 			if (Settings.sSystemDateTime == "")
 				Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
- 			string sAVSInfoFile = "";
-			char szPath[MAX_PATH_LEN + 1];
-			if (::GetCurrentDirectory(MAX_PATH_LEN, szPath) > 0)
+	 		string sAVSInfoFile = "";
+			char szPath[MAX_PATH + 1];
+			if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
 			{
 				if (Settings.sLogDirectory == "")
 				{
@@ -819,8 +884,13 @@ int main(int argc, char* argv[])
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 	}
 
+
 	HINSTANCE hDLL;
-	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	if (Settings.sAVSDLL == "")
+		hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	else
+		hDLL = ::LoadLibraryEx(Settings.sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+
 
 	if (!hDLL)
 	{
@@ -897,11 +967,20 @@ int main(int argc, char* argv[])
 
 		sOutBuf = utils.StrFormat("Script file:                %s", sAVSFile.c_str());
 		sLogBuffer += sOutBuf + "\n";
+
+		if (sCommandLine != "")
+		{
+			sOutBuf = utils.StrFormat("Command line switches:      %s", sCommandLine.c_str());
+			sLogBuffer += sOutBuf + "\n";
+		}
+
+
 		if (Settings.sLogDirectory != "")
 		{
 			sOutBuf = utils.StrFormat("Log file directory:         %s", Settings.sLogDirectory.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
+
 
 		sLogBuffer += "\n[OS/Hardware info]\n";
 		sOutBuf = utils.StrFormat("Operating system:           %s\n\n", sys.GetOSVersion().c_str());
@@ -1799,6 +1878,17 @@ string ParseINIFile()
 			}
 			continue;
 		}
+		if (sCurrentLine.substr(0, 6) == "avsdll")
+		{
+			Settings.sAVSDLL = sOrgLine.substr(7);
+			utils.StrTrim(Settings.sAVSDLL);
+			if ((!utils.FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
+			{
+				sRet = utils.StrFormat("\nThe file specified in AVSMeter.ini does not exist:\nAVSDLL=%s\n", Settings.sAVSDLL.c_str());
+				return sRet;
+			}
+			continue;
+		}
 
 		if (sCurrentLine.substr(0, 18) == "loadplugininterval")
 		{
@@ -1906,6 +1996,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
+	sSettings += utils.StrFormat("AVSDLL=%s\n\n", Settings.sAVSDLL.c_str());
 
 	sSettings += utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	sSettings += utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
@@ -1949,6 +2040,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	string sLogFile = "";
 	size_t ilen = s_avsfile.length();
 	ofstream hLogFile;
+
 
 	Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 	if (ilen > 4)
@@ -2088,6 +2180,7 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 		return sRet;
 	}
 
+
 	string sCSV = "";
 
 	if (cs_pdata.size() > 1)
@@ -2207,7 +2300,14 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	unsigned int uiFrameInterval = 10;
 
 	HINSTANCE hDLL;
-	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+
+
+
+	if (Settings.sAVSDLL == "")
+		hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	else
+		hDLL = ::LoadLibraryEx(Settings.sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+
 
 	if (!hDLL)
 	{

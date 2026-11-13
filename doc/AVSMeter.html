@@ -65,6 +65,8 @@
       &nbsp;
       -avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
+
+
       Displays extended Avisynth info<br>
       &nbsp; -info&nbsp;&nbsp;
       [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Displays clip info<br>
@@ -73,9 +75,13 @@
       &nbsp;
       -csv&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
+
+
       Creates csv file<br>
       &nbsp;
       -gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
       Displays GPU/VPU usage (requires GPU-Z)<br>
       &nbsp; -range=first,last&nbsp;&nbsp; Sets frame range<br>
@@ -84,17 +90,25 @@
       &nbsp;
       -hp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
+
+
       Sets process priority to high<br>
       &nbsp;
       -o&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
       Omits script pre-scanning<br>
       &nbsp;
       -lf&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
+
+
       Adds internal/external functions to the avsinfo*.log file<br>
       &nbsp;
       -p&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
       Pauses the program at the end and returns after pressing a key.<br>
     </font><b><br>
@@ -185,7 +199,15 @@
     If set to "1", pauses the program at the end and returns after
     pressing a key.<br>
     <br>
-    <b><b>"LogDirectory"</b><br>
+    <b><b><b><b><b>"AVSDLL"</b><br>
+          </b></b></b></b>The user can specify the avisynth.dll to be
+    used. This has to be a fully qualified path, for example
+    "AVSDLL=d:\apps\avisynth\avisynth.dll" (without the quotes). The <font
+      color="#ff0000">default is an empty string </font>which means
+    that AVSMeter will attempt to load avisynth.dll through the standard
+    Windows search hierarchy.<br>
+    <b><b><br>
+        "LogDirectory"</b><br>
     </b> The user can specify a directory in which all log files are
     stored. This has to be a fully qualified<br>
     path, for example "LogDirectory=c:\LogFiles" (without the quotes).

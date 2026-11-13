@@ -32,7 +32,7 @@ public:
 	CAvisynthInfo();
 	virtual ~CAvisynthInfo();
 
-	BOOL    GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck);
+	BOOL    GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugCheck);
 	int     iInterfaceVersion;
 	vector  <string> vPluginDirs;
 	vector  <string> vInternalFunctions;
@@ -54,6 +54,7 @@ public:
 
 private:
 	CUtils              utils;
+	string              sAVSDLL;
 	BOOL                IsGruntFunc(string s_function);
   void                EnumPluginDirs();
 	void                EnumPluginDLLs();
@@ -79,7 +80,7 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
+BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 {
 	sDLLPath = "";
 	bIs64BitAVSDLL = FALSE;
@@ -96,7 +97,13 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 	LOADED_IMAGE li;
 	BOOL bLoaded;
 
-	bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
+	if (s_AVSDLL == "")
+		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
+	else
+		bLoaded = MapAndLoad((LPSTR)s_AVSDLL.c_str(), NULL, &li,	TRUE,	TRUE);
+
+	//Need a local copy
+	sAVSDLL = s_AVSDLL;
 
 	if (!bLoaded)
 	{
@@ -208,7 +215,11 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 	}
 
 	HINSTANCE hDLL;
-	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	if (sAVSDLL == "")
+		hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	else
+		hDLL = ::LoadLibraryEx(sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+
 
 	if (!hDLL)
 	{
@@ -810,7 +821,10 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 void CAvisynthInfo::TestLoadPlugins()
 {
 	HINSTANCE hDLL;
-	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	if (sAVSDLL == "")
+		hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+	else
+		hDLL = ::LoadLibraryEx(sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
 	if (!hDLL)
 		return;

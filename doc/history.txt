@@ -1,3 +1,12 @@
+v3.0.7.0
+- Updated libcpuid (new AMD and Intel CPUs)
+
+- The user can specify a custom avisynth.dll in the INI file.
+  This feture was removed some time ago, now it's back
+
+- Info about used command line switches is added to the log files
+
+
 v3.0.6.0
 - Increased some static buffer sizes
 - Now using LoadlibraryEx with the flag "LOAD_WITH_ALTERED_SEARCH_PATH"
