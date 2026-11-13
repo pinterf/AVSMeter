@@ -66,7 +66,7 @@ string GetExceptionModule(LPVOID address)
 	if (iCurModule == -1)
 		return "";
 
-	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH))
+	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH_LEN))
 		return "";
 
 	string sModule(modulename);

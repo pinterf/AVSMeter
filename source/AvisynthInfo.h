@@ -54,7 +54,6 @@ public:
 
 private:
 	CUtils              utils;
-	string              sAVSDLL;
 	BOOL                IsGruntFunc(string s_function);
   void                EnumPluginDirs();
 	void                EnumPluginDLLs();
@@ -209,10 +208,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 	}
 
 	HINSTANCE hDLL;
-	if (sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(sAVSDLL.c_str());
+	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
 	if (!hDLL)
 	{
@@ -814,10 +810,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 void CAvisynthInfo::TestLoadPlugins()
 {
 	HINSTANCE hDLL;
-	if (sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(sAVSDLL.c_str());
+	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
 	if (!hDLL)
 		return;
@@ -1032,7 +1025,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			continue;
 		}
 
-		HINSTANCE hDLL = ::LoadLibrary(szDepName);
+		HINSTANCE hDLL = ::LoadLibraryEx(szDepName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 		if (!hDLL)
 			s_failed_dependencies += sDepDLL;
 		else
@@ -1202,7 +1195,7 @@ BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 
 			if (filedata.find("libfftw3f-3.dll") != std::string::npos)
 			{
-				HINSTANCE hDLL = ::LoadLibrary("libfftw3f-3.dll");
+				HINSTANCE hDLL = ::LoadLibraryEx("libfftw3f-3.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 				if (!hDLL)
 				{
 					s_failed_deps += "  libfftw3f-3.dll\n";
@@ -1216,7 +1209,7 @@ BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 
 			if (filedata.find("fftw3.dll") != std::string::npos)
 			{
-				HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
+				HINSTANCE hDLL = ::LoadLibraryEx("fftw3.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 				if (!hDLL)
 				{
 					s_failed_deps += "  fftw3.dll\n";

@@ -54,6 +54,7 @@ using std::getline;
 using std::remove;
 using std::exception;
 
+#define MAX_PATH_LEN 32768
 #define DSE_DELAY 500
 const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
 const HWND ConsoleHWND = GetConsoleWindow();

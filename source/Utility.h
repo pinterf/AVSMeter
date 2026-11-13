@@ -374,11 +374,11 @@ string CUtils::StrFormatTPF(double d_frametime)
 string CUtils::GetFileVersion(string s_file)
 {
 	string sFileVersion = "n/a";
-	char szFileName[MAX_PATH + 1];
+	char szFileName[MAX_PATH_LEN + 1];
 
 	if (s_file == "")
 	{
-		if (GetModuleFileName(NULL, szFileName, MAX_PATH) == 0)
+		if (GetModuleFileName(NULL, szFileName, MAX_PATH_LEN) == 0)
 			return sFileVersion;
 	}
 	else
@@ -417,11 +417,11 @@ string CUtils::GetFileVersion(string s_file)
 string CUtils::GetProductVersion(string s_file)
 {
 	string sProductVersion = "n/a";
-	char szFileName[MAX_PATH + 1];
+	char szFileName[MAX_PATH_LEN + 1];
 
 	if (s_file == "")
 	{
-		if (GetModuleFileName(NULL, szFileName, MAX_PATH) == 0)
+		if (GetModuleFileName(NULL, szFileName, MAX_PATH_LEN) == 0)
 			return sProductVersion;
 	}
 	else

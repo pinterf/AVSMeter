@@ -1,7 +1,10 @@
+v3.0.6.0
+- Increased some static buffer sizes
+- Now using LoadlibraryEx with the flag "LOAD_WITH_ALTERED_SEARCH_PATH"
+
 v3.0.5.0
 - Added command line switch "-p"
-  This pauses the program at the end and returns after pressing
-  a key irrespective of the INI setting "PauseBeforeExit".
+  This pauses the program at the end and returns after pressing a key
 - Modified some error messages
 
 

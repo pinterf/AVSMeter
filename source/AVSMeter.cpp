@@ -187,7 +187,6 @@ int main(int argc, char* argv[])
 
 	if (argc < 2)
 	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: No command line arguments\n");
 		PrintUsage();
 		PollKeys();
 		return -1;
@@ -335,8 +334,8 @@ int main(int argc, char* argv[])
 			if (sArgTest.substr(sArgTest.length() - 4) == ".avs")
 			{
 				LPTSTR lpPart;
-				char szOut[MAX_PATH + 1];
-				if (::GetFullPathName(argv[iArg], MAX_PATH, szOut, &lpPart))
+				char szOut[MAX_PATH_LEN + 1];
+				if (::GetFullPathName(argv[iArg], MAX_PATH_LEN, szOut, &lpPart))
 				{
 					sAVSFile = utils.StrFormat("%s", szOut);
 					if (!utils.FileExists(sAVSFile))
@@ -357,8 +356,8 @@ int main(int argc, char* argv[])
 			{
 				sTemp = sArg + ".avs";
 				LPTSTR lpPart;
-				char szOut[MAX_PATH + 1];
-				if (::GetFullPathName(sTemp.c_str(), MAX_PATH, szOut, &lpPart))
+				char szOut[MAX_PATH_LEN + 1];
+				if (::GetFullPathName(sTemp.c_str(), MAX_PATH_LEN, szOut, &lpPart))
 				{
 					sAVSFile = utils.StrFormat("%s", szOut);
 					if (!utils.FileExists(sAVSFile))
@@ -754,8 +753,8 @@ int main(int argc, char* argv[])
 				Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
  			string sAVSInfoFile = "";
-			char szPath[MAX_PATH + 1];
-			if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
+			char szPath[MAX_PATH_LEN + 1];
+			if (::GetCurrentDirectory(MAX_PATH_LEN, szPath) > 0)
 			{
 				if (Settings.sLogDirectory == "")
 				{
@@ -821,7 +820,7 @@ int main(int argc, char* argv[])
 	}
 
 	HINSTANCE hDLL;
-	hDLL = ::LoadLibrary("avisynth");
+	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
 	if (!hDLL)
 	{
@@ -1735,8 +1734,8 @@ string ParseINIFile()
 	string sINIFile = "";
 	string sTemp = "";
 
-	char szPath[MAX_PATH + 1];
-	if (::GetModuleFileName(NULL, szPath, MAX_PATH) > 0)
+	char szPath[MAX_PATH_LEN + 1];
+	if (::GetModuleFileName(NULL, szPath, MAX_PATH_LEN) > 0)
 	{
 		sProgramPath = utils.StrFormat("%s", szPath);
 		size_t i = 0;
@@ -2208,7 +2207,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	unsigned int uiFrameInterval = 10;
 
 	HINSTANCE hDLL;
-	hDLL = ::LoadLibrary("avisynth");
+	hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
 	if (!hDLL)
 	{
@@ -2351,23 +2350,21 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 
 void PrintUsage()
 {
-	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage:  AVSMeter script.avs [switches]\n\n");
-
+	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage1:  AVSMeter script.avs [switches]\n");
+	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "Usage2:  AVSMeter -avsinfo   [switches]\n\n");
 	PrintConsole(TRUE, BG_BLACK | FG_HGREEN, "Switches:\n");
 
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display extended Avisynth info\n");	
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Display clip info\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Display GPU/VPU usage (requires GPU-Z)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -hp                 Set process priority to high\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Add video adapter info to the log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the avsinfo*.log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -p                  Pauses the program at the end and returns after pressing a key.\n\n\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Displays extended Avisynth info\n");	
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Displays clip info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Creates log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Creates csv file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Displays GPU/VPU usage (requires GPU-Z)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Sets frame range\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Sets time limit (seconds)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -hp                 Sets process priority to high\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omits script pre-scanning\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Adds internal/external functions to the avsinfo*.log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -p                  Pauses the program at the end and returns after pressing a key.\n\n\n");
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  settings read the documentation (AVSMeter.html) included\n");
