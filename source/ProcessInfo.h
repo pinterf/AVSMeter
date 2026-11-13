@@ -6,9 +6,7 @@
 #ifndef _PROCESSINFO_H
 #define _PROCESSINFO_H
 
-#include <windows.h>
-#include <psapi.h>
-#include <tlhelp32.h>
+#include "stdafx.h"
 
 class CProcessInfo
 {

@@ -6,16 +6,7 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 
-#include <windows.h>
-#include <wintrust.h>
-#include <imagehlp.h>
-#include <string>
-#include <algorithm>
-
-#define AVSDLL_SUCCESS 0x00
-#define AVSDLL_INCOMPATIBLE 0x01
-#define CANNOT_LOAD_AVSDLL 0x02
-#define NO_AVS_LINKAGE 0x03
+#include "stdafx.h"
 
 using namespace std;
 
@@ -27,7 +18,6 @@ public:
 	double       GetTimer();
 	BOOL         TestTimer();
 	BOOL         FileExists(string s_file);
-	BYTE         CheckAvisynth();
 	void         CursorUp(int iLines);
 	unsigned int GetConsoleWidth();
 	HANDLE       hConsole;
@@ -101,14 +91,8 @@ BOOL CUtils::TestTimer()
 
 	BOOL bRet = TRUE;
 
-	DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x01);
-	Sleep(0);
-
 	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
 		bRet = FALSE;
-
-	::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
-	Sleep(0);
 
 	return bRet;
 }
@@ -126,51 +110,6 @@ BOOL CUtils::FileExists(string s_file)
 
 	return TRUE;
 }
-
-
-BYTE CUtils::CheckAvisynth()
-{
-	BYTE bRet = AVSDLL_SUCCESS;
-
-	try
-	{
-		LOADED_IMAGE li;
-		BOOL bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
-		if (!bLoaded)
-			return CANNOT_LOAD_AVSDLL;
-
-		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
-
-		DWORD rvaNames = pExp->AddressOfNames;
-		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
-		string sName = "";
-		int iPos = 0;
-		bRet = NO_AVS_LINKAGE;
-
-		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
-		{
-			DWORD rvaName = prvaNames[dwName];
-			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-			StrToLC(sName);
-			iPos = (int)sName.find("avs_linkage");
-			if (iPos >= 0)
-			{
-				bRet = AVSDLL_SUCCESS;
-				break;
-			}
-		}
-
-		UnMapAndLoad(&li);
-	}
-	catch (...)
-	{
-		return AVSDLL_INCOMPATIBLE;
-	}
-
-	return bRet;
-}
-
 
 void CUtils::StrTrimLeft(string &s_string)
 {
