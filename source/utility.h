@@ -67,6 +67,7 @@ public:
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
 	string         GetFormattedSystemTime();
+	string         GetOSVersion();
 	int            iConsoleWidth;
 
 	//string functions
@@ -380,14 +381,93 @@ BOOL CUtils::IsNumeric(string s_string)
 string CUtils::StrAnsiToOEM(string s_string)
 {
 	char *buffer = NULL;
-
 	buffer = new char[s_string.length() + 1];
 	memset(buffer, ' ', sizeof(buffer));
-
 	CharToOem(s_string.c_str(), buffer);
 	string sOEM(buffer);
 
 	return sOEM;
+}
+
+
+string CUtils::GetOSVersion()
+{
+	typedef LONG NTSTATUS, *PNTSTATUS;
+	typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOEXW);
+	string sOSVersion = "Unknown OS Version";
+	string sOSAddendum = "";
+
+	string sArchitecture = "(x86)";
+	SYSTEM_INFO stInfo;
+	GetNativeSystemInfo(&stInfo);
+	if ((stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) || (stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64))
+		sArchitecture = "(x64)";
+
+	HMODULE hMod = ::GetModuleHandle("ntdll.dll");
+	if (!hMod)
+		return "Cannot get module handle to ntdll.dll";
+
+	RtlGetVersionPtr rgvPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+	if (rgvPtr == NULL)
+		return "Cannot invoke \"RtlGetVersion\"";
+
+	RTL_OSVERSIONINFOEXW osvi = {0};
+	osvi.dwOSVersionInfoSize = sizeof(osvi);
+	if (rgvPtr(&osvi) != 0)
+		return "Cannot invoke \"RtlGetVersion\"";
+
+	if (osvi.dwMajorVersion == 5)
+	{
+		if (osvi.wProductType == VER_NT_WORKSTATION)
+			sOSVersion = StrFormat("Windows XP %s", sArchitecture.c_str());
+		else
+			sOSVersion = StrFormat("Windows Server 2003 %s", sArchitecture.c_str());
+	}
+
+	if (osvi.dwMajorVersion == 6)
+	{
+		if (osvi.dwMinorVersion == 0)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = StrFormat("Windows Vista %s", sArchitecture.c_str());
+			else
+				sOSVersion = StrFormat("Windows Server 2008 %s", sArchitecture.c_str());
+		}
+		if (osvi.dwMinorVersion == 1)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = StrFormat("Windows 7 %s", sArchitecture.c_str());
+			else
+				sOSVersion = StrFormat("Windows Server 2008 R2 %s", sArchitecture.c_str());
+		}
+		if (osvi.dwMinorVersion == 2)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = StrFormat("Windows 8 %s", sArchitecture.c_str());
+			else
+				sOSVersion = StrFormat("Windows Server 2012 %s", sArchitecture.c_str());
+		}
+		if (osvi.dwMinorVersion == 3)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = StrFormat("Windows 8.1 %s", sArchitecture.c_str());
+			else
+				sOSVersion = StrFormat("Windows Server 2012 R2 %s", sArchitecture.c_str());
+		}
+	}
+
+	if (osvi.dwMajorVersion == 10)
+	{
+		if (osvi.dwMinorVersion == 0)
+			sOSVersion = StrFormat("Windows 10 %s", sArchitecture.c_str());
+	}
+
+	if (osvi.wServicePackMajor > 0)
+		sOSAddendum = StrFormat(" Service Pack %u (Build %u)", osvi.wServicePackMajor, osvi.dwBuildNumber);
+	else
+		sOSAddendum = StrFormat(" (Build %u)", osvi.dwBuildNumber);
+
+	return sOSVersion + sOSAddendum;
 }
 
 

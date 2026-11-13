@@ -1,3 +1,9 @@
+v2.2.6
+- Added OS version info
+- Added plugin function enumeration to the "avsinfo" log
+- Couple of bugs fixed
+- Minor tweaks
+
 v2.2.5
 - Added dependency checking for avisynth.dll
 - More detailed and comprehensive plugin error messages relating to potentially missing dependencies

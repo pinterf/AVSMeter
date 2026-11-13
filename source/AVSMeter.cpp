@@ -392,12 +392,15 @@ int main(int argc, char* argv[])
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 		utils.CursorUp(1);
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
-		sOutBuf = utils.StrFormat("Log created with AVSMeter %s\n\n", sAVSMVersion.c_str());
+		sOutBuf = utils.StrFormat("Log created with:            AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
 
-		sOutBuf = utils.StrFormat("Avisynth version string:     %s\n", AvisynthInfo.sVersionString.c_str());
+		sOutBuf = utils.StrFormat("OS version:                  %s\n", utils.GetOSVersion().c_str());
+		sLogBuffer += sOutBuf;
+
+		sOutBuf = utils.StrFormat("\nAvisynth version string:     %s\n", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -450,7 +453,7 @@ int main(int argc, char* argv[])
 		//CPP26 plugs
 		if (AvisynthInfo.mPluginDLLsCPP26.size() > 0)
 		{
-			sOutBuf = "\nAvisynth CPP 2.6 plugins:\n";
+			sOutBuf = "\n[Avisynth CPP 2.6 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -470,7 +473,7 @@ int main(int argc, char* argv[])
 		//CPP25 plugs
 		if (AvisynthInfo.mPluginDLLsCPP25.size() > 0)
 		{
-			sOutBuf = "\nAvisynth CPP 2.5 plugins:\n";
+			sOutBuf = "\n[Avisynth CPP 2.5 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -490,7 +493,7 @@ int main(int argc, char* argv[])
 		//CPP20 plugs
 		if (AvisynthInfo.mPluginDLLsCPP20.size() > 0)
 		{
-			sOutBuf = "\nAvisynth CPP 2.0 plugins:\n";
+			sOutBuf = "\n[Avisynth CPP 2.0 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -510,7 +513,7 @@ int main(int argc, char* argv[])
 		//C25 plugs
 		if (AvisynthInfo.mPluginDLLsC25.size() > 0)
 		{
-			sOutBuf = "\nAvisynth C 2.5 plugins:\n";
+			sOutBuf = "\n[Avisynth C 2.5 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -530,7 +533,7 @@ int main(int argc, char* argv[])
 		//C20 plugs
 		if (AvisynthInfo.mPluginDLLsC20.size() > 0)
 		{
-			sOutBuf = "\nAvisynth C 2.0 plugins:\n";
+			sOutBuf = "\n[Avisynth C 2.0 plugins]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
@@ -547,11 +550,32 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		if (!AvisynthInfo.mPluginErrors.empty())
+		{
+			sOutBuf = "\n(!) Plugin errors found, see section [Plugin errors] at the end of this document.\n";
+			sLogBuffer += sOutBuf;
+		}
+
+		//Plugin Functions
+		string sFunction = "";
+		if (!AvisynthInfo.mPluginFunctions.empty())
+		{
+			sOutBuf = "\n\n[Plugin Functions]\n";
+			sLogBuffer += sOutBuf;
+		}
+
+		for (map<string, BYTE>::iterator pfunc = AvisynthInfo.mPluginFunctions.begin(); pfunc != AvisynthInfo.mPluginFunctions.end(); ++pfunc)
+		{
+			sFunction = pfunc->first;
+			sOutBuf = utils.StrFormat("  %s\n", sFunction.c_str());
+			sLogBuffer += sOutBuf;
+		}
+
 		//Plug errors
 		string sPluginError = "";
 		if (!AvisynthInfo.mPluginErrors.empty())
 		{
-			sOutBuf = "\n\n*** Plugin errors ***\n";
+			sOutBuf = "\n\n[Plugin errors]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 			sOutBuf = utils.StrFormat("%s\n", std::string(utils.iConsoleWidth - 1, '-').c_str());
@@ -757,6 +781,9 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("Log file directory:                    %s", Settings.sLogDirectory.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
+
+		sOutBuf = utils.StrFormat("OS version:                            %s", utils.GetOSVersion().c_str());
+		sLogBuffer += sOutBuf + "\n\n";
 
 		sOutBuf = utils.StrFormat("Avisynth version string:               %s", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf + "\n";
@@ -1053,13 +1080,13 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
-		if ((uiFrames > 999) && (!Settings.bSkipSpeedTest))
+		if ((uiFrames > 199) && (!Settings.bSkipSpeedTest))
 		{		
 			double dFrameTime = 0.0;
 			double dElapsedTime = 0.0;
 			unsigned int uiFramesRead = 0;
 			double d1 = timer.GetTimer();
-			for (unsigned int fr = (uiFrames - 100); fr < uiFrames; fr++)
+			for (unsigned int fr = 100; fr <= 199; fr++)
 			{
 				PVideoFrame test = AVS_clip->GetFrame(fr, AVS_env);
 				++uiFramesRead;

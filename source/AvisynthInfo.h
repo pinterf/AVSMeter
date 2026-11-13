@@ -29,6 +29,7 @@ public:
 	string  sAVSDLL;
 	BOOL    GetInfo(string &s_ErrorMsg);
 	void    EnumPluginDLLs();
+	void    TokenizeString(string s_string, map <string, BYTE> &Tokens);
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
@@ -39,6 +40,7 @@ public:
 	map     <string, BYTE> mPluginDLLsCPP25;
 	map     <string, BYTE> mPluginDLLsCPP20;
 	map     <string, BYTE> mPluginErrors;
+	map     <string, BYTE> mPluginFunctions;
 	BYTE    NumPlugDirRefs;
 	string  sDLLPath;
 	string  sLinkerVersion;
@@ -59,7 +61,7 @@ private:
 	void    AVSCheckPlugins();
 	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies);
 	void    FindStrings(string s_dll, string &s_failed_deps);
-	__int64 GetSize(string s_file);
+	__int64 FileSize(string s_file);
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
@@ -383,6 +385,17 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
+
+		string sPluginFunctions = "";
+		try
+		{
+			foo = AVS_env->GetVar("$PluginFunctions$");
+			sPluginFunctions = foo.AsString();
+			TokenizeString(sPluginFunctions, mPluginFunctions);
+		}
+		catch(...)
+		{
+		}
 
 		foo = 0;
 		Sleep(50);
@@ -1090,7 +1103,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError);
+			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError.c_str());
 			StrTrim(s_Msg);
 		}
 
@@ -1365,7 +1378,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 
 void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 {
-	if (GetSize(s_dll) > (50 * 1024 * 1024))
+	if (FileSize(s_dll) > (50 * 1024 * 1024))
 		return;
 
 	size_t pos = 0;
@@ -1411,7 +1424,7 @@ void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 }
 
 
-__int64 CAvisynthInfo::GetSize(string s_file)
+__int64 CAvisynthInfo::FileSize(string s_file)
 {
 	WIN32_FIND_DATA fd; 
 	__int64 iSize = -1;
@@ -1423,6 +1436,26 @@ __int64 CAvisynthInfo::GetSize(string s_file)
 	FindClose(hFind); 
 
 	return iSize;
+}
+
+
+void CAvisynthInfo::TokenizeString(string s_string, map <string, BYTE> &Tokens)
+{
+	string sToken = "";
+	size_t current;
+	size_t next = -1;
+	do
+	{
+		current = next + 1;
+		next = s_string.find_first_of(" ", current);
+		sToken = s_string.substr(current, next - current);
+		StrTrim(sToken);
+		if (sToken != "")
+			Tokens[sToken] = 1;
+	}
+	while (next != string::npos);
+
+	return;
 }
 
 
