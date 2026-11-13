@@ -131,6 +131,7 @@ int main(int argc, char* argv[])
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
 	BOOL bOmitPreScan = FALSE;
+	BOOL bVerboseLog = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 1;
 	string sErrorMsg = "";
@@ -145,6 +146,7 @@ int main(int argc, char* argv[])
 	BOOL CLSwitches_info = FALSE;
 	BOOL CLSwitches_o = FALSE;
 	BOOL CLSwitches_c = FALSE;
+	BOOL CLSwitches_v = FALSE;
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -203,6 +205,13 @@ int main(int argc, char* argv[])
 		{
 			CLSwitches_o = TRUE;
 			bOmitPreScan = TRUE;
+			continue;
+		}
+
+		if (sArgTest == "-v")
+		{
+			CLSwitches_v = TRUE;
+			bVerboseLog = TRUE;
 			continue;
 		}
 
@@ -434,6 +443,14 @@ int main(int argc, char* argv[])
 		if (CLSwitches_c)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-c\"\n");
+			PrintUsage();
+			PollKeys();
+			return -1;
+		}
+
+		if (CLSwitches_v)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-v\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -710,51 +727,55 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		//Internal Functions
-		if (AvisynthInfo.vInternalFunctions.size() > 0)
+
+		if (bVerboseLog)
 		{
-			string sFunction = "";
-			sOutBuf = "\n\n\n[Internal (core) functions]\n";
-			sLogBuffer += sOutBuf;
-	
-			for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
+			//Internal Functions
+			if (AvisynthInfo.vInternalFunctions.size() > 0)
 			{
-				sFunction = AvisynthInfo.vInternalFunctions[IFunc];
-				sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
+				string sFunction = "";
+				sOutBuf = "\n\n\n[Internal (core) functions]\n";
 				sLogBuffer += sOutBuf;
+		
+				for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
+				{
+					sFunction = AvisynthInfo.vInternalFunctions[IFunc];
+					sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
+					sLogBuffer += sOutBuf;
+				}
 			}
-		}
 
-		//External (plugin) Functions
-		if (AvisynthInfo.vPluginFunctions.size() > 0)
-		{
-			string sFunction = "";
-			sOutBuf = "\n\n[External (plugin) functions]\n";
-			sLogBuffer += sOutBuf;
+			//External (plugin) Functions
+			if (AvisynthInfo.vPluginFunctions.size() > 0)
+			{
+				string sFunction = "";
+				sOutBuf = "\n\n[External (plugin) functions]\n";
+				sLogBuffer += sOutBuf;
 	
-			for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
-			{
-				sFunction = AvisynthInfo.vPluginFunctions[PFunc];
-				sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
-				sLogBuffer += sOutBuf;
+				for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
+				{
+					sFunction = AvisynthInfo.vPluginFunctions[PFunc];
+					sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
+					sLogBuffer += sOutBuf;
+				}
 			}
-		}
 
 
-		//Plugin Dependencies
-		if (AvisynthInfo.vPluginDependencies.size() > 0)
-		{
-			if (AvisynthInfo.bIs64BitAVSDLL)
-				sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
-			else
-				sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
-
-			sLogBuffer += sOutBuf;
-
-			for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
+			//Plugin Dependencies
+			if (AvisynthInfo.vPluginDependencies.size() > 0)
 			{
-				sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
+				if (AvisynthInfo.bIs64BitAVSDLL)
+					sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
+				else
+					sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
+
 				sLogBuffer += sOutBuf;
+
+				for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
+				{
+					sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
+					sLogBuffer += sOutBuf;
+				}
 			}
 		}
 
@@ -2569,7 +2590,8 @@ void PrintUsage()
 
  	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n\n\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -v                  Add functions/dependencies to the log file\n\n\n\n");
 
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");

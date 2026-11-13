@@ -63,6 +63,7 @@
 
 
 
+
         line usage 1 (analyse a script):&nbsp; AVSMeter script.avs
         [switches]</font></font><font face="Fixedsys"><big><b><font
             face="Lucida Console" size="+1" color="#333399"><br>
@@ -86,9 +87,11 @@
 
 
 
+
         Create csv file<br>
         &nbsp;
         -gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
 
 
@@ -107,6 +110,7 @@
         -priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set
         process priority (1:low, 2:normal, 3:high)<br>
       </big></font> <font face="Fixedsys"><big><font face="Fixedsys"><big>&nbsp;
+
 
 
             -o &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;
@@ -135,10 +139,16 @@
 
 
 
+
         Specify custom plugin directory<br>
         &nbsp; -log&nbsp;&nbsp;&nbsp;
-        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file</big><big><br>
-      </big></font><font face="Fixedsys"><br>
+        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file</big></font><br>
+    <font face="Fixedsys"><big><font face="Fixedsys"><big>&nbsp; -v
+            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Add
+            functions/dependencies to the log file<br>
+          </big></font></big><big>&nbsp;</big></font><font
+      face="Fixedsys"><br>
       <br>
     </font><b>"avsinfo"<br>
     </b>Displays extended info about the installed Avisynth version and
@@ -149,13 +159,17 @@
     list of DLL dependencies for avisynth.dll and all auto-load plugins
     and a list of internal/external Avisynth functions.<br>
     <br>
-    <br>
     <b><b>"-c"</b><br>
     </b>In combination with "-avsinfo", this switch allows to select a
     custom plugin directory (other than the directory/directories
     referenced in the registry).<br>
     <br>
-    <b><b>"-avsdll"</b><br>
+    <b><b><b><b>"-v"</b><br>
+        </b></b></b>In combination with "-avsinfo", this switch adds a
+    list of internal/external functions and DLL dependencies to the log
+    file.<b><b><br>
+        <br>
+        "-avsdll"</b><br>
     </b>The user can specify the avisynth.dll to be used (a file open
     dialog lets the user select it). Without this switch AVSMeter will
     attempt to load avisynth.dll through the standard Windows search

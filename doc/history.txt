@@ -1,3 +1,7 @@
+v2.8.4
+- Regression from v2.8.3: Revert to "MapAndLoad" WinAPI function
+- Added switch "-v". In combination with "avsinfo", this switch adds a list of internal/external functions and DLL dependencies to the log file.
+
 v2.8.3
 - Changed to implicit loading of avisynth.dll which seems more stable in multithreaded environments
 - Fixed timing issue when deleting IScriptEnvironment objects

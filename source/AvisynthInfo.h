@@ -121,17 +121,18 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	BOOL bRet = TRUE;
 	s_ErrorMsg = "";
 
-	PLOADED_IMAGE li;
+	LOADED_IMAGE li;
+	BOOL bLoaded;
 
 	//Make a local copy
 	sAVSDLL = s_AVSDLL;
 
 	if (sAVSDLL == "")
-		li = ImageLoad("avisynth", NULL);
+		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
 	else
-		li = ImageLoad((LPSTR)sAVSDLL.c_str(), NULL);
+		bLoaded = MapAndLoad((LPSTR)sAVSDLL.c_str(), NULL, &li,	TRUE,	TRUE);
 
-	if (li == NULL)
+	if (!bLoaded)
 	{
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
@@ -145,14 +146,14 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	try
 	{
 		_set_se_translator(SE_Translator);
-		sDLLPath = utils.StrFormat("%s", li->ModuleName);
+		sDLLPath = utils.StrFormat("%s", li.ModuleName);
 
-		if (li->FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
+		if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
 		{
 			bIs64BitAVSDLL = TRUE;
 			if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
 			{
-				ImageUnload(li);
+				UnMapAndLoad(&li);
 				s_ErrorMsg = "AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
 				return FALSE;
 			}
@@ -161,21 +162,21 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		{
 			if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
 			{
-				ImageUnload(li);
+				UnMapAndLoad(&li);
 				s_ErrorMsg = "AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
 				return FALSE;
 			}
 		}
 
-		DWORD expVA = li->FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li->FileHeader, li->MappedAddress, expVA, NULL);
+		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
 		DWORD rvaNames = pExp->AddressOfNames;
-		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaNames, NULL);
+		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
 
 		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
 			DWORD rvaName = prvaNames[dwName];
-			string sName((char *)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaName, NULL));
+			string sName((char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL));
 			utils.StrToLC(sName);
 
 			if (sName.find("avs_linkage") != string::npos)
@@ -200,7 +201,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 			s_ErrorMsg = "Cannot load avisynth.dll";
 	}
 
-	ImageUnload(li);
+	UnMapAndLoad(&li);
 
 	if (!bRet)
 		return FALSE;
@@ -594,9 +595,10 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	b_Is64BitDLL = FALSE;
 	s_Msg = "UNCATEGORIZED";		
 
-	PLOADED_IMAGE li = ImageLoad((LPSTR)s_dll.c_str(), NULL);
+	LOADED_IMAGE li;
+	BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,	TRUE,	TRUE);
 
-	if (li == NULL)
+	if (!bLoaded)
 	{
 		s_Msg = utils.SysErrorMessage();
 		if (s_Msg != "")
@@ -611,12 +613,12 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	{
 		_set_se_translator(SE_Translator);
 
-		if (li->FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
+		if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
 		{
 			b_Is64BitDLL = TRUE;
 			if (!PROCESS_64)
 			{
-				ImageUnload(li);
+				UnMapAndLoad(&li);
 				return TRUE;
 			}
 		}
@@ -624,30 +626,30 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 		{
 			if (PROCESS_64)
 			{
-				ImageUnload(li);
+				UnMapAndLoad(&li);
 				return TRUE;
 			}
 		}
 
-		DWORD expVA = li->FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 		if (expVA == 0)
 		{
-			ImageUnload(li);
+			UnMapAndLoad(&li);
 			return TRUE;
 		}
 
-		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li->FileHeader, li->MappedAddress, expVA, NULL);
+		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
 		if (pExp == 0)
 		{
-			ImageUnload(li);
+			UnMapAndLoad(&li);
 			return TRUE;
 		}
 
 		DWORD rvaNames = pExp->AddressOfNames;
-		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaNames, NULL);
+		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
 		if (prvaNames == 0)
 		{
-			ImageUnload(li);
+			UnMapAndLoad(&li);
 			return TRUE;
 		}
 
@@ -657,7 +659,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 		{
 			sName = "";
 			DWORD rvaName = prvaNames[dwName];
-			sName = (char *)ImageRvaToVa(li->FileHeader, li->MappedAddress, rvaName, NULL);
+			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
 			utils.StrToLC(sName);
 
 			if (sName.find("avisynthplugininit3") != string::npos)
@@ -703,7 +705,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			s_Msg = utils.StrFormat("Unknown exception:\n\"%s\"", s_dll.c_str());
 	}
 
-	ImageUnload(li);
+	UnMapAndLoad(&li);
 
 	return bRet;
 }
