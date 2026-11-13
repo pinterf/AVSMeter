@@ -457,9 +457,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (map<string, BYTE>::iterator cpp26 = AvisynthInfo.mPluginDLLsCPP26.begin(); cpp26 != AvisynthInfo.mPluginDLLsCPP26.end(); ++cpp26)
+			for (set<string, StrCaseInsensitiveCompare>::iterator cpp26 = AvisynthInfo.mPluginDLLsCPP26.begin(); cpp26 != AvisynthInfo.mPluginDLLsCPP26.end(); ++cpp26)
 			{
-				sPluginDLL = cpp26->first;
+				sPluginDLL = *cpp26;
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
@@ -477,9 +477,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (map<string, BYTE>::iterator cpp25 = AvisynthInfo.mPluginDLLsCPP25.begin(); cpp25 != AvisynthInfo.mPluginDLLsCPP25.end(); ++cpp25)
+			for (set<string, StrCaseInsensitiveCompare>::iterator cpp25 = AvisynthInfo.mPluginDLLsCPP25.begin(); cpp25 != AvisynthInfo.mPluginDLLsCPP25.end(); ++cpp25)
 			{
-				sPluginDLL = cpp25->first;
+				sPluginDLL = *cpp25;
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
@@ -497,9 +497,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (map<string, BYTE>::iterator cpp20 = AvisynthInfo.mPluginDLLsCPP20.begin(); cpp20 != AvisynthInfo.mPluginDLLsCPP20.end(); ++cpp20)
+			for (set<string, StrCaseInsensitiveCompare>::iterator cpp20 = AvisynthInfo.mPluginDLLsCPP20.begin(); cpp20 != AvisynthInfo.mPluginDLLsCPP20.end(); ++cpp20)
 			{
-				sPluginDLL = cpp20->first;
+				sPluginDLL = *cpp20;
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
@@ -517,9 +517,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (map<string, BYTE>::iterator c25 = AvisynthInfo.mPluginDLLsC25.begin(); c25 != AvisynthInfo.mPluginDLLsC25.end(); ++c25)
+			for (set<string, StrCaseInsensitiveCompare>::iterator c25 = AvisynthInfo.mPluginDLLsC25.begin(); c25 != AvisynthInfo.mPluginDLLsC25.end(); ++c25)
 			{
-				sPluginDLL = c25->first;
+				sPluginDLL = *c25;
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
@@ -537,9 +537,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (map<string, BYTE>::iterator c20 = AvisynthInfo.mPluginDLLsC20.begin(); c20 != AvisynthInfo.mPluginDLLsC20.end(); ++c20)
+			for (set<string, StrCaseInsensitiveCompare>::iterator c20 = AvisynthInfo.mPluginDLLsC20.begin(); c20 != AvisynthInfo.mPluginDLLsC20.end(); ++c20)
 			{
-				sPluginDLL = c20->first;
+				sPluginDLL = *c20;
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
@@ -564,9 +564,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 		}
 
-		for (map<string, BYTE>::iterator pfunc = AvisynthInfo.mPluginFunctions.begin(); pfunc != AvisynthInfo.mPluginFunctions.end(); ++pfunc)
+		for (set<string, StrCaseInsensitiveCompare>::iterator pfunc = AvisynthInfo.mPluginFunctions.begin(); pfunc != AvisynthInfo.mPluginFunctions.end(); ++pfunc)
 		{
-			sFunction = pfunc->first;
+			sFunction = *pfunc;
 			sOutBuf = utils.StrFormat("  %s\n", sFunction.c_str());
 			sLogBuffer += sOutBuf;
 		}
@@ -583,9 +583,9 @@ int main(int argc, char* argv[])
 			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 		}
 
-		for (map<string, BYTE>::iterator err = AvisynthInfo.mPluginErrors.begin(); err != AvisynthInfo.mPluginErrors.end(); ++err)
+		for (set<string>::iterator err = AvisynthInfo.mPluginErrors.begin(); err != AvisynthInfo.mPluginErrors.end(); ++err)
 		{
-			sPluginError = err->first;
+			sPluginError = *err;
 			sOutBuf = utils.StrFormat("\n%s\n\n%s\n", sPluginError.c_str(), std::string(utils.iConsoleWidth - 1, '-').c_str());
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());

@@ -22,6 +22,15 @@
 #define BUFSIZE 2048
 #define NUM_PLUG_DIR_REFS 8
 
+struct StrCaseInsensitiveCompare
+{ 
+	bool operator() (const string& a, const string& b) const
+	{
+		return _stricmp(a.c_str(), b.c_str()) < 0;
+	}
+};
+
+
 class CAvisynthInfo
 {
 public:
@@ -29,18 +38,18 @@ public:
 	string  sAVSDLL;
 	BOOL    GetInfo(string &s_ErrorMsg);
 	void    EnumPluginDLLs();
-	void    TokenizeString(string s_string, map <string, BYTE> &Tokens);
+	void    StrTokenize(string s_string, set<string, StrCaseInsensitiveCompare> &Tokens);
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
-	map     <string, BYTE> mPluginDirs;
-	map     <string, BYTE> mPluginDLLsC25;
-	map     <string, BYTE> mPluginDLLsC20;
-	map     <string, BYTE> mPluginDLLsCPP26;
-	map     <string, BYTE> mPluginDLLsCPP25;
-	map     <string, BYTE> mPluginDLLsCPP20;
-	map     <string, BYTE> mPluginErrors;
-	map     <string, BYTE> mPluginFunctions;
+	set     <string, StrCaseInsensitiveCompare> mPluginDirs;
+	set     <string, StrCaseInsensitiveCompare> mPluginFunctions;
+	set     <string, StrCaseInsensitiveCompare> mPluginDLLsC25;
+	set     <string, StrCaseInsensitiveCompare> mPluginDLLsC20;
+	set     <string, StrCaseInsensitiveCompare> mPluginDLLsCPP26;
+	set     <string, StrCaseInsensitiveCompare> mPluginDLLsCPP25;
+	set     <string, StrCaseInsensitiveCompare> mPluginDLLsCPP20;
+	set     <string> mPluginErrors;
 	BYTE    NumPlugDirRefs;
 	string  sDLLPath;
 	string  sLinkerVersion;
@@ -59,7 +68,7 @@ private:
   void    EnumPluginDirs();
 	BOOL    SYSCheckPlugin(string s_dll, string &s_Msg);
 	void    AVSCheckPlugins();
-	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies);
+	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
 	void    FindStrings(string s_dll, string &s_failed_deps);
 	__int64 FileSize(string s_file);
 	string  StrFormat(const char *fmt, ...);
@@ -100,9 +109,14 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 			s_ErrorMsg = "Failed to load avisynth.dll.";
 
 		string sFailedDependencies = "";
-		GetDLLDependencies(sDLLPath, sFailedDependencies);
+		string sHint = "";
+		GetDLLDependencies(sDLLPath, sFailedDependencies, sHint);
 		if (sFailedDependencies != "")
+		{
 			s_ErrorMsg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+			if (sHint != "")
+				s_ErrorMsg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+		}
 
 		return 0;
 	}
@@ -391,7 +405,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		{
 			foo = AVS_env->GetVar("$PluginFunctions$");
 			sPluginFunctions = foo.AsString();
-			TokenizeString(sPluginFunctions, mPluginFunctions);
+			StrTokenize(sPluginFunctions, mPluginFunctions);
 		}
 		catch(...)
 		{
@@ -450,7 +464,7 @@ void CAvisynthInfo::EnumPluginDirs()
 	//- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
 
-	map <string, BYTE> mDuplicates;
+	set <string> mDuplicates;
 	LONG lRes;
 	HKEY hKeyResult = 0;
 
@@ -476,8 +490,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -505,8 +519,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -534,8 +548,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -563,8 +577,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -594,8 +608,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -623,8 +637,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -652,8 +666,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -681,8 +695,8 @@ void CAvisynthInfo::EnumPluginDirs()
 
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						mDuplicates[sTempLower] = 1;
-						mPluginDirs[sTemp] = 1;
+						mDuplicates.insert(sTempLower);
+						mPluginDirs.insert(sTemp);
 					}
 				}
 			}
@@ -881,9 +895,9 @@ void CAvisynthInfo::EnumPluginDLLs()
 	string sDir = "";
 	string sMessage = "";
 
-	for (map<string, BYTE>::iterator it = mPluginDirs.begin(); it != mPluginDirs.end(); ++it)
+	for (set<string, StrCaseInsensitiveCompare>::iterator it = mPluginDirs.begin(); it != mPluginDirs.end(); ++it)
 	{
-		sDir = it->first;
+		sDir = *it;
 
 		WIN32_FIND_DATA fd;
 		HANDLE hFind;
@@ -899,20 +913,20 @@ void CAvisynthInfo::EnumPluginDLLs()
 				if (!SYSCheckPlugin(sCurrentFile, sMessage))
 				{
 					if (sMessage != "")
-						mPluginErrors[sMessage] = 1;
+						mPluginErrors.insert(sMessage);
 				}
 				else
 				{
 					if (sMessage == "AVSC25")
-						mPluginDLLsC25[sCurrentFile] = 1;
+						mPluginDLLsC25.insert(sCurrentFile);
 					if (sMessage == "AVSC20")
-						mPluginDLLsC20[sCurrentFile] = 1;
+						mPluginDLLsC20.insert(sCurrentFile);
 					if (sMessage == "AVS26CPP")
-						mPluginDLLsCPP26[sCurrentFile] = 1;
+						mPluginDLLsCPP26.insert(sCurrentFile);
 					if (sMessage == "AVS25CPP")
-						mPluginDLLsCPP25[sCurrentFile] = 1;
+						mPluginDLLsCPP25.insert(sCurrentFile);
 					if (sMessage == "AVS20CPP")
-						mPluginDLLsCPP20[sCurrentFile] = 1;
+						mPluginDLLsCPP20.insert(sCurrentFile);
 				}
 			}
 			bRet = FindNextFile(hFind, &fd);
@@ -1058,6 +1072,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 {
 	string sPlugin = "";
 	string sFailedDependencies = "";
+	string sHint = "";
 	string sMsg = "";
 
 	HINSTANCE hDLL;
@@ -1088,9 +1103,9 @@ void CAvisynthInfo::AVSCheckPlugins()
 	BOOL bPlugError = FALSE;
 	string sAVSError = "";
 
-	for (map<string, BYTE>::iterator itCPP26 = mPluginDLLsCPP26.begin(); itCPP26 != mPluginDLLsCPP26.end(); ++itCPP26)
+	for (set<string, StrCaseInsensitiveCompare>::iterator itCPP26 = mPluginDLLsCPP26.begin(); itCPP26 != mPluginDLLsCPP26.end(); ++itCPP26)
 	{
-		sPlugin = itCPP26->first;
+		sPlugin = *itCPP26;
 
 		bPlugError = FALSE;
 		string s_Msg = "";
@@ -1103,16 +1118,21 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError.c_str());
+			s_Msg = StrFormat("%s", sPlugin.c_str(), sAVSError.c_str());
 			StrTrim(s_Msg);
 		}
 
 		if (bPlugError)
 		{
 			sFailedDependencies = "";
-			GetDLLDependencies(sPlugin, sFailedDependencies);
+			sHint = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
+			{
 				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+			}
 		}
 		else
 		{
@@ -1124,12 +1144,12 @@ void CAvisynthInfo::AVSCheckPlugins()
 		}
 
 		if (s_Msg != "")
-			mPluginErrors[s_Msg] = 1;
+			mPluginErrors.insert(s_Msg);
 	}
 
-	for (map<string, BYTE>::iterator itCPP25 = mPluginDLLsCPP25.begin(); itCPP25 != mPluginDLLsCPP25.end(); ++itCPP25)
+	for (set<string, StrCaseInsensitiveCompare>::iterator itCPP25 = mPluginDLLsCPP25.begin(); itCPP25 != mPluginDLLsCPP25.end(); ++itCPP25)
 	{
-		sPlugin = itCPP25->first;
+		sPlugin = *itCPP25;
 
 		bPlugError = FALSE;
 		string s_Msg = "";
@@ -1142,16 +1162,21 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError);
+			s_Msg = StrFormat("%s", sAVSError.c_str());
 			StrTrim(s_Msg);
 		}
 
 		if (bPlugError)
 		{
 			sFailedDependencies = "";
-			GetDLLDependencies(sPlugin, sFailedDependencies);
+			sHint = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
+			{
 				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+			}
 		}
 		else
 		{
@@ -1163,12 +1188,12 @@ void CAvisynthInfo::AVSCheckPlugins()
 		}
 
 		if (s_Msg != "")
-			mPluginErrors[s_Msg] = 1;
+			mPluginErrors.insert(s_Msg);
 	}
 
-	for (map<string, BYTE>::iterator itCPP20 = mPluginDLLsCPP20.begin(); itCPP20 != mPluginDLLsCPP20.end(); ++itCPP20)
+	for (set<string, StrCaseInsensitiveCompare>::iterator itCPP20 = mPluginDLLsCPP20.begin(); itCPP20 != mPluginDLLsCPP20.end(); ++itCPP20)
 	{
-		sPlugin = itCPP20->first;
+		sPlugin = *itCPP20;
 
 		bPlugError = FALSE;
 		string s_Msg = "";
@@ -1181,16 +1206,21 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError);
+			s_Msg = StrFormat("%s", sAVSError.c_str());
 			StrTrim(s_Msg);
 		}
 
 		if (bPlugError)
 		{
 			sFailedDependencies = "";
-			GetDLLDependencies(sPlugin, sFailedDependencies);
+			sHint = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
+			{
 				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+			}
 		}
 		else
 		{
@@ -1202,12 +1232,12 @@ void CAvisynthInfo::AVSCheckPlugins()
 		}
 
 		if (s_Msg != "")
-			mPluginErrors[s_Msg] = 1;
+			mPluginErrors.insert(s_Msg);
 	}
 
-	for (map<string, BYTE>::iterator itC25 = mPluginDLLsC25.begin(); itC25 != mPluginDLLsC25.end(); ++itC25)
+	for (set<string, StrCaseInsensitiveCompare>::iterator itC25 = mPluginDLLsC25.begin(); itC25 != mPluginDLLsC25.end(); ++itC25)
 	{
-		sPlugin = itC25->first;
+		sPlugin = *itC25;
 
 		bPlugError = FALSE;
 		string s_Msg = "";
@@ -1220,15 +1250,20 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"", sPlugin.c_str(), sAVSError);
+			s_Msg = StrFormat("%s\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"", sAVSError.c_str());
 		}
 
 		if (bPlugError)
 		{
 			sFailedDependencies = "";
-			GetDLLDependencies(sPlugin, sFailedDependencies);
+			sHint = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
+			{
 				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+			}
 		}
 		else
 		{
@@ -1240,12 +1275,12 @@ void CAvisynthInfo::AVSCheckPlugins()
 		}
 
 		if (s_Msg != "")
-			mPluginErrors[s_Msg] = 1;
+			mPluginErrors.insert(s_Msg);
 	}
 
-	for (map<string, BYTE>::iterator itC20 = mPluginDLLsC20.begin(); itC20 != mPluginDLLsC20.end(); ++itC20)
+	for (set<string, StrCaseInsensitiveCompare>::iterator itC20 = mPluginDLLsC20.begin(); itC20 != mPluginDLLsC20.end(); ++itC20)
 	{
-		sPlugin = itC20->first;
+		sPlugin = *itC20;
 
 		bPlugError = FALSE;
 		string s_Msg = "";
@@ -1258,15 +1293,20 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need \"avisynth_c.dll\" support DLL", sPlugin.c_str(), sAVSError);
+			s_Msg = StrFormat("%s\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need \"avisynth_c.dll\" support DLL", sAVSError.c_str());
 		}
 
 		if (bPlugError)
 		{
 			sFailedDependencies = "";
-			GetDLLDependencies(sPlugin, sFailedDependencies);
+			sHint = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies, sHint);
 			if (sFailedDependencies != "")
+			{
 				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
+				if (sHint != "")
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is probably required and not installed.", sHint.c_str());
+			}
 		}
 		else
 		{
@@ -1278,7 +1318,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 		}
 
 		if (s_Msg != "")
-			mPluginErrors[s_Msg] = 1;
+			mPluginErrors.insert(s_Msg);
 	}
 
 	AVS_main = 0;
@@ -1295,7 +1335,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 }
 
 
-void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependencies)
+void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint)
 {
 	BOOL bRet = TRUE;
 	HANDLE hFile = NULL;
@@ -1335,7 +1375,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 			return;
 		}
 		
-		string sTemp = "";
 		string sDepDLL = "";
 		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
 		IMAGE_IMPORT_DESCRIPTOR null_iid;
@@ -1346,10 +1385,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 		{
 
 			LPCSTR szDepName = (LPCSTR)ImageRvaToVa(pNtHeaders, lpbaseAddress, pImageTable[i].Name,NULL);
-			sTemp = StrFormat("  %s", szDepName);
-			sDepDLL = sTemp + "\n";
-			StrTrim(sTemp);
-			StrToLC(sTemp);
+			sDepDLL = StrFormat("  %s\n", szDepName);
 
 			HINSTANCE hDLL = ::LoadLibraryEx(szDepName, NULL, LOAD_LIBRARY_AS_DATAFILE);
 
@@ -1370,7 +1406,27 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 	if (hFile)
 		CloseHandle(hFile);
 
+	string sTemp = s_failed_dependencies;
+	StrToLC(sTemp);
+
+	s_hint = "";
+	if ((sTemp.find("msvcm71.dll") != std::string::npos) || (sTemp.find("msvcp71.dll") != std::string::npos) || (sTemp.find("msvcr71.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2003 Runtime Distributable\n";
+	if ((sTemp.find("msvcm80.dll") != std::string::npos) || (sTemp.find("msvcp80.dll") != std::string::npos) || (sTemp.find("msvcr80.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2005 Runtime Distributable\n";
+	if ((sTemp.find("msvcm90.dll") != std::string::npos) || (sTemp.find("msvcp90.dll") != std::string::npos) || (sTemp.find("msvcr90.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2008 Runtime Distributable\n";
+	if ((sTemp.find("msvcm100.dll") != std::string::npos) || (sTemp.find("msvcp100.dll") != std::string::npos) || (sTemp.find("msvcr100.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2010 Runtime Distributable\n";
+	if ((sTemp.find("msvcm110.dll") != std::string::npos) || (sTemp.find("msvcp110.dll") != std::string::npos) || (sTemp.find("msvcr110.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2012 Runtime Distributable\n";
+	if ((sTemp.find("msvcm120.dll") != std::string::npos) || (sTemp.find("msvcp120.dll") != std::string::npos) || (sTemp.find("msvcr120.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2013 Runtime Distributable\n";
+	if ((sTemp.find("msvcm140.dll") != std::string::npos) || (sTemp.find("msvcp140.dll") != std::string::npos) || (sTemp.find("msvcr140.dll") != std::string::npos))
+		s_hint += "Microsoft Visual Studio 2015 Runtime Distributable\n";
+
 	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
+	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
 	return;
 }
@@ -1439,7 +1495,7 @@ __int64 CAvisynthInfo::FileSize(string s_file)
 }
 
 
-void CAvisynthInfo::TokenizeString(string s_string, map <string, BYTE> &Tokens)
+void CAvisynthInfo::StrTokenize(string s_string, set<string, StrCaseInsensitiveCompare> &Tokens)
 {
 	string sToken = "";
 	size_t current;
@@ -1451,9 +1507,10 @@ void CAvisynthInfo::TokenizeString(string s_string, map <string, BYTE> &Tokens)
 		sToken = s_string.substr(current, next - current);
 		StrTrim(sToken);
 		if (sToken != "")
-			Tokens[sToken] = 1;
+			Tokens.insert(sToken);
 	}
 	while (next != string::npos);
+
 
 	return;
 }

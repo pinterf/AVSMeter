@@ -1,3 +1,9 @@
+v2.2.7
+- Fixed a couple of bugs
+- Improved memory usage
+- Added some hints to the plugin error messages (for example, pointing out potentially missing
+  restributable packages)
+
 v2.2.6
 - Added OS version info
 - Added plugin function enumeration to the "avsinfo" log

@@ -14,10 +14,9 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
+#define WIN32_LEAN_AND_MEAN
 
 #pragma once
-
-//#pragma warning (disable : 4101)
 
 #include <windows.h>
 #include <process.h>
@@ -32,13 +31,12 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include <map>
+#include <set>
 #include <eh.h>
-
 
 using namespace std;
 
-#include "avsinc\avisynth.h"
+#include "avisynth.h"
 const AVS_Linkage *AVS_linkage = 0;
 
 class SE_Exception
