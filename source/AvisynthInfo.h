@@ -322,17 +322,21 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 			sInternalFunctions = "";
 		}
 
+
 		string sDLLFunctions = "";
-		try
+		if (!b_CustomPluginDir)
 		{
-			foo = AVS_env->GetVar("$PluginFunctions$");
-			sDLLFunctions = foo.AsString();
-			utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", TRUE);
-			sort(vPluginFunctions.begin(), vPluginFunctions.end());
-		}
-		catch(...)
-		{
-			sDLLFunctions = "";
+			try
+			{
+				foo = AVS_env->GetVar("$PluginFunctions$");
+				sDLLFunctions = foo.AsString();
+				utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", TRUE);
+				sort(vPluginFunctions.begin(), vPluginFunctions.end());
+			}
+			catch(...)
+			{
+				sDLLFunctions = "";
+			}
 		}
 
 		foo = 0;

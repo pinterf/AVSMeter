@@ -1,3 +1,6 @@
+v2.7.3
+- Fixed a bug in the external plugin enumeration
+
 v2.7.2
 - Added new switch "-c". This allows in combination with "-avsinfo" to specify a custom plugin directory.
 - "Save as..." dialog for all log/csv files when using "-log" and/or "-csv" switches
