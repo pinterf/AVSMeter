@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 		sAVSMVersion += " (x86)";
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2018, Groucho2004\n");
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2019, Groucho2004\n");
 
 	if (sINIRet != "")
 	{
