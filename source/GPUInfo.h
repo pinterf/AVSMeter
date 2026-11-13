@@ -34,8 +34,6 @@ public:
 
 	struct Sensors
 	{
-		DWORD  GPUClock;
-		DWORD  MEMClock;
 		BYTE   GPULoad;
 		BYTE   VPULoad;
 		BYTE   GPUTemp;
@@ -126,13 +124,11 @@ void CGPUInfo::GPUZInit()
 		else
 		{
 			if (dwLastError == ERROR_FILE_NOT_FOUND)
-				sError += "\nMake sure that GPU-Z is running.\n";
+				sError += "\nMake sure that GPU-Z is running.\n\nGPU-Z can be downloaded here:\nhttps://www.techpowerup.com/download/gpu-z/";
 		}
 
 		return;
 	}
-
-	Sleep(50);
 
 	if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
 	{
@@ -144,7 +140,6 @@ void CGPUInfo::GPUZInit()
 		return;
 	}
 
-	Sleep(50);
 	bInitialized = TRUE;
 	ReadData();
 
@@ -193,6 +188,9 @@ void CGPUInfo::ReadData()
 		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
 		transform(sKey.begin(), sKey.end(), sKey.begin(), ::toupper);
 
+		if ((sValue == "") || (sValue == "0"))
+			sValue = "n/a";
+
 		if (sKey == "CARDNAME")	       data.CardName = sValue;
 		if (sKey == "GPUNAME")         data.GPUName = sValue;
 		if (sKey == "MEMSIZE")         data.MemSize = sValue;
@@ -227,16 +225,6 @@ void CGPUInfo::ReadSensors()
 		if (wcslen(lpMem->sensors[i].name) < 2)
 			continue;
 
-		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Core Clock") == 0)
-		{
-			sensors.GPUClock = (WORD)(lpMem->sensors[i].value + 0.5);
-			continue;
-		}
-		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Memory Clock") == 0)
-		{
-			sensors.MEMClock = (WORD)(lpMem->sensors[i].value + 0.5);
-			continue;
-		}
 		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Load") == 0)
 		{
 			sensors.GPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);

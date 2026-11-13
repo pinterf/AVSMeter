@@ -28,6 +28,7 @@ class CSysInfo
 public:
 	CSysInfo();
 	virtual           ~CSysInfo();
+
 	string            GetOSVersion();
 	string            GetFormattedSystemDateTime();
 	BOOL              Is64BitOS();

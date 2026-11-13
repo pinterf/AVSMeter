@@ -28,10 +28,9 @@ class CProcessInfo
 public:
 	CProcessInfo();
 	virtual ~CProcessInfo();
+
 	void Update();
 	void CloseProcess();
-
-	//public variables:
 	BYTE  btCPUUsage;
 	WORD  wThreadCount;
 	DWORD dwPhysicalMemMB;

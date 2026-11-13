@@ -34,6 +34,7 @@
 #include <conio.h>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <set>
 #include <eh.h>
 
@@ -42,6 +43,7 @@ using std::ifstream;
 using std::ofstream;
 using std::vector;
 using std::sort;
+using std::map;
 using std::set;
 using std::transform;
 using std::getline;
@@ -49,5 +51,26 @@ using std::remove;
 using std::exception;
 
 const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
+
+
+static BOOL CompareNoCase(string first, string second)
+{
+  size_t i = 0;
+  while ((i < first.length()) && (i < second.length()))
+  {
+    if (tolower (first[i]) < tolower (second[i]))
+			return true;
+    else if (tolower (first[i]) > tolower (second[i]))
+			return false;
+ 
+   i++;
+  }
+
+  if (first.length() < second.length())
+		return true;
+  else
+		return false;
+}
+
 
 #endif //_COMMON_H

@@ -1,11 +1,11 @@
-COMPILER_OPTIONS=/MT /W3 /EHa /O1 /Ob2
+COMPILER_OPTIONS=/MT /W3 /EHa /O1 /Ob1 /GL
 
 INTDIR=.\Intermediate
 ALL : "AVSMeter.exe"
 CPP=@cl.exe
 CPP_PROJ=/nologo $(COMPILER_OPTIONS) /D "WIN32" /D "_CRT_SECURE_NO_WARNINGS" /D "NDEBUG" /D WINVER=0x0501 /D _WIN32_WINNT=0x0501 /D "_CONSOLE" /Fo"$(INTDIR)\\" /c
 LINK=@link.exe
-LINK_FLAGS=psapi.lib imagehlp.lib version.lib user32.lib advapi32.lib /nologo /subsystem:console /incremental:no /machine:x86 /out:"AVSMeter.exe" /LARGEADDRESSAWARE
+LINK_FLAGS=psapi.lib imagehlp.lib version.lib user32.lib advapi32.lib /nologo /subsystem:console /incremental:no /machine:x86 /out:"AVSMeter.exe" /LARGEADDRESSAWARE /LTCG
 RSC=@rc.exe
 RSC_PROJ=/nologo /l 0x809 /fo"$(INTDIR)\AVSMeter.res" /d "NDEBUG" 
 

@@ -1,3 +1,51 @@
+v2.6.6
+- Detailed external function enumeration and duplicate report are still not working properly, removed for now
+
+v2.6.5
+- Added hint for error 127 (proc not found / procedure could not be found).
+- Minor fixes/cosmetics
+
+v2.6.4
+- New/updated code for reporting duplicate plugin functions
+
+v2.6.3
+- Fixed: Updating very old ini files didn't work
+- Removed report of duplicate plugin functions temporarily
+- Some minor fixes/cosmetics
+
+v2.6.2
+- Fixed a problem caused by the 50 plugin limit in "classic" Avisynth
+
+v2.6.1
+- The list of plugin functions in the log file (-avsinfo -log) now points out duplicates (functions with the same name in different DLLs) by adding "[DUPLICATE]" to the function name
+
+v2.6.0
+- External plugin functions are now listed for each plugin DLL 
+
+v2.5.9
+- Fixed potential duplicate entries in plugin list
+- It seems that old C 2.0 plugins are still being used by some so the plugin sections for v2.0 plugins are back
+- Minor fixes
+
+v2.5.8
+- Re-organised the auto-load sections and added section for AVSI
+- Fixed a problem with log file content (regression)
+- C 2.0 and CPP 2.0 plugins no longer have a dedicated section in the list of plugins.
+  They are still enumerated but now fall into the section "Uncategorized".
+  The reasons for this are
+  - They are not supported by AVS+ at all
+  - They need ancient support DLLs and special loading mechanisms in order to be
+    used with other Avisynth versions
+
+v2.5.7
+- Added sections for uncategorised files/DLLs in the plugin directories
+- Fixed a bug in the detection of installed VC++ runtimes
+- Improved error handling for plugin check
+
+v2.5.6
+- Fixed a problem with plugin enumeration
+- Refactoring and tweaks
+
 v2.5.5
 - Improved dependency check for FFTW support libraries
 - Updated CPU feature detection
