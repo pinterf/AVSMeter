@@ -294,7 +294,8 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	}
 
 
-	sTimeStamp = GetTimeStamp(sDLLPath);
+	sTimeStamp = GetTimeStamp(sDLLPath, FALSE);
+	sTimeStampUTC = GetTimeStamp(sDLLPath, TRUE);
 
 	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg);
 	if (iInterfaceVersion == 0)
@@ -767,36 +768,62 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 }
 
 
-string CAvisynthInfo::GetTimeStamp(string s_file)
+string CAvisynthInfo::GetTimeStamp(string s_file, BOOL bUTC)
 {
-	HANDLE hFile = CreateFile(s_file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
-		return "Cannot determine timestamp";
-
-	FILETIME ftCreate, ftAccess, ftWrite, ftLocal;
-	SYSTEMTIME fTime;
-
-	if (!GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite))
+	string sTimeStamp = "";
+	if (!bUTC)
 	{
+		HANDLE hFile = CreateFile(s_file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		if (hFile == INVALID_HANDLE_VALUE)
+			return "Cannot determine timestamp";
+
+		FILETIME ftCreate, ftAccess, ftWrite, ftLocal;
+		SYSTEMTIME fTime;
+
+		if (!GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite))
+		{
+			CloseHandle(hFile);
+			return "Cannot determine timestamp";
+		}
+
+		if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal))
+		{
+			CloseHandle(hFile);
+			return "Cannot determine timestamp";
+		}
+
+		if (!FileTimeToSystemTime(&ftLocal, &fTime))
+		{
+			CloseHandle(hFile);
+			return "Cannot determine timestamp";
+		}
+
 		CloseHandle(hFile);
-		return "Cannot determine timestamp";
+
+		sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
+	}
+	else
+	{
+		WIN32_FIND_DATA fd;
+		HANDLE hFind = FindFirstFile(s_file.c_str(), &fd); 
+
+		if (hFind == INVALID_HANDLE_VALUE)
+			return "Cannot determine timestamp";
+
+		SYSTEMTIME fTime;
+
+		if (!FileTimeToSystemTime(&fd.ftLastWriteTime, &fTime))
+		{
+			FindClose(hFind);
+			return "Cannot determine timestamp";
+		}
+
+		FindClose(hFind);
+
+		sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u (UTC)", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
 	}
 
-	if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal))
-	{
-		CloseHandle(hFile);
-		return "Cannot determine timestamp";
-	}
-
-	if (!FileTimeToSystemTime(&ftLocal, &fTime))
-	{
-		CloseHandle(hFile);
-		return "Cannot determine timestamp";
-	}
-
-	CloseHandle(hFile);
-
-	return StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
+	return sTimeStamp;
 }
 
 
@@ -1104,7 +1131,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				sNote += StrFormat("\n\nDependencies that could not be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					sNote += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
+					sNote += StrFormat("\n\nNote: \"%s\"", sHint.c_str());
 			}
 			if (sPluginType == "C 2.0")
 				sNote += "\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need the \"avisynth_c.dll\" support DLL";
@@ -1118,7 +1145,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				sNote += StrFormat("\"%s\"\n\nDependencies that could not be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
 				if (sHint != "")
-						sNote += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
+						sNote += StrFormat("\n\nNote: \"%s\"", sHint.c_str());
 			}
 		}
 
@@ -1279,28 +1306,28 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 		}
 	}
 
+	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
 	sTemp = s_failed_dependencies;
 	StrToLC(sTemp);
 
 	s_hint = "";
 	if ((sTemp.find("msvcm80.dll") != std::string::npos) || (sTemp.find("msvcp80.dll") != std::string::npos) || (sTemp.find("msvcr80.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2005 Runtime Distributable\n";
+		s_hint += "Visual Studio 2005 Runtime doesn't seem to be installed\n";
 	if ((sTemp.find("msvcm90.dll") != std::string::npos) || (sTemp.find("msvcp90.dll") != std::string::npos) || (sTemp.find("msvcr90.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2008 Runtime Distributable\n";
+		s_hint += "Visual Studio 2008 Runtime doesn't seem to be installed\n";
 	if ((sTemp.find("msvcm100.dll") != std::string::npos) || (sTemp.find("msvcp100.dll") != std::string::npos) || (sTemp.find("msvcr100.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2010 Runtime Distributable\n";
+		s_hint += "Visual Studio 2010 Runtime doesn't seem to be installed\n";
 	if ((sTemp.find("msvcm110.dll") != std::string::npos) || (sTemp.find("msvcp110.dll") != std::string::npos) || (sTemp.find("msvcr110.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2012 Runtime Distributable\n";
+		s_hint += "Visual Studio 2012 Runtime doesn't seem to be installed\n";
 	if ((sTemp.find("msvcm120.dll") != std::string::npos) || (sTemp.find("msvcp120.dll") != std::string::npos) || (sTemp.find("msvcr120.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2013 Runtime Distributable\n";
+		s_hint += "Visual Studio 2013 Runtime doesn't seem to be installed\n";
 	if ((sTemp.find("msvcm140.dll") != std::string::npos) || (sTemp.find("msvcp140.dll") != std::string::npos) || (sTemp.find("msvcr140.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2015 Runtime Distributable\n";
+		s_hint += "Visual Studio 2015 Runtime doesn't seem to be installed\n";
 	if (sTemp.find("libfftw3f-3.dll") != std::string::npos)
 		s_hint += "libfftw3f-3.dll can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      libfftw3f-3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, i.e. System32/SysWOW64\n";
 	if (sTemp.find("fftw3.dll") != std::string::npos)
 		s_hint += "fftw3.dll (libfftw3f-3.dll) can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      fftw3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, i.e. System32/SysWOW64\n";
 
-	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
 	return;
@@ -1344,26 +1371,23 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 				string sValue(szValue);
 				StrToLC(sValue);
 				size_t spos = 0;
-				BYTE matchcount = 0;
+				BYTE mask = 0;
 
 				spos = sValue.find(s_version);
-				if (spos != std::string::npos) ++matchcount;
+				if (spos != std::string::npos) mask |= b0001;
 				spos = sValue.find("visual c++");
-				if (spos != std::string::npos) ++matchcount;
+				if (spos != std::string::npos) mask |= b0010;
 				spos = sValue.find("redistributable");
-				if (spos != std::string::npos) ++matchcount;
+				if (spos != std::string::npos) mask |= b0100;
 				spos = sValue.find("runtime");
-				if (spos != std::string::npos) ++matchcount;
+				if (spos != std::string::npos) mask |= b0100;
+				spos = sValue.find("x64");
+				if (spos != std::string::npos) mask |= b1000;
 
-				if (matchcount >= 3)
-				{
-					spos = sValue.find("x64");
-					if ((spos == std::string::npos) && (!bIs64BitAVS))
-						bInstalled = TRUE;
-
-					if ((spos > 1) && (bIs64BitAVS))
-						bInstalled = TRUE;
-				}
+				if ((mask == b0111) && (!bIs64BitAVS))
+					bInstalled = TRUE;
+				if ((mask == b1111) && (bIs64BitAVS))
+					bInstalled = TRUE;
 			}
 		}
 		RegCloseKey(hKeyResult);

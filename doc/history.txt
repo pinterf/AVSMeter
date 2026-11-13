@@ -1,3 +1,10 @@
+v2.4.3
+- Added INI setting "UseUTC". If set to "1" (default), file timestamps are
+  displayed as UTC (Coordinated Universal Time)
+- Refactoring of the dependency test code
+- Added some command line sanity checks
+- Moved the documentation for INI settings to the INI file itself
+
 v2.4.2
 - Fixed dependency check for 2005 & 2008 runtimes
 

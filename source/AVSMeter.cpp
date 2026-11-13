@@ -57,6 +57,7 @@ public:
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
 	string    sSystemTime;
+	BOOL      bUseUTC;
 	BOOL      bLogFileDateTimeSuffix;
 	BOOL      bSimpleMode;
 };
@@ -87,6 +88,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile);
 string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP, BOOL bOmitPerfData);
 string       CreateCSVFile(string &s_avsfile, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, unsigned int ui_frameinterval, BOOL bNVVP);
 string       ParseINIFile();
+BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
 void         Pause();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
@@ -343,6 +345,23 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+
+	if (bPrintAVSInfo)
+	{
+		if (bInfoOnly)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
+			Pause();
+			return -1;
+		}
+		if (sAVSFile != "")
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
+			Pause();
+			return -1;
+		}
+	}
+
 	utils.StrTrim(sCommandLine);
 
 	if (Settings.nProcessPriority == 1)
@@ -535,7 +554,11 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStamp.c_str());
+		if (Settings.bUseUTC)
+			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStampUTC.c_str());
+		else
+			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStamp.c_str());
+
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -905,7 +928,11 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s", AvisynthInfo.sDLLPath.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStamp.c_str());
+		if (Settings.bUseUTC)
+			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStampUTC.c_str());
+		else
+			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStamp.c_str());
+
 		sLogBuffer += sOutBuf + "\n";
 
 		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
@@ -1729,10 +1756,6 @@ string ParseINIFile()
 		sINIFile = sProgramPath + "\\AVSMeter.ini";
 	}
 
-	string sAVSMVersion = utils.GetFileVersion("");
-	if (sAVSMVersion.length() > 5)
-		sAVSMVersion = sAVSMVersion.substr(0, 5);
-
 	string sCurrentLine = "";
 
 	//defaults
@@ -1754,44 +1777,17 @@ string ParseINIFile()
 	Settings.nProcessPriority = 2;
 	Settings.bConUseStdOut = FALSE;
 	Settings.iTimeLimit = -1;
+	Settings.bUseUTC = TRUE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
 
 	if (!utils.FileExists(sINIFile)) //No ini file present, create the file with defaults
 	{
-		ofstream hINIFile(sINIFile.c_str());
-		if (!hINIFile.is_open())
+		if (!WriteINIFile(sINIFile))
 	  {
 			sRet = utils.StrFormat("\nCannot create \"%s\"\n", sINIFile.c_str());
 			return sRet;
 		}
-
-		hINIFile << "[Main]\n";
-		hINIFile << "Version=" << sAVSMVersion << "\n";
-		hINIFile << "LogDirectory=\n";
-		hINIFile << "AVSDLL=\n";
-		hINIFile << "DisplayFPS=1\n";
-		hINIFile << "DisplayTPF=0\n";
-		hINIFile << "DisplayEfficiencyIndex=0\n";
-		hINIFile << "CreateLog=0\n";
-		hINIFile << "CreateCSV=0\n";
-		hINIFile << "LogFileDateTimeSuffix=0\n";
-		hINIFile << "PauseBeforeExit=0\n";
-		hINIFile << "FrameRange=0,-1\n";
-		hINIFile << "InvokeDistributor=1\n";
-		hINIFile << "AllowOnlyOneInstance=1\n";
-		hINIFile << "UseColor=1\n";
-		hINIFile << "MonitorGPULoad=0\n";
-		hINIFile << "ProcessPriority=2\n";
-		hINIFile << "ConUseSTDOUT=0\n";
-		hINIFile << "TimeLimit=-1\n";
-
-		hINIFile << "\n[Miscellaneous]\n";
-		hINIFile << "LogEstimatedTime=0\n";
-		hINIFile << "AutoCompleteExtension=0\n";
-
-		hINIFile.flush();
-		hINIFile.close();
 
 		return "";
 	}
@@ -1976,6 +1972,14 @@ string ParseINIFile()
 			}
 		}
 
+		if (sCurrentLine.substr(0, 6) == "useutc")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
+				Settings.bUseUTC = FALSE;
+			else
+				Settings.bUseUTC = TRUE;
+		}
+
 		if (sCurrentLine.substr(0, 16) == "logestimatedtime")
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
@@ -1997,79 +2001,160 @@ string ParseINIFile()
 
 
 	//Write INI file with new settings
-	ofstream hNewINIFile(sINIFile.c_str());
-	if (!hNewINIFile.is_open())
+	if (!WriteINIFile(sINIFile))
   {
 		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sINIFile.c_str());
 		return sRet;
 	}
 
-	hNewINIFile << "[Main]\n";
-	hNewINIFile << "Version=" << sAVSMVersion << "\n";
+	return "";
+}
 
+
+BOOL WriteINIFile(string &s_inifile)
+{
+	string sCurrentLine = "";
+	string sComment = "";
+
+	ofstream hINIFile(s_inifile.c_str());
+	if (!hINIFile.is_open())
+		return FALSE;
+
+	string sAVSMVersion = utils.GetFileVersion("");
+	if (sAVSMVersion.length() > 5)
+		sAVSMVersion = sAVSMVersion.substr(0, 5);
+
+	hINIFile << "AVSMeterVersion=" << sAVSMVersion << "\n\n";
+
+	sComment = "# \"LogDirectory\"\n";
+	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
+	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\\\" (without the quotes). The default is an empty string\n";
+	sComment += "# which means that all log files are stored in the script directory or, in case the \"-avsinfo\"\n";
+	sComment += "# switch was used, the current (working) directory.\n";
 	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"AVSDLL\"\n";
+	sComment += "# The user can specify the avisynth.dll to be used. This has to be a fully qualified path, for example\n";
+	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\\\" (without the quotes). The default is an empty string which\n";
+	sComment += "# means that AVSMeter will attempt to load avisynth.dll through the standard Windows search hierarchy.\n";
 	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"DisplayFPS\" (0 or 1)\n";
+	sComment += "# If set to \"1\", frames/second is printed to the console.\n";
 	sCurrentLine = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"DisplayTPF\" (0 or 1):\n";
+	sComment += "# If set to \"1\", time/frame (in milliseconds) is printed to the console.\n";
 	sCurrentLine = utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"DisplayEfficiencyIndex\" (0 or 1):\n";
+	sComment += "# If set to \"1\", the result of (FPS / CPU usage) is printed to the console. This ratio indicates the\n";
+	sComment += "# efficiency of a script (higher = better) and is useful for comparing different versions of a script\n";
+	sComment += "# or scripts that are supposed to do the same thing.\n";
 	sCurrentLine = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"CreateLog\" (0 or 1):\n";
+	sComment += "# Creates a log file with various details about the installed Avisynth version, clip info, runtime\n";
+	sComment += "# results, a copy of the script and a performance data table with the measured details about each\n";
+	sComment += "# frame/frame interval. The log file is created in the same directory as the script unless the INI\n";
+	sComment += "# option \"LogDirectory\" points to a valid directory.\n";
+	sComment += "# Note: The numbering of the frames in the performance data section is not zero-based, i.e. the first\n";
+	sComment += "# frame is 1, not 0.\n";
 	sCurrentLine = utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"CreateCSV\" (0 or 1):\n";
+	sComment += "# Creates a CSV file containing the performance data formatted as comma-separated values for direct\n";
+	sComment += "# import in Excel or a similar spread sheet program (OpenOffice, LibreOffice). The CSV file is created\n";
+	sComment += "# in the same directory as the script unless the INI option \"LogDirectory\" points to a valid\n";
+	sComment += "# directory.\n";
+	sComment += "# Note: The numbering of the frames in the .csv file is not zero-based, i.e. the first frame is 1, not 0.\n";
 	sCurrentLine = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"LogFileDateTimeSuffix\" (0 or 1):\n";
+	sComment += "# If set to \"1\", adds a date/time suffix to all .log and .csv files.\n";
 	sCurrentLine = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"PauseBeforeExit\" (0 or 1):\n";
+	sComment += "# If set to \"1\", pauses the program at the end and returns to the console prompt only after pressing \"ESC\".\n";
 	sCurrentLine = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"FrameRange\" (first,last):\n";
+	sComment += "# Specify the range of frames to be processed. \"FrameRange=0,-1\" processes all frames in the script.\n";
+	sComment += "# \"FrameRange=1500,1999\" processes 500 frames starting at frame 1500.\n";
 	sCurrentLine = utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sCurrentLine = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
-	hNewINIFile << sCurrentLine;
-
+	sComment = "# \"AllowOnlyOneInstance\" (0 or 1):\n";
+	sComment += "# If set to \"1\", only one instance of AVSMeter can run at the same time.\n";
 	sCurrentLine = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sCurrentLine = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
-	hNewINIFile << sCurrentLine;
-
+	sComment = "# \"MonitorGPULoad\" (0 or 1):\n";
+	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
+	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
+	sComment += "# shared memory space. GPU-Z has to be running (the window can be minimized to the system tray) before\n";
+	sComment += "# running AVSMeter.\n";
 	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bMonitorGPULoad);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"ProcessPriority\" (1, 2 or 3):\n";
+	sComment += "# Specify the process priority for AVSMeter and all attached processes (1: low, 2: normal, 3: high).\n";
 	sCurrentLine = utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sCurrentLine = utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
-	hNewINIFile << sCurrentLine;
-
+	sComment = "# \"TimeLimit\" (1 - 999999):\n";
+	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates. A\n";
+	sComment += "# setting of \"-1\" disables this feature. This setting is ignored when the program is invoked with\n";
+	sComment += "# the \"-i\" (\"-info\") switch which only determines the clip properties.\n";
 	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	hNewINIFile << "\n[Miscellaneous]\n";
+	sComment = "# \"InvokeDistributor\" (0 or 1):\n";
+	sComment += "# For users of SEt's Avisynth MT: If set to \"1\", adds the \"Distributor\" call internally if the\n";
+	sComment += "# script uses MT Mode 1~4 (via \"SetMTMode\"). Note: Setting this value to \"1\" and adding the\n";
+	sComment += "# Distributor call in the script will unnecessarily increase the number of threads which leads to\n";
+	sComment += "# increased memory usage and suboptimal performance. The \"InvokeDistributor\" setting is ignored when\n";
+	sComment += "# using non-MT versions of Avisynth.\n";
+	sCurrentLine = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# \"UseUTC\" (0 or 1):\n";
+	sComment += "# If set to \"1\", file timestamps are displayed as UTC (Coordinated Universal Time)\n";
+	sCurrentLine = utils.StrFormat("UseUTC=%u\n", Settings.bUseUTC);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment = "# \"ConUseSTDOUT\" (0 or 1):\n";
+	sComment += "# If set to \"1\", directs all console output to stdout. The default setting \"0\" uses stderr except\n";
+	sComment += "# the \"command line usage\" message which always goes through stdout.\n";
+	sCurrentLine = utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment = "# \"UseColor\" (0 or 1):\n";
+	sComment += "# If set to \"0\", coloring of the console output is disabled.\n";
+	sCurrentLine = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment = "# Individual request (http://forum.doom9.org/showpost.php?p=1639610&postcount=96)\n";
 	sCurrentLine = utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment = "# Individual request (http://forum.doom9.org/showpost.php?p=1728756&postcount=330)\n";
 	sCurrentLine = utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
-	hNewINIFile << sCurrentLine;
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	hNewINIFile.flush();
-	hNewINIFile.close();
+	hINIFile.flush();
+	hINIFile.close();
 
-	return sRet;
+	return TRUE;
 }
 
 

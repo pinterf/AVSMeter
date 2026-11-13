@@ -113,6 +113,8 @@
 
 
 
+
+
         Display extended Avisynth info (<font color="#ff0000">1</font>)<br>
         &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
@@ -124,6 +126,8 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -258,6 +262,8 @@
 
 
 
+
+
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <big><font face="Courier New"><font face="Fixedsys">&nbsp;-simple
           [-s]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Simple mode
@@ -324,125 +330,13 @@
     <b><font color="#3333ff"><big><b><i>Note:</i></b> If applicable,
           command line switches override INI settings.</big></font><br>
       <br>
-      <br>
       <u> <br>
         <big>INI file settings</big></u></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
-    the default settings.<br>
-    Supported settings for the INI file (default values in <b><font
-        color="Red">red</font></b>):<br>
+    the default settings. The INI file supports additional settings,
+    documentation can be found in the INI file itself.<br>
     <br>
-    <b><b><b><b><b><b><b><b>"LogDirectory"</b></b><b><b>:</b></b></b></b></b></b></b></b><br>
-    The user can specify a directory in which all log files are stored.
-    This has to be a fully qualified path, for example
-    "LogDirectory=c:\LogFiles" (without the quotes). The default is an
-    empty string which means that all log files are stored in the script
-    directory or, in case the "-avsinfo" switch was used, the current
-    (working) directory.<br>
-    <b><b><b><b><br>
-            "AVSDLL"</b></b><b><b>:</b><br>
-        </b></b></b>The user can specify the avisynth.dll to be used.
-    This has to be a fully qualified path, for example
-    "AVSDLL=d:\apps\avisynth\avisynth.dll" (<b>without</b> the quotes).
-    The default is an empty string which means that AVSMeter will
-    attempt to load avisynth.dll through the standard Windows search <span
-      data-dobid="hdw">hierarchy.</span><br>
-    <b><b><br>
-        "DisplayFPS" </b></b><b><b><b>(0 or <font color="Red">1</font>)</b>:</b><br>
-    </b> If set to "1", frames/second is printed to the console.<br>
-    <b><b><b><br>
-          "DisplayTPF" (<font color="Red">0</font> or 1):</b></b><br>
-    </b>If set to "1", time/frame (in milliseconds) is printed to the
-    console.<br>
-    <br>
-    <b><b><b>"DisplayEfficiencyIndex" </b></b></b><b><b><b><b><b><b>(0
-                or <font color="Red">1</font>)</b></b></b>:</b></b><br>
-    </b>If set to "1", the result of (FPS / CPU usage) is printed to the
-    console. This ratio indicates the efficiency of a script (higher =
-    better) and is useful for comparing different versions of a script
-    or scripts that are supposed to do the same thing.<br>
-    <b><br>
-      "CreateLog" (<font color="Red">0</font> or 1):</b><br>
-    Creates a log file with various details about the installed Avisynth
-    version, clip info, runtime results, a copy of the script and a
-    performance data table with the measured details about each
-    frame/frame interval. The log file is created in the same directory
-    as the script unless the INI option "LogDirectory" points to a valid
-    directory.<b><nobr></nobr></b> <br>
-    <b><i>Note:</i></b> The numbering of the frames in the performance
-    data section is not zero-based, i.e. the first frame is 1, not 0.<br>
-    <br>
-    <b> "CreateCSV" (<font color="Red">0</font> or 1):</b><br>
-    Creates a CSV file containing the performance data formatted as
-    comma-separated values for direct import in Excel or a similar
-    spread sheet program (OpenOffice, LibreOffice). The CSV file is
-    created in the same directory as the script unless the INI option
-    "LogDirectory" points to a valid directory.<nobr><b></b></nobr><br>
-    <b><i>Note:</i></b> The numbering of the frames in the .csv file is
-    not zero-based, i.e. the first frame is 1, not 0.<br>
-    <br>
-    <b>"LogFileDateTimeSuffix" (<font color="Red">0</font> or 1):</b><br>
-    If set to "1", adds a date/time suffix to all .log and .csv files.<br>
-    <br>
-    <b></b><b>"PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
-    If set to "1", pauses the program at the end and returns to the
-    console prompt only after pressing "ESC".<br>
-    <b><br>
-    </b><b><b>"ConUseSTDOUT" (<font color="Red">0</font> or 1):</b><br>
-    </b>If set to "1", directs all console output to stdout. The default
-    setting "0" uses stderr except the "command line usage" message
-    which always goes through stdout.<br>
-    <b> <br>
-      "FrameRange" (first,last):</b><br>
-    Specify the range of frames to be processed. "FrameRange=<font
-      color="Red"><b>0,-1</b></font>" processes all frames in the
-    script. "FrameRange=1500,1999" processes 500 frames starting at
-    frame 1500.<br>
-    <b><br>
-      "InvokeDistributor" (0 or <font color="Red">1</font>):</b><br>
-    For users of SEt's Avisynth MT: If set to "1", adds the
-    "Distributor" call internally if the script uses MT Mode 1~4 (via
-    "SetMTMode"). Note: Setting this value to "1" <b>and</b> adding the
-    Distributor call in the script will unnecessarily increase the
-    number of threads which leads to increased memory usage and
-    suboptimal performance. The "InvokeDistributor" setting is ignored
-    when using non-MT versions of Avisynth.<br>
-    <br>
-    <b>"AllowOnlyOneInstance" (</b><b><b>0 or <font color="Red">1</font></b>):</b><br>
-    When set to "1", only one instance of AVSMeter can run at the same
-    time.<br>
-    <br>
-    <b>"</b><b>UseColor" (</b><b><b>0 or <font color="Red">1</font></b>):</b><br>
-    When set to "0", coloring of the console output is disabled.<br>
-    <br>
-    <b>"</b><b>MonitorGPULoad" (</b><b><b><b><font color="Red">0</font>
-          or 1</b></b>):</b><br>
-    When set to "1", enables display of the GPU/VPU usage which of
-    course is only useful if a filter that uses the GPU is in the chain.
-    AVSMeter uses <b><a
-        href="http://www.techpowerup.com/downloads/SysInfo/GPU-Z/">GPU-Z</a></b>
-    to access the graphics card sensors through a shared memory space.
-    GPU-Z has to be running (the window can be minimized to the system
-    tray) before running AVSMeter.<br>
-    <br>
-    <b>"ProcessPriority</b><b>" (1</b><b><b><b>, <font color="#ff0000">2</font>
-          or 3</b></b>):</b><br>
-    Specify the process priority for AVSMeter and all attached processes
-    (1: low, 2: normal, 3: high).<br>
-    <br>
-    <b>"TimeLimit</b><b>" (1 - 999999</b><b>):</b><br>
-    Specify a time limit (in seconds) after which the program stops
-    reading frames and terminates. A setting of "<b><font color="Red">-1</font></b>"
-    disables this feature. This setting is ignored when the program is
-    invoked with the "-i" ("-info") switch which only determines the
-    clip properties.<br>
-    <br>
-    <b>"ExportAVSFunctions</b><b>" </b><b>(</b><b><b><b><font
-            color="Red">0</font> or 1</b></b>)</b><b>:</b><br>
-    When set to "1", exports a list of internal and external (plugin)
-    functions into a file ("avsfunctions.log") when the switch
-    "-avsinfo" is used in combination with "-log".<br>
     <br>
   </body>
 </html>

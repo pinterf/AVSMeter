@@ -60,13 +60,17 @@ class CUtils
 public:
 	CUtils();
 	virtual        ~CUtils();
+
+	//File/directory stuff
 	BOOL           FileExists(string s_file);
 	BOOL           DirectoryExists(string s_dir);
-	void           CursorUp(unsigned int iLines);
+	string         GetFileVersion(string s_file);
+
+	//Console functions
 	int            GetConsoleWidth();
 	void           SetRGB(WORD wAttributes);
 	void           ResetRGB();
-	string         GetFileVersion(string s_file);
+	void           CursorUp(unsigned int iLines);
 
 	//string functions
 	string         StrFormat(char const *fmt, ...);

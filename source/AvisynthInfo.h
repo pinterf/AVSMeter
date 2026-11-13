@@ -41,6 +41,7 @@ public:
 	string  sVersionString;
 	string  sVersionNumber;
 	string  sTimeStamp;
+	string  sTimeStampUTC;
 	BOOL    bIs64BitAVS;
 	BOOL    bLoadError;
 	BOOL    bIsAVSPlus;
@@ -51,7 +52,7 @@ private:
 	void           StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups);
 	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string         GetFileVersion(string s_file);
-	string         GetTimeStamp(string s_file);
+	string         GetTimeStamp(string s_file, BOOL bUTC);
 	int            GetInterfaceVersion(string &s_ErrorMsg);
   void           EnumPluginDirs();
 	void           EnumPluginDLLs();
