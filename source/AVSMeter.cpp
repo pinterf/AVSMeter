@@ -50,7 +50,6 @@ public:
 	BOOL      bMonitorGPULoad;
 	BYTE      bProcessPriority;
 	BOOL      bConUseStdOut;
-	BOOL      bUseFixedFrameInterval;
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
 };
@@ -87,10 +86,8 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 
 int main(int argc, char* argv[])
 {
-	//some defaults
 	Settings.bPauseBeforeExit = TRUE;
 	Settings.bUseColor = TRUE;
-	Settings.bUseFixedFrameInterval = FALSE;
 
 	int iRet = 0;
 	string sAVSMVersion = utils.GetFileVersion("");
@@ -128,6 +125,7 @@ int main(int argc, char* argv[])
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 0;
 	string sErrorMsg = "";
+	BOOL bAVSInfo = FALSE;
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
 
@@ -216,6 +214,13 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
+		if (sArgTest == "-avsinfo")
+		{
+			sCommandLine += sCmdToken + " ";
+			bAVSInfo = TRUE;
+			continue;
+		}
+
 		if ((sArgTest == "-l") || (sArgTest == "-log"))
 		{
 			sCommandLine += sCmdToken + " ";
@@ -223,17 +228,17 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
+		if ((sArgTest == "-c") || (sArgTest == "-csv"))
+		{
+			sCommandLine += sCmdToken + " ";
+			Settings.bCreateCSV = TRUE;
+			continue;
+		}
+
 		if ((sArgTest == "-i") || (sArgTest == "-info"))
 		{
 			sCommandLine += sCmdToken + " ";
 			bInfoOnly = TRUE;
-			continue;
-		}
-
-		if ((sArgTest == "-fixed") || (sArgTest == "-f"))
-		{
-			sCommandLine += sCmdToken + " ";
-			Settings.bUseFixedFrameInterval = TRUE;
 			continue;
 		}
 
@@ -380,6 +385,33 @@ int main(int argc, char* argv[])
 
 	utils.StrTrim(sCommandLine);
 
+	if (bAVSInfo)
+	{
+		utils.CursorUp(1);
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth version:            %s (%s)\n", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth Interface Version:  %d\n", AvisynthInfo.iInterfaceVersion);
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Linker/compiler version:     %s\n", AvisynthInfo.sLinkerVersion.c_str());
+		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth DLL location:       %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
+
+		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
+		{
+			sTemp = AvisynthInfo.saPluginDirs[uiPlugDir];
+			if (sTemp != "")
+			{
+				size_t spos = sTemp.find(":\t");
+				sTemp = sTemp.substr(0, spos + 1) + "   " + sTemp.substr(spos + 2);
+				PrintConsole(TRUE, COLOR_EMPHASIS, "%s\n", utils.StrAnsiToOEM(sTemp).c_str());
+			}
+		}
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+
+		Pause();
+		return 0;
+	}
+
 	if (sAVSFile == "")
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
@@ -448,29 +480,14 @@ int main(int argc, char* argv[])
 	if (!bInfoOnly)
 	{
 		sAVSError = "";
-		uiFrameInterval = 10;
-		if (!Settings.bUseFixedFrameInterval)
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
+		uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+		if ((uiFrameInterval == 0) || (sAVSError != ""))
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
-			uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
-
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
-
-			if ((uiFrameInterval == 0) || (sAVSError != ""))
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
-				Pause();
-				return -1;
-			}
-		}
-		else
-		{
-			if (!timer.TestTimer())
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-				Pause();
-				return -1;
-			}
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
+			Pause();
+			return -1;
 		}
 	}
 
@@ -579,7 +596,10 @@ int main(int argc, char* argv[])
 			sTemp = AvisynthInfo.saPluginDirs[uiPlugDir];
 			if (sTemp != "")
 			{
-				sOutBuf = utils.StrFormat("%s", AvisynthInfo.saPluginDirs[uiPlugDir].c_str());
+				size_t spos = sTemp.find(":\t");
+				sTemp = sTemp.substr(0, spos + 1) + "             " + sTemp.substr(spos + 2);
+
+				sOutBuf = utils.StrFormat("%s", sTemp.c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
 		}
@@ -639,7 +659,19 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf + "\n";
 
 		if (!bAudioOnly)
-			sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+		{
+			if (AVS_vidinfo.IsFieldBased())
+			{
+				if (AVS_vidinfo.IsTFF())
+					sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u, TFF)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+				else if (AVS_vidinfo.IsBFF())
+					sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u, BFF)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+				else
+					sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+			}
+			else
+				sOutBuf = utils.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+		}
 		else
 			sOutBuf = "Framerate:                         n/a";
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
@@ -823,9 +855,6 @@ int main(int argc, char* argv[])
 			uiLastFrame = uiFrames - 1;
 			uiFramesToProcess = uiFrames;
 		}
-
-		if ((Settings.bUseFixedFrameInterval) && (uiFramesToProcess <= 10))
-			uiFrameInterval = 1;
 
 		while ((uiFramesToProcess / uiFrameInterval) > 500000)
 			uiFrameInterval *= 10;
@@ -1263,16 +1292,16 @@ int main(int argc, char* argv[])
 			Pause();
 			return -1;
 		}
+	}
 
-		if (Settings.bCreateCSV)
+	if (Settings.bCreateCSV)
+	{
+		string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiPDIndex, uiFrameInterval, gpuinfo.data.NVVP);
+		if (cr != "")
 		{
-			string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiPDIndex, uiFrameInterval, gpuinfo.data.NVVP);
-			if (cr != "")
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
-				Pause();
-				return -1;
-			}
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
+			Pause();
+			return -1;
 		}
 	}
 
@@ -1662,12 +1691,12 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs
 		if (Settings.bMonitorGPULoad)
 		{
 			if (bNVVP)
-				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),CPU(%),GPU(%),VPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
+				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),VPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
 			else
-				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),CPU(%),GPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
+				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
 		}
 		else
-			sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),CPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
+			sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
 
 		hCSVFile << sCSV;
 
@@ -1681,12 +1710,12 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs
 				if (Settings.bMonitorGPULoad)
 				{
 					if (bNVVP)
-						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 					else
-						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 				else
-					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 
 				hCSVFile << stemp + "\n";
 			}
@@ -1806,13 +1835,11 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 				break;
 		}
 
-		uiFrameInterval = 20000;
+		uiFrameInterval = 10000;
 		double dAverageFrameTime = 0.0;
 		if (TDelta > 0.2)
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uif; //ms
 
-		if (dAverageFrameTime >  0.001)
-			uiFrameInterval = 10000;
 		if (dAverageFrameTime >  0.002)
 			uiFrameInterval = 5000;
 		if (dAverageFrameTime >  0.005)
@@ -1833,6 +1860,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			uiFrameInterval = 10;
 		if (dAverageFrameTime > 10.000)
 			uiFrameInterval = 1;
+
 
 		AVS_clip = 0;
 		AVS_main = 0;
@@ -1911,14 +1939,15 @@ void PrintUsage()
 {
 	PrintConsole(TRUE, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -info  [-i]         Display clip info only\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -log   [-l]         Create log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -fixed [-f]         Use fixed frame interval for measurements\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -gpu                Monitor GPU/VPU usage\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -range=first,last   Specify frame range\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -timelimit=n        Specify time (sec) after which the process will exit\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -priority=n         Specify process priority (1:low, 2:normal, 3:high)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, " -help [-h]          Display command line usage\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display Avisynth info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info  [-i]         Display clip info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log   [-l]         Create log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv   [-c]         Create csv file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Monitor GPU/VPU usage\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Specify frame range\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Specify time (sec) after which the process will exit\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Specify process priority (1:low, 2:normal, 3:high)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -help [-h]          Display command line usage\n");
 
 	PrintConsole(TRUE, COLOR_DEFAULT, "\n");
 	return;

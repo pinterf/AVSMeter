@@ -67,7 +67,7 @@ public:
 
 private:
 	unsigned __int64 GetSTDTimer();
-	BOOL IsValidVersionNumber(string s_string);
+	BOOL IsValidVersionNumber(string &s_string);
 
 	#pragma pack(push, 1)
 		typedef struct GPUZ_RECORD 
@@ -283,7 +283,7 @@ unsigned __int64 CGPUInfo::GetSTDTimer()
 }
 
 
-BOOL CGPUInfo::IsValidVersionNumber(string s_string)
+BOOL CGPUInfo::IsValidVersionNumber(string &s_string)
 {
 	if (s_string == "")
 		return FALSE;

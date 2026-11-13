@@ -22,7 +22,7 @@
 #include "common.h"
 
 #define BUFSIZE 2048
-#define NUM_PLUG_DIRS 8
+#define NUM_PLUG_DIRS 6
 
 class CAvisynthInfo
 {
@@ -43,7 +43,7 @@ public:
 
 private:
 	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
-	string  GetFileVersion(string s_file);
+	string  GetFileVersion(string &s_file);
 	int     GetInterfaceVersion(string &s_ErrorMsg, string &s_avsdll);
   void    EnumPluginDirs();
 	string  StrFormat(const char *fmt, ...);
@@ -210,23 +210,23 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string &s_avsdll)
 
 		sLinkerVersion = StrFormat("%u.%u", li.FileHeader->OptionalHeader.MajorLinkerVersion, li.FileHeader->OptionalHeader.MinorLinkerVersion);
 		if (sLinkerVersion.substr(0, 2) == "6.")
-			sLinkerVersion += " (VC 6)";
+			sLinkerVersion += " (VC6)";
 		if (sLinkerVersion.substr(0, 3) == "7.0")
-			sLinkerVersion += " (VC 2002)";
+			sLinkerVersion += " (VS2002)";
 		if (sLinkerVersion.substr(0, 3) == "7.1")
-			sLinkerVersion += " (VC 2003)";
+			sLinkerVersion += " (VS2003)";
 		if (sLinkerVersion.substr(0, 2) == "8.")
-			sLinkerVersion += " (VC 2005)";
+			sLinkerVersion += " (VS2005)";
 		if (sLinkerVersion.substr(0, 2) == "9.")
-			sLinkerVersion += " (VC 2008)";
+			sLinkerVersion += " (VS2008)";
 		if (sLinkerVersion.substr(0, 3) == "10.")
-			sLinkerVersion += " (VC 2010)";
+			sLinkerVersion += " (VS2010)";
 		if (sLinkerVersion.substr(0, 3) == "11.")
-			sLinkerVersion += " (VC 2012)";
+			sLinkerVersion += " (VS2012)";
 		if (sLinkerVersion.substr(0, 3) == "12.")
-			sLinkerVersion += " (VC 2013)";
+			sLinkerVersion += " (VS2013)";
 		if (sLinkerVersion.substr(0, 3) == "14.")
-			sLinkerVersion += " (VC 2015)";
+			sLinkerVersion += " (VS2015)";
 
 		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
@@ -425,10 +425,15 @@ void CAvisynthInfo::EnumPluginDirs()
 	for (unsigned int n = 0; n < NUM_PLUG_DIRS; n++)
 		saPluginDirs[n] = "";
 
+	//32 Bit
 	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
 	//- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
+	//64 Bit
+	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
+	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
+
 
 	LONG lRes;
 	HKEY hKeyResult = 0;
@@ -447,7 +452,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
 				if (sTemp != "")
-					saPluginDirs[0] = "PluginDir+    (HKCU, x86):             " + sTemp;
+					saPluginDirs[0] = "PluginDir+    (HKCU, x86):\t" + sTemp;
 			}
 
 			RegCloseKey(hKeyResult);
@@ -465,7 +470,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
 				if (sTemp != "")
-					saPluginDirs[1] = "PluginDir+    (HKLM, x86):             " + sTemp;
+					saPluginDirs[1] = "PluginDir+    (HKLM, x86):\t" + sTemp;
 			}
 
 			RegCloseKey(hKeyResult);
@@ -483,7 +488,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
 				if (sTemp != "")
-					saPluginDirs[2] = "PluginDir2_5  (HKCU, x86):             " + sTemp;
+					saPluginDirs[2] = "PluginDir2_5  (HKCU, x86):\t" + sTemp;
 			}
 
 			RegCloseKey(hKeyResult);
@@ -501,7 +506,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
 				if (sTemp != "")
-					saPluginDirs[3] = "PluginDir2_5  (HKLM, x86):             " + sTemp;
+					saPluginDirs[3] = "PluginDir2_5  (HKLM, x86):\t" + sTemp;
 			}
 
 			RegCloseKey(hKeyResult);
@@ -521,7 +526,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
 				if (sTemp != "")
-					saPluginDirs[4] = "PluginDir+    (HKCU, x64):             " + sTemp;
+					saPluginDirs[4] = "PluginDir+    (HKCU, x64):\t" + sTemp;
 			}
 
 			RegCloseKey(hKeyResult);
@@ -539,44 +544,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				string sTemp(szPlugDir);
 				StrTrim(sTemp);
 				if (sTemp != "")
-					saPluginDirs[5] = "PluginDir+    (HKLM, x64):             " + sTemp;
-			}
-
-			RegCloseKey(hKeyResult);
-		}
-	
-	
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
-		{
-			char szPlugDir[2050] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = 2048;
-			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-			{
-				string sTemp(szPlugDir);
-				StrTrim(sTemp);
-				if (sTemp != "")
-					saPluginDirs[6] = "PluginDir2_5  (HKCU, x64):             " + sTemp;
-			}
-
-			RegCloseKey(hKeyResult);
-		}
-	
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
-		{
-			char szPlugDir[2050] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = 2048;
-			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-			{
-				string sTemp(szPlugDir);
-				StrTrim(sTemp);
-				if (sTemp != "")
-					saPluginDirs[7] = "PluginDir2_5  (HKLM, x64):             " + sTemp;
+					saPluginDirs[5] = "PluginDir+    (HKLM, x64):\t" + sTemp;
 			}
 
 			RegCloseKey(hKeyResult);
@@ -643,7 +611,7 @@ BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 }
 
 
-string CAvisynthInfo::GetFileVersion(string s_file)
+string CAvisynthInfo::GetFileVersion(string &s_file)
 {
 	string sFileVersion = "0.0.0.0";
 	char szFilename[MAX_PATH + 1] = {0};

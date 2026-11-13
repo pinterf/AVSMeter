@@ -1,3 +1,8 @@
+v2.1.2
+- Added switch "-csv" so this option can be set on the command line as well
+- Added switch "-avsinfo"
+- Added average time/frame to the csv file output
+
 v2.1.1
 - Added ini setting "AVSDLL". The user can specify the avisynth.dll to be used.
 - Added handler for C structured exceptions

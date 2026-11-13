@@ -62,7 +62,7 @@ class CUtils
 public:
 	CUtils();
 	virtual        ~CUtils();
-	BOOL           FileExists(string s_file);
+	BOOL           FileExists(string &s_file);
 	void           CursorUp(unsigned int iLines);
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
@@ -78,7 +78,8 @@ public:
 	string         StrPad(string s_line);
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatFrameTime(double d_frametime);
-	BOOL           IsNumeric(string s_string);
+	string         StrAnsiToOEM(string &s_string);
+	BOOL           IsNumeric(string &s_string);
 
 private:
 	HANDLE         hConsole;
@@ -135,7 +136,7 @@ void CUtils::ResetRGB(BOOL bSet)
 }
 
 
-BOOL CUtils::FileExists(string s_file)
+BOOL CUtils::FileExists(string &s_file)
 {
 	DWORD dwAttrib;
 	dwAttrib = ::GetFileAttributes(s_file.c_str());
@@ -316,7 +317,7 @@ string CUtils::GetFileVersion(string s_file)
 }
 
 
-BOOL CUtils::IsNumeric(string s_string)
+BOOL CUtils::IsNumeric(string &s_string)
 {
 	if (s_string == "")
 		return FALSE;
@@ -343,6 +344,20 @@ BOOL CUtils::IsNumeric(string s_string)
 	}
 
 	return TRUE;
+}
+
+
+string CUtils::StrAnsiToOEM(string &s_string)
+{
+	char *buffer = NULL;
+
+	buffer = new char[s_string.length() + 1];
+	memset(buffer, ' ', sizeof(buffer));
+
+	CharToOem(s_string.c_str(), buffer);
+	string sOEM(buffer);
+
+	return sOEM;
 }
 
 
