@@ -1,3 +1,9 @@
+v2.1.8
+- Added additional error handling to the plugin enumeration:
+  - Test DLLs if they are valid Avisynth plugins
+  - 64/32 bit mismatch detection
+- Separate sections for CPP- and C-plugins
+
 v2.1.7
 - Removed the initial speed test. After some tests it turned out to be unnecessary
 - The switch "-avsinfo" now also lists all plugin DLLs (with version info if present)

@@ -27,13 +27,16 @@ class CAvisynthInfo
 {
 public:
 	CAvisynthInfo();
-	BOOL    GetInfo(string &s_ErrorMsg, string s_avsdll);
-	virtual ~CAvisynthInfo();
+	string  sAVSDLL;
+	BOOL    GetInfo(string &s_ErrorMsg);
+	void    EnumPluginDLLs();
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	map     <string, BYTE> mPluginDirs;
-	map     <string, BYTE> mPluginDLLs;
+	map     <string, BYTE> mPluginDLLsC;
+	map     <string, BYTE> mPluginDLLsCPP;
+	map     <string, BYTE> mPluginErrors;
 	BYTE    NumPlugDirRefs;
 	string  sDLLPath;
 	string  sLinkerVersion;
@@ -42,14 +45,15 @@ public:
 	string  sTimeStamp;
 	BOOL    bIs64BitVersion;
 	BOOL    bLoadError;
+	virtual ~CAvisynthInfo();
 
 private:
 	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string  GetFileVersion(string s_file);
 	string  GetTimeStamp(string s_file);
-	int     GetInterfaceVersion(string &s_ErrorMsg, string s_avsdll);
+	int     GetInterfaceVersion(string &s_ErrorMsg);
   void    EnumPluginDirs();
-	void    EnumPluginDLLs();
+	BOOL    CheckPlugin(string s_dll, string &s_Msg);
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
@@ -59,6 +63,7 @@ private:
 CAvisynthInfo::CAvisynthInfo()
 {
 	NumPlugDirRefs = NUM_PLUG_DIR_REFS;
+	sAVSDLL = "";
 }
 
 CAvisynthInfo::~CAvisynthInfo()
@@ -66,16 +71,16 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg, string s_avsdll)
+int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 {
 	int iInterfaceVersion = 0;
 	s_ErrorMsg = "";
 
 	HINSTANCE hDLL;
-	if (s_avsdll == "")
+	if (sAVSDLL == "")
 		hDLL = ::LoadLibrary("avisynth");
 	else
-		hDLL = ::LoadLibrary(s_avsdll.c_str());
+		hDLL = ::LoadLibrary(sAVSDLL.c_str());
 
 	if (!hDLL)
 	{
@@ -158,7 +163,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg, string s_avsdll)
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
+BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 {
 	sDLLPath = "";
 	bIs64BitVersion = FALSE;
@@ -175,10 +180,10 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 	LOADED_IMAGE li;
 	BOOL bLoaded;
 
-	if (s_avsdll == "")
+	if (sAVSDLL == "")
 		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
 	else
-		bLoaded = MapAndLoad((LPSTR)s_avsdll.c_str(), NULL, &li,	TRUE,	TRUE);
+		bLoaded = MapAndLoad((LPSTR)sAVSDLL.c_str(), NULL, &li,	TRUE,	TRUE);
 	
 	if (!bLoaded)
 	{
@@ -312,15 +317,15 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 
 	sTimeStamp = GetTimeStamp(sDLLPath);
 
-	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg, s_avsdll);
+	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg);
 	if (iInterfaceVersion == 0)
 		return FALSE;
 
 	HINSTANCE hDLL;
-	if (s_avsdll == "")
+	if (sAVSDLL == "")
 		hDLL = ::LoadLibrary("avisynth");
 	else
-		hDLL = ::LoadLibrary(s_avsdll.c_str());
+		hDLL = ::LoadLibrary(sAVSDLL.c_str());
 
 	if (!hDLL)
 	{
@@ -405,8 +410,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 	Sleep(50);
 
 	EnumPluginDirs();
-	EnumPluginDLLs();
-
 
 	return bRet;
 }
@@ -851,6 +854,7 @@ void CAvisynthInfo::StrToLC(string &s_string)
 void CAvisynthInfo::EnumPluginDLLs()
 {
 	string sDir = "";
+	string sMessage = "";
 	for (map<string, BYTE>::iterator it = mPluginDirs.begin(); it != mPluginDirs.end(); ++it)
 	{
 		sDir = it->first;
@@ -866,7 +870,18 @@ void CAvisynthInfo::EnumPluginDLLs()
 			if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
 			{
 				sCurrentFile = sDir + "\\" + fd.cFileName;
-				mPluginDLLs[sCurrentFile] = 1;
+				if (!CheckPlugin(sCurrentFile, sMessage))
+				{
+					if (sMessage != "")
+						mPluginErrors[sMessage] = 1;
+				}
+				else
+				{
+					if (sMessage == "CPlugin")
+						mPluginDLLsC[sCurrentFile] = 1;
+					else
+						mPluginDLLsCPP[sCurrentFile] = 1;
+				}
 			}
 			bRet = FindNextFile(hFind, &fd);
 		}
@@ -877,6 +892,108 @@ void CAvisynthInfo::EnumPluginDLLs()
 	return;
 }
 
+
+BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
+{
+	BOOL bRet = TRUE;
+	s_Msg = "";
+	BOOL bIs64BitDLL = FALSE;
+	BOOL bIsPlugin = FALSE;
+
+	LOADED_IMAGE li;
+	BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,	TRUE,	TRUE);
+	
+	if (!bLoaded)
+	{
+		s_Msg = SysErrorMessage();
+		if (s_Msg != "")
+			s_Msg = StrFormat("Load error:\n\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
+		else
+			s_Msg = StrFormat("Load error:\n\"%s\"", s_dll.c_str());
+
+		return FALSE;
+	}
+
+	try
+	{
+		_set_se_translator(SE_Translator);
+
+		if ((li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_IA64) || (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64))
+		{
+			bIs64BitDLL = TRUE;
+			#ifndef AVS64
+				UnMapAndLoad(&li);
+				s_Msg = StrFormat("Load error:\n\"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
+				return FALSE;
+			#endif
+		}
+		else
+		{
+			#ifdef AVS64
+				UnMapAndLoad(&li);
+				s_Msg = StrFormat("Load error:\n\"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
+				return FALSE;
+			#endif
+		}
+
+		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
+		DWORD rvaNames = pExp->AddressOfNames;
+		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
+		string sName = "";
+		size_t pos = 0;
+
+		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
+		{
+			DWORD rvaName = prvaNames[dwName];
+			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
+
+			for (unsigned int i = 0; i < sName.length(); i++)
+				sName[i] = tolower(sName[i]);
+
+			pos = sName.find("avisynth_c_plugin_init");
+			if (pos != std::string::npos)
+			{
+				bIsPlugin = TRUE;
+				s_Msg = "CPlugin";
+				break;
+			}
+
+			pos = sName.find("avisynthplugininit");
+			if (pos != std::string::npos)
+			{
+				bIsPlugin = TRUE;
+				s_Msg = "";
+				break;
+			}
+		}
+
+		if (!bIsPlugin)
+		{
+			UnMapAndLoad(&li);
+			s_Msg = "";
+			return FALSE;
+		}
+	}
+	catch (SE_Exception ep)
+	{
+		bRet = FALSE;
+		s_Msg = SE_ErrorMessage(ep.GetCode());
+	}
+	catch (...)
+	{
+		bRet = FALSE;
+		s_Msg = SysErrorMessage();
+		if (s_Msg != "")
+			s_Msg = StrFormat("Unload error:\n\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
+		else
+			s_Msg = StrFormat("Unload error:\n\"%s\"", s_dll.c_str());
+	}
+
+	UnMapAndLoad(&li);
+
+	return bRet;
+}
 
 
 #endif //_AVISYNTHINFO_H

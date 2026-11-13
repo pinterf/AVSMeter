@@ -139,7 +139,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg, Settings.sAVSDLL);
+	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
+	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 	if (!bRet)
@@ -384,6 +385,10 @@ int main(int argc, char* argv[])
 	{
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+		utils.CursorUp(1);
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+		utils.CursorUp(1);
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 		PrintConsole(TRUE, COLOR_EMPHASIS, "Avisynth version string:     %s\n", AvisynthInfo.sVersionString.c_str());
@@ -405,16 +410,38 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		PrintConsole(TRUE, COLOR_DEFAULT, "\n");
-		PrintConsole(TRUE, COLOR_AVSM_VERSION, "Auto-load plugin DLLs:\n");
+		AvisynthInfo.EnumPluginDLLs();
 
-		for (map<string, BYTE>::iterator it = AvisynthInfo.mPluginDLLs.begin(); it != AvisynthInfo.mPluginDLLs.end(); ++it)
+		//CPP plugs
+		if (AvisynthInfo.mPluginDLLsCPP.size() > 0)
 		{
-			sTemp = it->first;
-			PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
-			PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nCPP-plugins:\n");
+			for (map<string, BYTE>::iterator cpp = AvisynthInfo.mPluginDLLsCPP.begin(); cpp != AvisynthInfo.mPluginDLLsCPP.end(); ++cpp)
+			{
+				sTemp = cpp->first;
+				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+			}
 		}
-		PrintConsole(TRUE, COLOR_DEFAULT, "\n");
+
+		//C plugs
+		if (AvisynthInfo.mPluginDLLsC.size() > 0)
+		{
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nC-plugins:\n");
+			for (map<string, BYTE>::iterator c = AvisynthInfo.mPluginDLLsC.begin(); c != AvisynthInfo.mPluginDLLsC.end(); ++c)
+			{
+				sTemp = c->first;
+				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+			}
+		}
+
+		//Plug errors
+		for (map<string, BYTE>::iterator err = AvisynthInfo.mPluginErrors.begin(); err != AvisynthInfo.mPluginErrors.end(); ++err)
+		{
+			sTemp = err->first;
+			PrintConsole(TRUE, COLOR_ERROR, "\n%s\n", utils.StrAnsiToOEM(sTemp).c_str());
+		}
 
 		Pause();
 		return 0;
@@ -426,7 +453,6 @@ int main(int argc, char* argv[])
 		Pause();
 		return -1;
 	}
-
 
 	if (Settings.bProcessPriority == 1)
 		::SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
