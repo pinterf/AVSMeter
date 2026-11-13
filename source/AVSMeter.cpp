@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
 	else
 		sAVSMVersion += " (x86)";
 
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s, %s\n", sAVSMVersion.c_str(), COPYLEFT_STR);
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s, %s\n", sAVSMVersion.c_str(), COPYRIGHT_STR);
 
 	if (sINIRet != "")
 	{
@@ -1162,13 +1162,13 @@ int main(int argc, char* argv[])
 				case VideoInfo::CS_Y14:         sOutBuf = "       Y14"; break;
 				case VideoInfo::CS_BGR48:       sOutBuf = "     BGR48"; break;
 				case VideoInfo::CS_BGR64:       sOutBuf = "     BGR64"; break;
-				case VideoInfo::CS_RGBP:        sOutBuf = "      RGBP"; break;
+				case VideoInfo::CS_RGBP8:       sOutBuf = "     RGBP8"; break;
 				case VideoInfo::CS_RGBP10:      sOutBuf = "    RGBP10"; break;
 				case VideoInfo::CS_RGBP12:      sOutBuf = "    RGBP12"; break;
 				case VideoInfo::CS_RGBP14:      sOutBuf = "    RGBP14"; break;
 				case VideoInfo::CS_RGBP16:      sOutBuf = "    RGBP16"; break;
 				case VideoInfo::CS_RGBPS:       sOutBuf = "     RGBPS"; break;
-				case VideoInfo::CS_RGBAP:       sOutBuf = "     RGBAP"; break;
+				case VideoInfo::CS_RGBAP8:      sOutBuf = "    RGBAP8"; break;
 				case VideoInfo::CS_RGBAP10:     sOutBuf = "   RGBAP10"; break;
 				case VideoInfo::CS_RGBAP12:     sOutBuf = "   RGBAP12"; break;
 				case VideoInfo::CS_RGBAP14:     sOutBuf = "   RGBAP14"; break;

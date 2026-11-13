@@ -16,15 +16,15 @@
 */
 
 
-#if !defined(_RES_H)
-#define _RES_H
+#if !defined(_VERSION_H)
+#define _VERSION_H
 
-#define PRODUCTNAME_STR "AVSMeter"
-#define VERSION_NUM      2,9,9,2
-#define VERSION_STR     "2.9.9.2"
-#define COPYLEFT_STR    "2012-2020, (c) Groucho2004"
-#define COMMENTS_STR    "AVSMeter - Avisynth Script Testing"
+#define PRODUCTNAME_STR "AVSMeter\0"
+#define VERSION_NUM      2,9,9,3
+#define VERSION_STR     "2.9.9.3"
+#define COPYRIGHT_STR   "(c) Groucho2004, 2012-2020\0"
+#define COMMENTS_STR    "AVSMeter - Avisynth Script Testing\0"
 
 #define IDI_MAINFRAME 101
 
-#endif //_RES_H
+#endif //_VERSION_H

@@ -1,9 +1,14 @@
+v2.9.9.3
+- Added new color space definitions (CS_RGBP8 and CS_RGBAP8), removed redundant CS_RGBP / CS_RGBAP
+- Fixed a version resource issue
+- Updated AVS headers
+
 v2.9.9.2
 - Updated AVS headers
 - Updated libcpuid
 
 v2.9.9.1
-- Increased range for  AVISYNTH_INTERFACE_VERSION detection
+- Increased range for AVISYNTH_INTERFACE_VERSION detection
 
 v2.9.9
 - Added GPU power consumption sensor readout
