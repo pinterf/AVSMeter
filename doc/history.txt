@@ -1,3 +1,7 @@
+v2.9.9.2
+- Updated AVS headers
+- Updated libcpuid
+
 v2.9.9.1
 - Increased range for  AVISYNTH_INTERFACE_VERSION detection
 
