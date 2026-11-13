@@ -1,3 +1,7 @@
+v2.6.9
+- avsinfo: If the version info is missing in (auto-load) plugins/files, the UTC timestamp is printed instead
+- Simplified "ESC" key handling
+
 v2.6.8
 - Fixed a bug in plugin type enumeration (regression)
 

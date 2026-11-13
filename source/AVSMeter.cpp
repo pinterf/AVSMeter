@@ -88,7 +88,7 @@ string       CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL
 string       ParseINIFile();
 BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
-void         WaitForKBHit();
+void         PollKeyHit();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 string       Pad(string s_line);
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
 	if (sINIRet != "")
 	{
 		PrintConsole(TRUE, COLOR_ERROR, sINIRet.c_str());
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nOne instance of AVSMeter is already running\n");
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 	}
@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 	if (argc < 2)
 	{
 		PrintUsage();
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
 			if (sTemp.length() < 3)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				WaitForKBHit();
+				PollKeyHit();
 				return -1;
 			}
 
@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
 			if ((spos < 1) || (spos > 27))
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				WaitForKBHit();
+				PollKeyHit();
 				return -1;
 			}
 
@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				WaitForKBHit();
+				PollKeyHit();
 				return -1;
 			}
 			continue;
@@ -243,14 +243,14 @@ int main(int argc, char* argv[])
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-					WaitForKBHit();
+					PollKeyHit();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-				WaitForKBHit();
+				PollKeyHit();
 				return -1;
 			}
 
@@ -266,14 +266,14 @@ int main(int argc, char* argv[])
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-					WaitForKBHit();
+					PollKeyHit();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-				WaitForKBHit();
+				PollKeyHit();
 				return -1;
 			}
 
@@ -292,7 +292,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sArg.c_str());
-						WaitForKBHit();
+						PollKeyHit();
 						return -1;
 					}
 					else
@@ -314,7 +314,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
-						WaitForKBHit();
+						PollKeyHit();
 						return -1;
 					}
 					else
@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -334,13 +334,13 @@ int main(int argc, char* argv[])
 		if (bInfoOnly)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 		if (sAVSFile != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 	}
@@ -360,7 +360,7 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 	}
@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -514,7 +514,7 @@ int main(int argc, char* argv[])
 				if (sPluginVersion != "n/a")
 					sOutBuf = utils.StrFormat("  [%s]\n", sPluginVersion.c_str());
 				else
-					sOutBuf = "\n";
+					sOutBuf = utils.StrFormat("  [%s]\n", utils.GetFileDateStamp(sPluginDLL).c_str());
 
 				sLogBuffer += sOutBuf;
 				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
@@ -637,14 +637,14 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		WaitForKBHit();
+		PollKeyHit();
 		return 0;
 	}
 
 	if (sAVSFile == "")
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -657,7 +657,7 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 
@@ -673,7 +673,7 @@ int main(int argc, char* argv[])
 	if (!hDLL)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
-		WaitForKBHit();
+		PollKeyHit();
 		return -1;
 	}
 
@@ -688,7 +688,7 @@ int main(int argc, char* argv[])
 		if (!CreateEnvironment)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 
@@ -696,7 +696,7 @@ int main(int argc, char* argv[])
 		if (!AVS_env)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 
@@ -1040,7 +1040,7 @@ int main(int argc, char* argv[])
 			AVS_linkage = 0;
 			::FreeLibrary(hDLL);
 
-			WaitForKBHit();
+			PollKeyHit();
 			return 0;
 		}
 
@@ -1117,24 +1117,6 @@ int main(int argc, char* argv[])
 		double dCurrentTime = dStartTime;
 		double dLastDisplayTime = dStartTime;
 		double dLastIntervalTime = dStartTime;
-
-
-		if (_kbhit())
-		{
-			if (_getch() == 0x1B) //ESC
-			{
-				AVS_clip = 0;
-				AVS_main = 0;
-				AVS_temp = 0;
-				AVS_env->DeleteScriptEnvironment();
-				AVS_env = 0;
-				AVS_linkage = 0;
-
-				PrintConsole(TRUE, COLOR_ERROR, "\'ESC\' pressed, cancelled.\n");
-				WaitForKBHit();
-				return -1;
-			}
-		}
 
 		unsigned int uiCursorOffset = 0;
 		SetErrorMode(nPrevErrorMode);
@@ -1544,7 +1526,7 @@ int main(int argc, char* argv[])
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 	}
@@ -1555,12 +1537,12 @@ int main(int argc, char* argv[])
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
-			WaitForKBHit();
+			PollKeyHit();
 			return -1;
 		}
 	}
 
-	WaitForKBHit();
+	PollKeyHit();
 
 	return iRet;
 }
@@ -2070,17 +2052,19 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 }
 
 
-void WaitForKBHit()
+void PollKeyHit()
 {
 	if (Settings.bPauseBeforeExit)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\nPress any key to exit...");
+
 		for (;;)
 		{
 			Sleep(100);
 			if (_getch())
 				break;
 		}
+
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", Pad("").c_str());
 		utils.CursorUp(1);
 	}
@@ -2207,6 +2191,12 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		unsigned __int64 D0 = 0;
 		while ((TDelta < 5.0) && (uiFrame < uiTotalFrames))
 		{
+			if (_kbhit())
+			{
+				if (_getch() == 0x1B) //ESC
+					AVS_env->ThrowError("\'ESC\' pressed, cancelled.");
+			}
+
 			if ((timer.GetSTDTimerMS() - D0) >= 200)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rPre-scanning script (F%u / T%.2lf)\r", uiFrame, TDelta);

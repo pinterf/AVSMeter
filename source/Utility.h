@@ -67,6 +67,7 @@ public:
 	string         GetFileVersion(string s_file);
 	string         GetProductVersion(string s_file);
 	string         GetFileTimeStamp(string s_file);
+	string         GetFileDateStamp(string s_file);
 	BOOL           FileExists(string s_file);
 	BOOL           DirectoryExists(string s_dir);
 	string         GetWOW64FilePath(string s_filepath);
@@ -230,6 +231,31 @@ string CUtils::GetFileTimeStamp(string s_file)
 	sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u (UTC)", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
 
 	return sTimeStamp;
+}
+
+
+string CUtils::GetFileDateStamp(string s_file)
+{
+	string sDateStamp = "";
+	WIN32_FIND_DATA fd;
+	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
+
+	if (hFind == INVALID_HANDLE_VALUE)
+		return "Cannot determine timestamp";
+
+	SYSTEMTIME fTime;
+
+	if (!FileTimeToSystemTime(&fd.ftLastWriteTime, &fTime))
+	{
+		FindClose(hFind);
+		return "Cannot determine timestamp";
+	}
+
+	FindClose(hFind);
+
+	sDateStamp = StrFormat("%04u-%02u-%02u", fTime.wYear, fTime.wMonth, fTime.wDay);
+
+	return sDateStamp;
 }
 
 
