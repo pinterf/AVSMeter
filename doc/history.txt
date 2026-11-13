@@ -1,3 +1,6 @@
+v1.9.0
+- Added GPU monitoring
+
 v1.8.3
 - Internal memory usage tweaks
 - Better error handling of wrong INI file settings

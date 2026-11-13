@@ -16,7 +16,7 @@ public:
 	CTimer();
 	virtual      ~CTimer();
 	double       GetTimer();
-	double       GetMMTimer();
+	double       GetSTDTimer();
 	BOOL         TestTimer();
 	string       FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 	string       StrFormat(const char *fmt, ...);
@@ -37,10 +37,6 @@ BOOL CTimer::TestTimer()
 	LARGE_INTEGER liPerfFreq = {0,0};
 
 	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
-		return FALSE;
-
-	TIMECAPS tc;
-	if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) != TIMERR_NOERROR) 
 		return FALSE;
 
 	double start = GetTimer();
@@ -72,9 +68,9 @@ double CTimer::GetTimer()
 }
 
 
-double CTimer::GetMMTimer()
+double CTimer::GetSTDTimer()
 {
-	return (double)timeGetTime() / 1000.0;
+	return (double)GetTickCount() / 1000.0;
 }
 
 

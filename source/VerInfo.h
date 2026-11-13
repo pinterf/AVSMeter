@@ -28,30 +28,26 @@ VERSION HISTORY:
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef	_INC_SHLWAPI
-	#include < Shlwapi.h >
+	#include <Shlwapi.h>
 #endif
 #pragma comment( lib, "shlwapi.lib" )
 
 #ifndef VER_H
-	#include < WinVer.h >
+	#include <WinVer.h>
 #endif
 
 #ifndef _T
 	#ifndef _INC_TCHAR
-		#include < TChar.h >
+		#include <TChar.h>
 	#endif
 #endif
 
 #ifndef	ASSERT
 	#ifndef _INC_CRTDBG
-		#include < CrtDbg.h >
+		#include <CrtDbg.h>
 	#endif
 	#define ASSERT( x )			_ASSERTE( x )
 #endif
-
-/////////////////////////////////////////////////////////////////////////////
-
-//#define _wslPackVersion( major, minor )		MAKELONG( minor, major )
 
 #ifndef		_free
 	#define _free( p )			{ if( p != NULL ){ free( p ); p = NULL; } }
@@ -60,8 +56,6 @@ VERSION HISTORY:
 #ifndef		ASSERT_RETURN
 	#define ASSERT_RETURN( x )	{ ASSERT( 0 ); return x; }
 #endif
-
-/////////////////////////////////////////////////////////////////////////////
 
 #ifndef DLLVER_MAJOR_MASK
 
@@ -84,11 +78,7 @@ VERSION HISTORY:
 #endif // MAKEDLLVERULL
 
 
-/////////////////////////////////////////////////////////////////////////////
-
 STDAPI_( HRESULT ) DllGetVersion( IN HMODULE hModule, OUT DLLVERSIONINFO* lpDVI );
-
-/////////////////////////////////////////////////////////////////////////////
 
 typedef enum _VI_CP {
 	VI_CP_ASCII				= 0,	// 7-bit ASCII 
@@ -121,13 +111,6 @@ typedef enum _VI_STR {
 	VI_STR_OLESELFREGISTER	= 12	// OLESelfRegister
 } VI_STR;
 
-/*
-HIWORD( m_vsffi.dwFileVersionMS )
-LOWORD( m_vsffi.dwFileVersionMS )
-HIWORD( m_vsffi.dwFileVersionLS )
-LOWORD( m_vsffi.dwFileVersionLS )
-*/
-
 class CFileVersionInfo
 {
 public:	// Construction/destruction:
@@ -154,7 +137,6 @@ public: // Static members:
 	
 	static BOOL		GetLIDName( IN WORD wLID, OUT LPTSTR lpszName, IN INT nBuf );
 	static BOOL		GetCPName( IN WORD wCP, OUT LPCTSTR* ppszName );
-	//static DWORD	InstallFile( void );
 	
 public: // Inline members
 
@@ -604,3 +586,4 @@ BOOL CFileVersionInfo::GetCPName( IN  WORD	   wCP,
 /////////////////////////////////////////////////////////////////////////////
 #endif //__VER_H__
 /////////////////////////////////////////////////////////////////////////////
+

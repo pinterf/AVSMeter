@@ -336,9 +336,7 @@ BOOL CUtils::GetResourceInfo(string s_file)
 		if (fvi.GetTransCount() > 0)
 		{
 			char szLID[56] = {0};
-			//LPCTSTR lpszTmp = NULL;
 			fvi.GetLIDName(fvi.GetLIDByIndex(0), szLID, 56);
-			//fvi.GetCPName(fvi.GetCPByIndex(0), &lpszTmp);
 			resinfo.sLanguage = StrFormat("%s", szLID);
 		}
 		else
