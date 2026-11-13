@@ -572,7 +572,7 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets1.c_str());
+			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("                            %u physical cores / %u logical cores\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
@@ -761,7 +761,7 @@ int main(int argc, char* argv[])
 		}
 
 		string sFunction = "";
-		if (bLogFunctions)
+		if ((bLogFunctions) && (Settings.bCreateLog))
 		{
 			//Internal Functions
 			if (AvisynthInfo.vInternalFunctions.size() > 0)
@@ -1029,7 +1029,7 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets1.c_str());
+			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("                            %u physical cores / %u logical cores\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
