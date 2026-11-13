@@ -3,6 +3,7 @@
 #endif
 
 #include <windows.h>
+#include <process.h>
 #include <string>
 #include <algorithm>
 #include <psapi.h>

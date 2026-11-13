@@ -35,18 +35,17 @@
     testing filters/plugins to evaluate their performance and memory
     requirements.<br>
     <b><br>
-      Normal operation:<br>
       <img alt="" src="avsmeter1.png" height="543" width="652"><br>
       <br>
       <br>
       Usage:</b><br>
-    Usage: AVSMeter script.avs [-l] [-i]<br>
-    The "-l" switch creates a log file ("script.avs.log") which contains
-    information about the Avisynth version used, clip info, runtime
-    info, a table with statistics for each frame interval and a copy of
-    the script itself.<br>
-    The "-i" switch displays/logs just the clip info.<br>
-    <br>
+    <tt><big><b>AVSMeter script.avs [switches]</b><b><br>
+        </b><b>Switches:</b><b><br>
+        </b><b>-info [-i]&nbsp;&nbsp; Display clip info only</b><b><br>
+        </b><b>-log&nbsp; [-l]&nbsp;&nbsp; Create log file</b><b><br>
+        </b><b>-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          Monitor GPU usage</b><br>
+      </big></tt><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
     the default settings.<br>
@@ -55,8 +54,9 @@
         color="Red">red</font></b>):<br>
     <b><br>
       "CreateLog" (<font color="Red">0</font> or 1):</b><br>
-    Determines if a log will be created or not. Note: The command line
-    switch "-log" overrides the ("0") INI setting.<br>
+    Determines if a log will be created or not.<br>
+    <i>Note:</i> The command line switch "-log" or "-l" overrides the
+    ("0") INI setting.<br>
     <b><br>
       "PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
     If set to "1", pauses the program at the end and returns to the
@@ -95,7 +95,19 @@
     to access the GPU sensors through a shared memory space. GPU-Z has
     to be running (the window can be minimized to the system tray)
     before running AVSMeter.<br>
+    <i>Note:</i> The command line switch "-gpu" overrides the ("0") INI
+    setting.<br>
     <br>
+    <b>"ReadTimeout</b><b>" (10</b><b><b><b><font color="Red"></font> to
+          3600</b></b>):</b><br>
+    In some rare cases, Avisynth gets stuck on reading a single frame,
+    mostly the first frame due to an extremely slow script, buggy
+    decoder, etc. There is now a configurable timeout for these cases in
+    AVSMeter.ini:<br>
+    "ReadTimeout=<font color="#ff0000"><b>120</b></font>" sets the
+    timeout to 120 seconds which is also the default. Once the
+    configured time has expired, AVSMeter will terminate. Values from 10
+    to 3600 seconds are allowed.<br>
     <br>
     <br>
   </body>

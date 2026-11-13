@@ -51,6 +51,7 @@ class CUtils
 public:
 	CUtils();
 	virtual      ~CUtils();
+	BOOL         IsUserAdmin();
 	BOOL         FileExists(string s_file);
 	string       OSErrorMessage();
 	void         CursorUp(int iLines);
@@ -419,6 +420,24 @@ BOOL CUtils::IsNumeric(string s_string)
 	}
 
 	return TRUE;
+}
+
+
+BOOL CUtils::IsUserAdmin()
+{
+	BOOL bAdmin;
+	SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+	PSID AdministratorsGroup; 
+	bAdmin = AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup); 
+	if (bAdmin) 
+	{
+		if (!CheckTokenMembership(NULL, AdministratorsGroup, &bAdmin))
+			bAdmin = FALSE;
+
+    FreeSid(AdministratorsGroup); 
+	}
+
+	return(bAdmin);
 }
 
 

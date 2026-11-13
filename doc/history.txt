@@ -1,3 +1,12 @@
+v1.9.1
+- Added switch "-gpu" to enable GPU monitoring from the command line. The switch overrides the INI setting "MonitorGPULoad=0".
+- Added a check to make sure the user has admin privileges
+- In some rare cases, Avisynth gets stuck on reading a single frame, mostly the first frame due to an extremely slow script,
+  buggy decoder, etc. There is now a configurable timeout in AVSMeter.ini:
+  "ReadTimeout=120" sets the timeout to 120 seconds which is also the default. Once the configured time has expired,
+  AVSMeter will terminate. Values from 10 to 3600 seconds are allowed.
+- Some refactoring and minor fixes
+
 v1.9.0
 - Added GPU monitoring
 
