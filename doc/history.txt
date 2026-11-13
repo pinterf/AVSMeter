@@ -1,3 +1,9 @@
+v2.5.4
+- Improved error handling for Avisynth core (avisynth.dll)
+- Tweaks to reduce overhead
+- Fixed a display bug
+- Refactoring
+
 v2.5.3
 - Fixed duplicate error message
 - Fixed a minor console output bug

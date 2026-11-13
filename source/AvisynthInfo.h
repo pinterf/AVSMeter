@@ -23,40 +23,6 @@
 #include "utility.h"
 #include "avs_headers\avisynth.h"
 
-class CAvisynthInfo
-{
-public:
-	CAvisynthInfo();
-	string  sAVSDLL;
-	BOOL    GetInfo(string &s_ErrorMsg);
-	int     iInterfaceVersion;
-	vector  <string> vPluginDirs;
-	vector  <string> vInternalFunctions;
-	vector  <string> vPluginFunctions;
-	vector  <string> vPlugins;
-	vector  <string> vPluginDependencies;
-	vector  <string> vPluginErrors;
-	string  sDLLPath;
-	string  sFileVersion;
-	string  sVersionString;
-	string  sVersionNumber;
-	string  sTimeStamp;
-	BOOL    bIs64BitAVSDLL;
-	BOOL    bIsAVSPlus;
-	BOOL    bIsMTVersion;
-	virtual ~CAvisynthInfo();
-
-private:
-	CUtils         utils;
-	int            GetInterfaceVersion(string &s_ErrorMsg);
-  void           EnumPluginDirs();
-	void           EnumPluginDLLs();
-	BOOL           GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
-	void           AVSCheckPlugins();
-	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
-	BOOL           IsRuntimeInstalled(string s_version);
-};
-
 
 static BOOL CompareNoCase(string first, string second)
 {
@@ -77,11 +43,45 @@ static BOOL CompareNoCase(string first, string second)
 		return false;
 }
 
-const AVS_Linkage *AVS_linkage = 0;
+static const AVS_Linkage *AVS_linkage = 0;
+
+
+class CAvisynthInfo
+{
+public:
+	CAvisynthInfo();
+	BOOL    GetInfo(string s_AVSDLL, string &s_ErrorMsg);
+	int     iInterfaceVersion;
+	vector  <string> vPluginDirs;
+	vector  <string> vInternalFunctions;
+	vector  <string> vPluginFunctions;
+	vector  <string> vPlugins;
+	vector  <string> vPluginDependencies;
+	vector  <string> vPluginErrors;
+	string  sDLLPath;
+	string  sFileVersion;
+	string  sVersionString;
+	string  sVersionNumber;
+	string  sTimeStamp;
+	BOOL    bIs64BitAVSDLL;
+	BOOL    bIsAVSPlus;
+	BOOL    bIsMTVersion;
+	virtual ~CAvisynthInfo();
+
+private:
+	CUtils         utils;
+	string         sAVSDLL;
+  void           EnumPluginDirs();
+	void           EnumPluginDLLs();
+	BOOL           GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
+	void           TestLoadPlugins();
+	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
+	BOOL           IsRuntimeInstalled(string s_version);
+};
+
 
 CAvisynthInfo::CAvisynthInfo()
 {
-	sAVSDLL = "";
 }
 
 CAvisynthInfo::~CAvisynthInfo()
@@ -89,7 +89,7 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
+BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg)
 {
 	sDLLPath = "";
 	bIs64BitAVSDLL = FALSE;
@@ -104,6 +104,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	LOADED_IMAGE li;
 	BOOL bLoaded;
+
+	//Make a local copy
+	sAVSDLL = s_AVSDLL;
 
 	if (sAVSDLL == "")
 		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
@@ -198,12 +201,21 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	sDLLPath = utils.GetWOW64FilePath(sDLLPath);
 	sFileVersion = utils.GetFileVersion(sDLLPath);
-
 	sTimeStamp = utils.GetFileTimeStamp(sDLLPath);
 
-	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg);
-	if (iInterfaceVersion == 0)
+	string sDeps = "";
+	string sFailedDeps = "";
+	string sNote = "";
+	string sHint = "";
+	GetDLLDependencies(sDLLPath, sDeps, sFailedDeps, sHint);
+	if (sFailedDeps != "")
+	{
+		s_ErrorMsg = utils.StrFormat("Cannot load avisynth.dll\n\nDependencies that could not be loaded:\n%s", sFailedDeps.c_str());
+		if (sHint != "")
+			s_ErrorMsg += utils.StrFormat("\n\nNote:\n  %s\n", sHint.c_str());
+
 		return FALSE;
+	}
 
 	HINSTANCE hDLL;
 	if (sAVSDLL == "")
@@ -236,12 +248,17 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			return FALSE;
 		}
 
-		AVS_env = CreateEnvironment(iInterfaceVersion);
-		if (!AVS_env)
+		iInterfaceVersion = 8;
+		while (!AVS_env)
 		{
-			s_ErrorMsg = "Cannot create IScriptenvironment";
-			::FreeLibrary(hDLL);
-			return FALSE;
+			iInterfaceVersion--;
+			if (iInterfaceVersion < 5)
+			{
+				s_ErrorMsg = "Cannot create IScriptenvironment";
+				::FreeLibrary(hDLL);
+				return 0;
+			}
+			AVS_env = CreateEnvironment(iInterfaceVersion);
 		}
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
@@ -337,125 +354,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	EnumPluginDirs();
 	EnumPluginDLLs();
-	AVSCheckPlugins();
+	TestLoadPlugins();
 
 	return bRet;
-}
-
-
-int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
-{
-	int iInterfaceVersion = 0;
-	s_ErrorMsg = "";
-	string sSysError = "";
-
-	string sDependencies = "";
-	string sFailedDependencies = "";
-	string sHint = "";
-	GetDLLDependencies(sDLLPath, sDependencies, sFailedDependencies, sHint);
-
-	if (sDependencies != "")
-		vPluginDependencies.push_back(sDependencies);
-
-	HINSTANCE hDLL;
-	if (sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(sAVSDLL.c_str());
-
-	if (!hDLL)
-	{
-		sSysError = utils.SysErrorMessage();
-		if (sSysError != "")
-			s_ErrorMsg = utils.StrFormat("Failed to load avisynth.dll:\n%s", sSysError.c_str());
-		else
-			s_ErrorMsg = "Failed to load avisynth.dll.";
-
-		if (sFailedDependencies != "")
-		{
-			s_ErrorMsg += utils.StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
-			if (sHint != "")
-				s_ErrorMsg += utils.StrFormat("\n\nNote: \"%s\"\n", sHint.c_str());
-		}
-
-		return 0;
-	}
-
-	IScriptEnvironment *AVS_env = NULL;
-
-	try
-	{
-		_set_se_translator(SE_Translator);
-
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnvironment)
-		{
-			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
-			::FreeLibrary(hDLL);
-			return 0;
-		}
-
-		iInterfaceVersion = 5; //try the lowest version we want to support
-		AVS_env = CreateEnvironment(iInterfaceVersion);
-		if (!AVS_env)
-		{
-			s_ErrorMsg = "Could not create IScriptenvironment (AVISYNTH_INTERFACE_VERSION = 5)";
-			::FreeLibrary(hDLL);
-			return 0;
-		}
-
-		AVS_linkage = AVS_env->GetAVSLinkage();
-
-		try
-		{
-			AVS_env->CheckVersion(6);
-			iInterfaceVersion = 6;
-			AVS_env->CheckVersion(7); //who knows...
-			iInterfaceVersion = 7;
-		}
-		catch (AvisynthError)
-		{
-		}
-
-		Sleep(100);
-		AVS_env->DeleteScriptEnvironment();
-		AVS_env = 0;
-		AVS_linkage = 0;
-	}
-	catch (AvisynthError err)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
-	}
-	catch (exception& ex)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = ex.what();
-	}
-	catch (...)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.SysErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-	}
-
-
-	if (!::FreeLibrary(hDLL))
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.SysErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot unload avisynth.dll:\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot unload avisynth.dll";
-	}
-
-	Sleep(50);
-
-	return iInterfaceVersion;
 }
 
 
@@ -730,7 +631,6 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	catch (...)
 	{
 		bRet = FALSE;
-
 		s_Msg = utils.SysErrorMessage();
 		if (s_Msg != "")
 			s_Msg = utils.StrFormat("\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
@@ -744,7 +644,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 }
 
 
-void CAvisynthInfo::AVSCheckPlugins()
+void CAvisynthInfo::TestLoadPlugins()
 {
 	HINSTANCE hDLL;
 	if (sAVSDLL == "")
@@ -785,7 +685,6 @@ void CAvisynthInfo::AVSCheckPlugins()
 	AVS_linkage = AVS_env->GetAVSLinkage();
 	AVSValue AVS_main;
 
-	BOOL bPlugLoadError = FALSE;
 	string sPlugLoadError = "";
 	string sPlugLoadErrorLC = "";
 	string sNote = "";
@@ -819,7 +718,6 @@ void CAvisynthInfo::AVSCheckPlugins()
 		if (bMaxPlugsExceeded)
 			continue;
 
-		bPlugLoadError = FALSE;
 		sPlugLoadError = "";
 		sNote = "";
 		try
@@ -830,24 +728,22 @@ void CAvisynthInfo::AVSCheckPlugins()
 		{
 			sPlugLoadError = utils.StrFormat("%s", (PCSTR)err.msg);
 			utils.StrTrim(sPlugLoadError);
-			bPlugLoadError = TRUE;
-
 			sPlugLoadErrorLC = sPlugLoadError;
 			utils.StrToLC(sPlugLoadErrorLC);
+
 			if (sPlugLoadErrorLC.find("too many plugins loaded") != string::npos)
 				bMaxPlugsExceeded = TRUE;
-		}
 
-		if (bPlugLoadError)
-		{
 			if (sFailedDependencies != "")
 			{
 				sNote += utils.StrFormat("\n\nDependencies that could not be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
 					sNote += utils.StrFormat("\n\nNote: \"%s\"", sHint.c_str());
 			}
+
 			if (sPluginType.substr(0, 5) == "C 2.0")
 				sNote += "\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need the \"avisynth_c.dll\" support DLL";
+
 			if (sPluginType.substr(0, 5) == "C 2.5")
 				sNote += "\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"";
 
@@ -911,7 +807,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			return;
 		}
 
-		//s_dependencies = "\"" + s_dll + "\":\n";
 		s_dependencies = s_dll + ":\n";
 		string sDepDLL = "";
 		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);

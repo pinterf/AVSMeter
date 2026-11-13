@@ -62,7 +62,7 @@ public:
 	virtual        ~CUtils();
 
 	//File/directory/system
-	string SysErrorMessage();
+	string         SysErrorMessage();
 	__int64        FileSize(string s_file);
 	string         GetFileVersion(string s_file);
 	string         GetFileTimeStamp(string s_file);
@@ -72,8 +72,8 @@ public:
 
 	//Console functions
 	int            GetConsoleWidth();
-	void           SetRGB(WORD wAttributes);
-	void           ResetRGB();
+	void           SetConsoleColors(WORD wAttributes);
+	void           ResetConsoleColors();
 	void           CursorUp(unsigned int iLines);
 
 	//string functions
@@ -83,7 +83,6 @@ public:
 	void           StrTrim(string &s_string);
 	void           StrToUC(string &s_string);
 	void           StrToLC(string &s_string);
-	string         StrPad(string s_line);
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatTPF(double d_frametime);
 	string         StrAnsiToOEM(string s_string);
@@ -108,7 +107,7 @@ CUtils::CUtils()
 
 CUtils::~CUtils()
 {
-	//retrieve saved attributes
+	//restore attributes
 	SetConsoleTextAttribute(hConsole, wSavedAttributes);
 }
 
@@ -140,12 +139,12 @@ int CUtils::GetConsoleWidth()
 }
 
 
-void CUtils::CursorUp(unsigned int iLines)
+void CUtils::CursorUp(unsigned int iRows)
 {
 	COORD pos;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	::GetConsoleScreenBufferInfo(hConsole, &csbi);
-	pos.Y = (short)(csbi.dwCursorPosition.Y - iLines);
+	pos.Y = (short)(csbi.dwCursorPosition.Y - iRows);
 	pos.X = 0;
 	::SetConsoleCursorPosition(hConsole, pos);
 
@@ -153,14 +152,14 @@ void CUtils::CursorUp(unsigned int iLines)
 }
 
 
-void CUtils::SetRGB(WORD wAttributes)
+void CUtils::SetConsoleColors(WORD wAttributes)
 {
 	SetConsoleTextAttribute(hConsole, wAttributes);
 	return;
 }
 
 
-void CUtils::ResetRGB()
+void CUtils::ResetConsoleColors()
 {
 	SetConsoleTextAttribute(hConsole, wSavedAttributes);
 	return;
@@ -298,18 +297,6 @@ void CUtils::StrToLC(string &s_string)
 {
 	transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
 	return;
-}
-
-
-string CUtils::StrPad(string s_line)
-{
-	int iPadLen = GetConsoleWidth() - (int)s_line.length();
-	if ((iPadLen <= 0) || (iPadLen > 1000))
-		return s_line;
-
-	s_line.append(iPadLen - 1, ' ');
-
-	return s_line;
 }
 
 
