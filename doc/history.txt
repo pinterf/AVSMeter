@@ -1,3 +1,8 @@
+v2.4.5
+- Added supported instruction sets to the CPU info
+- Reduced overhead of GPU sensor readout
+- Fixed a bug that would throw the Avisynth error "too many plugins loaded..." multiple times
+
 v2.4.4
 - Improved validation of INI settings
 - Updated libcpuid

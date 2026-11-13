@@ -424,12 +424,12 @@ int main(int argc, char* argv[])
 	{
 		if (!gpuinfo.bGPUZIsRunning)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to use GPU monitoring, GPU-Z must be running.\n\n");
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "Continue without GPU monitoring? [y/n]");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to collect GPU info, GPU-Z must be running.\n\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "Continue without GPU info? [y/n]");
 
 			for (;;)
 			{
-				Sleep(10);
+				Sleep(100);
 				if (_kbhit())
 				{
 					int iKey = _getch();
@@ -497,6 +497,8 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("CPU (brand string):         %s\n", sys.cpudata.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU instructions sets:      %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.cpudata.CPURealClock > 100)
 			{
@@ -770,7 +772,7 @@ int main(int argc, char* argv[])
 	if ((!bInfoOnly) && (!Settings.bSimpleMode))
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Loading script...").c_str());
-		Sleep(333);
+		Sleep(200);
 		uiFrameInterval = CalculateFrameInterval(sAVSFile);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 	}
@@ -816,7 +818,7 @@ int main(int argc, char* argv[])
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Loading script...").c_str());
 		AVS_main = AVS_env->Invoke("Import", sAVSFile.c_str());
-		Sleep(333);
+		Sleep(200);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 		if (!AVS_main.IsClip())
@@ -879,6 +881,8 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("CPU (brand string):         %s\n", sys.cpudata.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU instructions sets:      %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.cpudata.CPURealClock > 100)
 			{
@@ -1242,7 +1246,7 @@ int main(int argc, char* argv[])
 
 		if (!Settings.bSimpleMode)
 		{
-			while ((uiFramesToProcess / uiFrameInterval) > 100000)
+			while ((uiFramesToProcess / uiFrameInterval) > 200000)
 				uiFrameInterval *= 10;
 
 			perfdata.reserve((uiFramesToProcess / uiFrameInterval) + 2);
@@ -1250,11 +1254,12 @@ int main(int argc, char* argv[])
 		else
 		{
 			uiFrameInterval = 1;
-			while ((uiFramesToProcess / uiFrameInterval) > 100000)
+			while ((uiFramesToProcess / uiFrameInterval) > 200000)
 				uiFrameInterval *= 10;
 		}
 
-		unsigned int n = 0;
+
+		unsigned int uiFramesRead = 0;
 		BOOL bFirstScr = TRUE;
 		__int64 iElapsedMS = 0;
 		__int64 iEstimatedMS = 0;
@@ -1264,13 +1269,16 @@ int main(int argc, char* argv[])
 		DWORD dwVirtualMemPeakMB = 0;
 		DWORD dwPhysicalMemCurrentMB = 0;
 		DWORD dwVirtualMemCurrentMB = 0;
+		unsigned int uiCPUUsageCur = 0;
 		unsigned int uiCPUUsageAcc = 0;
 		unsigned int uiCPUUsageAvg = 0;
+		unsigned int uiGPUUsageCur = 0;
 		unsigned int uiGPUUsageAcc = 0;
 		unsigned int uiGPUUsageAvg = 0;
+		unsigned int uiVPUUsageCur = 0;
 		unsigned int uiVPUUsageAcc = 0;
 		unsigned int uiVPUUsageAvg = 0;
-		unsigned int uiCounter = 0;
+		unsigned int uiIntervalCounter = 0;
 
 		unsigned int uiCurrentFrame = 0;
 		double dFPSAverage = 0.0;
@@ -1296,9 +1304,9 @@ int main(int argc, char* argv[])
 		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
-			++n;
+			++uiFramesRead;
 
-			if (((n % uiFrameInterval) != 0) && (n != uiFramesToProcess))
+			if (((uiFramesRead % uiFrameInterval) != 0) && (uiFramesRead != uiFramesToProcess))
 				continue;
 
 			dCurrentTime = timer.GetTimer();
@@ -1306,15 +1314,17 @@ int main(int argc, char* argv[])
 			if (!Settings.bSimpleMode)
 				processinfo.Update();
 
-			++uiCounter;
+			++uiIntervalCounter;
 
 			if ((Settings.bMonitorGPULoad) && (!Settings.bSimpleMode))
 			{
 				gpuinfo.ReadSensors();
-				uiGPUUsageAcc += (unsigned int)gpuinfo.sensors.GPULoad;
-				uiGPUUsageAvg = (unsigned int)(((double)uiGPUUsageAcc / (double)uiCounter) + 0.5);
-				uiVPUUsageAcc += (unsigned int)gpuinfo.sensors.VPULoad;
-				uiVPUUsageAvg = (unsigned int)(((double)uiVPUUsageAcc / (double)uiCounter) + 0.5);
+				uiGPUUsageCur = (unsigned int)gpuinfo.sensors.GPULoad;
+				uiGPUUsageAcc += uiGPUUsageCur;
+				uiGPUUsageAvg = (unsigned int)(((double)uiGPUUsageAcc / (double)uiIntervalCounter) + 0.5);
+				uiVPUUsageCur = (unsigned int)gpuinfo.sensors.VPULoad;
+				uiVPUUsageAcc += uiVPUUsageCur;
+				uiVPUUsageAvg = (unsigned int)(((double)uiVPUUsageAcc / (double)uiIntervalCounter) + 0.5);
 
 				if (gpuinfo.sensors.GPUClock > dwMaxGPUClock)
 					dwMaxGPUClock = gpuinfo.sensors.GPUClock;
@@ -1323,10 +1333,11 @@ int main(int argc, char* argv[])
 			}
 
 			iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
-			iEstimatedMS = (__int64)((double)uiFramesToProcess * (double)iElapsedMS / (double)n);
+			iEstimatedMS = (__int64)((double)uiFramesToProcess * (double)iElapsedMS / (double)uiFramesRead);
 
-			uiCPUUsageAcc += (unsigned int)processinfo.btCPUUsage;
-			uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiCounter) + 0.5);
+			uiCPUUsageCur = (unsigned int)processinfo.btCPUUsage;
+			uiCPUUsageAcc += uiCPUUsageCur;
+			uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiIntervalCounter) + 0.5);
 
 			dwPhysicalMemCurrentMB = processinfo.dwPhysicalMemMB;
 			dwVirtualMemCurrentMB = processinfo.dwVirtualMemMB;
@@ -1336,9 +1347,9 @@ int main(int argc, char* argv[])
 			if (dwVirtualMemCurrentMB > dwVirtualMemPeakMB)
 				dwVirtualMemPeakMB = dwVirtualMemCurrentMB;
 
-			dFPSAverage = (double)n / (dCurrentTime - dStartTime);
+			dFPSAverage = (double)uiFramesRead / (dCurrentTime - dStartTime);
 
-			if ((n % uiFrameInterval) != 0)
+			if ((uiFramesRead % uiFrameInterval) != 0)
 				continue;
 
 			if ((dCurrentTime - dLastIntervalTime) > 0.000001)
@@ -1420,7 +1431,7 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 
-				sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", processinfo.btCPUUsage, uiCPUUsageAvg);
+				sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", uiCPUUsageCur, uiCPUUsageAvg);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 
@@ -1440,13 +1451,13 @@ int main(int argc, char* argv[])
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 					++uiCursorOffset;
 
-					sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", gpuinfo.sensors.GPULoad, uiGPUUsageAvg);
+					sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", uiGPUUsageCur, uiGPUUsageAvg);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 					++uiCursorOffset;
 
 					if (gpuinfo.data.NVVPU)
 					{
-						sOutBuf = utils.StrFormat("VPU usage (current | average):  %u%% | %u%%", gpuinfo.sensors.VPULoad, uiVPUUsageAvg);
+						sOutBuf = utils.StrFormat("VPU usage (current | average):  %u%% | %u%%", uiVPUUsageCur, uiVPUUsageAvg);
 						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 						++uiCursorOffset;
 					}
@@ -1516,7 +1527,7 @@ int main(int argc, char* argv[])
 		if (Settings.bSimpleMode)
 			iMinElapsed = -1;
 
-		if ((n >= uiFrameInterval) && (iElapsedMS >= iMinElapsed))
+		if ((uiFramesRead >= uiFrameInterval) && (iElapsedMS >= iMinElapsed))
 		{
 			if (!bFirstScr)
 				utils.CursorUp(uiCursorOffset);
@@ -1524,12 +1535,12 @@ int main(int argc, char* argv[])
 			if (uiFirstFrame == uiLastFrame)
 			{
 				if (uiFirstFrame == 0)
-					sOutBuf = utils.StrFormat("Frames processed:               %u", n, uiFirstFrame);
+					sOutBuf = utils.StrFormat("Frames processed:               %u", uiFramesRead);
 				else
-					sOutBuf = utils.StrFormat("Frames processed:               %u (%u)", n, uiFirstFrame);
+					sOutBuf = utils.StrFormat("Frames processed:               %u (%u)", uiFramesRead, uiFirstFrame);
 			}
 			else
-				sOutBuf = utils.StrFormat("Frames processed:               %u (%u - %u)", n, uiFirstFrame, uiLastFrame);
+				sOutBuf = utils.StrFormat("Frames processed:               %u (%u - %u)", uiFramesRead, uiFirstFrame, uiLastFrame);
 
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf + "\n";
@@ -1615,7 +1626,7 @@ int main(int argc, char* argv[])
 				sLogBuffer += "\n";
 			}
 
-			if ((Settings.bLogEstimatedTime) && (n < uiFramesToProcess))
+			if ((Settings.bLogEstimatedTime) && (uiFramesRead < uiFramesToProcess))
 				sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
 			else
 				sOutBuf = utils.StrFormat("Time (elapsed):                 %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str());
@@ -1813,6 +1824,9 @@ string ParseINIFile()
 		utils.StrTrim(sCurrentLine);
 		sOrgLine = sCurrentLine;
 		utils.StrToLC(sCurrentLine);
+
+		if ((sCurrentLine.substr(0, 1) == "#") || (sCurrentLine == ""))
+			continue;
 
 		iBoolValue = -1;
 		if (sCurrentLine.length() > 3)
@@ -2084,11 +2098,10 @@ BOOL WriteINIFile(string &s_inifile)
 	if (!hINIFile.is_open())
 		return FALSE;
 
-	string sAVSMVersion = utils.GetFileVersion("");
-	if (sAVSMVersion.length() > 5)
-		sAVSMVersion = sAVSMVersion.substr(0, 5);
-
-	hINIFile << "AVSMeterVersion=" << sAVSMVersion << "\n\n";
+	sComment = "# This INI file can be used to set defaults for AVSMeter or configure settings that are not\n";
+	sComment += "# implemented as command line switches.\n";
+	sComment += "# Note: Command line switches override INI file settings.\n";
+	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment = "# \"LogDirectory\"\n";
 	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
@@ -2571,7 +2584,24 @@ unsigned int CalculateFrameInterval(string &s_avsfile)
 		if (dAverageFrameTime >  0.400) uiFrameInterval =   50;
 		if (dAverageFrameTime >  1.000) uiFrameInterval =   20;
 		if (dAverageFrameTime >  2.000) uiFrameInterval =   10;
+		if (dAverageFrameTime >  4.000) uiFrameInterval =    5;
+		if (dAverageFrameTime > 10.000) uiFrameInterval =    2;
 		if (dAverageFrameTime > 20.000) uiFrameInterval =    1;
+
+		/*
+		if (dAverageFrameTime >  0.010) uiFrameInterval = 5000;
+		if (dAverageFrameTime >  0.025) uiFrameInterval = 2000;
+		if (dAverageFrameTime >  0.050) uiFrameInterval = 1000;
+		if (dAverageFrameTime >  0.100) uiFrameInterval =  500;
+		if (dAverageFrameTime >  0.250) uiFrameInterval =  200;
+		if (dAverageFrameTime >  0.500) uiFrameInterval =  100;
+		if (dAverageFrameTime >  1.000) uiFrameInterval =   50;
+		if (dAverageFrameTime >  2.500) uiFrameInterval =   20;
+		if (dAverageFrameTime >  5.000) uiFrameInterval =   10;
+		if (dAverageFrameTime > 10.000) uiFrameInterval =    5;
+		if (dAverageFrameTime > 25.000) uiFrameInterval =    2;
+		if (dAverageFrameTime > 50.000) uiFrameInterval =    1;
+		*/
 	}
 	catch (AvisynthError err)
 	{
@@ -2618,7 +2648,7 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -simple [-s]        Simple mode (w/o statistics)\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  options read the documentation (AVSMeter.html) included\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  settings read the documentation (AVSMeter.html) included\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  in the distribution package.\n");
 
 	PrintConsole(TRUE, COLOR_DEFAULT, "\n");

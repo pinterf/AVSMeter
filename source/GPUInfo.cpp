@@ -175,10 +175,6 @@ void CGPUInfo::ReadData()
 
 void CGPUInfo::ReadSensors()
 {
-	static unsigned __int64 uiLastTimeRun;
-	if ((GetSTDTimer() - uiLastTimeRun) < 200)
-		return;
-
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
 	sensors.GPULoad = 0;
@@ -189,53 +185,49 @@ void CGPUInfo::ReadSensors()
 
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
-		char DefChar = ' ';
-		char szSensor[512];
-		WideCharToMultiByte(CP_ACP, 0, lpMem->sensors[i].name, -1, szSensor, 511, &DefChar, NULL);
-		string sSensor(szSensor);
-		sSensor.erase(sSensor.find_last_not_of(" \t\n\r") + 1);
-		sSensor.erase(0, sSensor.find_first_not_of(" \t\n\r"));
-		StrToUC(sSensor);
+		if (wcslen(lpMem->sensors[i].name) < 2)
+			continue;
 
-		if (sSensor == "GPU CORE CLOCK")
+		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Core Clock") == 0)
+		{
 			sensors.GPUClock = (WORD)(lpMem->sensors[i].value + 0.5);
-		if (sSensor == "GPU MEMORY CLOCK")
+			continue;
+		}
+		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Memory Clock") == 0)
+		{
 			sensors.MEMClock = (WORD)(lpMem->sensors[i].value + 0.5);
-		if (sSensor == "GPU LOAD")
+			continue;
+		}
+		if (_wcsicmp(lpMem->sensors[i].name, L"GPU Load") == 0)
+		{
 			sensors.GPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
-		if ((data.NVVPU) && (sSensor == "VIDEO ENGINE LOAD"))
+			continue;
+		}
+		if ((data.NVVPU) && (_wcsicmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))
+		{
 			sensors.VPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
-		if (sSensor == "MEMORY USED")
+			continue;
+		}
+		if (_wcsicmp(lpMem->sensors[i].name, L"Memory Used") == 0)
 		{
 			data.GeneralMem = TRUE;
 			sensors.MemoryUsedGeneral = (DWORD)(lpMem->sensors[i].value + 0.5);
+			continue;
 		}
-		if (sSensor == "MEMORY USAGE (DEDICATED)")
+		if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dedicated)") == 0)
 		{
 			data.DedicatedMem = TRUE;
-			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);
+			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);	
+			continue;
 		}
-		if (sSensor == "MEMORY USAGE (DYNAMIC)")
+		if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dynamic)") == 0)
 		{
 			data.DynamicMem = TRUE;
-			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);
+			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);	
 		}
 	}
 
-	uiLastTimeRun = GetSTDTimer();
-
 	return;
-}
-
-
-unsigned __int64 CGPUInfo::GetSTDTimer()
-{
-	static unsigned __int64 uiLastSTDTimer;
-	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
-	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
-	uiLastSTDTimer = uiSTDTimer;
-
-	return (uiSTDTimer + uiTimerWrapComp);
 }
 
 

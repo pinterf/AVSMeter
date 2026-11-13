@@ -42,6 +42,7 @@ public:
 		BYTE         NumCPUs;
 		BYTE         CPUTotalLogicalCores;
 		unsigned int CPURealClock; //MHz
+		string       CPUSupportedInstructionSets;
 	} cpudata;
 
 private:

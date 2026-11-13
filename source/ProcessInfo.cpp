@@ -55,12 +55,7 @@ void CProcessInfo::CloseProcess()
 
 void CProcessInfo::Update()
 {
-	static unsigned __int64 uiLastTimeRunCPU;
-	static unsigned __int64 uiLastTimeRunThreadCount;
-
-	//Min. update interval 100ms
-	if ((GetSTDTimer() - uiLastTimeRunCPU) < 100)
-		return;
+	static unsigned __int64 uiLastTimeRun;
 
 	GetCPUUsage();
 	bFirstRun = FALSE;
@@ -72,14 +67,12 @@ void CProcessInfo::Update()
 	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
 	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
 
-	uiLastTimeRunCPU = GetSTDTimer();
-
-	//Thread count only needs to be updated every few seconds
-	if ((GetSTDTimer() - uiLastTimeRunThreadCount) < 4000)
+	//Thread count should only be updated every few seconds to reduce overhead
+	if ((GetSTDTimer() - uiLastTimeRun) < 5000)
 		return;
 
 	wThreadCount = GetCurrentThreadCount();
-	uiLastTimeRunThreadCount = GetSTDTimer();
+	uiLastTimeRun = GetSTDTimer();
 
 	return;
 }

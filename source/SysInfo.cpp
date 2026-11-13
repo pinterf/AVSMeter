@@ -150,6 +150,54 @@ void CSysInfo::GetCPUID()
 	else
 		cpudata.CPURealClock = 0;
 
+	cpudata.CPUSupportedInstructionSets = "";
+	if (data.flags[CPU_FEATURE_3DNOW])
+		cpudata.CPUSupportedInstructionSets += "3DNOW, ";
+	if (data.flags[CPU_FEATURE_3DNOWEXT])
+		cpudata.CPUSupportedInstructionSets += "3DNOWEXT, ";
+	if (data.flags[CPU_FEATURE_MMX])
+		cpudata.CPUSupportedInstructionSets += "MMX, ";
+	if (data.flags[CPU_FEATURE_MMXEXT])
+		cpudata.CPUSupportedInstructionSets += "MMXEXT, ";
+	if (data.flags[CPU_FEATURE_SSE])
+		cpudata.CPUSupportedInstructionSets += "SSE, ";
+	if (data.flags[CPU_FEATURE_SSE2])
+		cpudata.CPUSupportedInstructionSets += "SSE2, ";
+	if (data.flags[CPU_FEATURE_PNI])
+		cpudata.CPUSupportedInstructionSets += "SSE3, ";
+	if (data.flags[CPU_FEATURE_SSSE3])
+		cpudata.CPUSupportedInstructionSets += "SSSE3, ";
+	if (data.flags[CPU_FEATURE_SSE4_1])
+		cpudata.CPUSupportedInstructionSets += "SSE4.1, ";
+	if (data.flags[CPU_FEATURE_SSE4_2])
+		cpudata.CPUSupportedInstructionSets += "SSE4.2, ";
+	if (data.flags[CPU_FEATURE_SSE4A])
+		cpudata.CPUSupportedInstructionSets += "SSE4A, ";
+	if (data.flags[CPU_FEATURE_FMA3])
+		cpudata.CPUSupportedInstructionSets += "FMA3, ";
+	if (data.flags[CPU_FEATURE_FMA4])
+		cpudata.CPUSupportedInstructionSets += "FMA4, ";
+	if (data.flags[CPU_FEATURE_AVX])
+		cpudata.CPUSupportedInstructionSets += "AVX, ";
+	if (data.flags[CPU_FEATURE_AVX2])
+		cpudata.CPUSupportedInstructionSets += "AVX2, ";
+	if (data.flags[CPU_FEATURE_AVX512F])
+		cpudata.CPUSupportedInstructionSets += "AVX512F, ";
+	if (data.flags[CPU_FEATURE_AVX512DQ])
+		cpudata.CPUSupportedInstructionSets += "AVX512DQ, ";
+	if (data.flags[CPU_FEATURE_AVX512PF])
+		cpudata.CPUSupportedInstructionSets += "AVX512PF, ";
+	if (data.flags[CPU_FEATURE_AVX512ER])
+		cpudata.CPUSupportedInstructionSets += "AVX512ER, ";
+	if (data.flags[CPU_FEATURE_AVX512CD])
+		cpudata.CPUSupportedInstructionSets += "AVX512CD, ";
+	if (data.flags[CPU_FEATURE_AVX512BW])
+		cpudata.CPUSupportedInstructionSets += "AVX512BW, ";
+	if (data.flags[CPU_FEATURE_AVX512VL])
+		cpudata.CPUSupportedInstructionSets += "AVX512VL, ";
+
+	cpudata.CPUSupportedInstructionSets.erase(cpudata.CPUSupportedInstructionSets.find_last_not_of(", ") + 1);
+
 	bCPUIDSuccess = TRUE;
 
 	return;

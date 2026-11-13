@@ -1079,6 +1079,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 
 	BOOL bPlugError = FALSE;
 	string sPlugError = "";
+	string sPlugErrorLC = "";
 	string sNote = "";
 	string sPlugin = "";
 	string sPluginType = "";	
@@ -1088,10 +1089,13 @@ void CAvisynthInfo::AVSCheckPlugins()
 	string sFailedDependencies = "";
 	string sHint = "";
 	string sMsg = "";
-
+	BOOL bMaxPlugsExceeded = FALSE;
 
 	for (uiPlugin = 0; uiPlugin < vPlugins.size(); uiPlugin++)
 	{
+		if (bMaxPlugsExceeded)
+			break;
+
 		sPlugin = vPlugins[uiPlugin];
 		spos = sPlugin.find("|");
 		if (spos < 3)
@@ -1119,6 +1123,11 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sPlugError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sPlugError);
 			bPlugError = TRUE;
+
+			sPlugErrorLC = sPlugError;
+			StrToLC(sPlugErrorLC);
+			if (sPlugErrorLC.find("too many plugins loaded") != std::string::npos)
+				bMaxPlugsExceeded = TRUE;
 		}
 
 		if (bPlugError)

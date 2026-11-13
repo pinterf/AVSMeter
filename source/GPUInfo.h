@@ -69,7 +69,6 @@ public:
 	string sError;
 
 private:
-	unsigned __int64 GetSTDTimer();
 	void StrToUC(string &s_string);
 	BOOL IsValidVersionNumber(string s_string);
 
