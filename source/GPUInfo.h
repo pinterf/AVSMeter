@@ -48,10 +48,11 @@ public:
 		string GPUZVersion;
 		string CardName;
 		string GPUName;
+		string VPEngineName;
 		string MemSize;
 		string OpenCLVersion;
 		string DriverVersion;
-		BOOL   NVVP;
+		BOOL   NVVPU;
 		BOOL   GeneralMem;
 		BOOL   DynamicMem;
 		BOOL   DedicatedMem;
@@ -67,6 +68,7 @@ public:
 
 private:
 	unsigned __int64 GetSTDTimer();
+	void StrToUC(string &s_string);
 	BOOL IsValidVersionNumber(string s_string);
 
 	#pragma pack(push, 1)
@@ -161,7 +163,7 @@ void CGPUInfo::ReadData()
 
 	BYTE nCUDA = 0;
 	double dCUDACaps = 0.0;
-	data.NVVP = FALSE;
+	data.NVVPU = FALSE;
 
 	if (IsValidVersionNumber(GPUZ_Version))
 		data.GPUZVersion = GPUZ_Version;
@@ -171,33 +173,116 @@ void CGPUInfo::ReadData()
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
 		char DefChar = ' ';
-		char szvalue[260];
-		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 260, &DefChar, NULL);
+		char szkey[512];
+		char szvalue[512];
+		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].key, -1, szkey, 511, &DefChar, NULL);
+		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 511, &DefChar, NULL);
+		string sKey(szkey);
 		string sValue(szvalue);
+		sKey.erase(sKey.find_last_not_of(" \t\n\r") + 1);
+		sKey.erase(0, sKey.find_first_not_of(" \t\n\r"));
 		sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
 		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
-		
+		StrToUC(sKey);
+
+		if (sKey == "")
+			continue;
+
 		if (sValue == "")
 			continue;
 
-		if (wcscmp(lpMem->data[i].key, L"CardName") == 0)
+		if (sKey == "CARDNAME")
 			data.CardName = sValue;
-		if (wcscmp(lpMem->data[i].key, L"GPUName") == 0)
+		if (sKey == "GPUNAME")
 			data.GPUName = sValue;
-		if (wcscmp(lpMem->data[i].key, L"MemSize") == 0)
+		if (sKey == "MEMSIZE")
 			data.MemSize = sValue;
-		if (wcscmp(lpMem->data[i].key, L"DriverVersion") == 0)
+		if (sKey == "DRIVERVERSION")
 			data.DriverVersion = sValue;
-		if (wcscmp(lpMem->data[i].key, L"OpenCL_Version") == 0)
+		if (sKey == "OPENCL_VERSION")
 			data.OpenCLVersion = sValue;
-		if (wcscmp(lpMem->data[i].key, L"CUDA") == 0)
-			nCUDA = (BYTE)atol(sValue.c_str());		
-		if (wcscmp(lpMem->data[i].key, L"CUDA_Capability") == 0)
-			dCUDACaps = atof(sValue.c_str());		
 	}
 	
-	if ((nCUDA != 0) && (dCUDACaps >= 1.0))
-		data.NVVP = TRUE;
+
+	if (data.GPUName == "G86")
+		data.VPEngineName = "VP2";
+	else if (data.GPUName == "G84")
+		data.VPEngineName = "VP2";
+	else if (data.GPUName == "G92")
+		data.VPEngineName = "VP2";
+	else if (data.GPUName == "G94")
+		data.VPEngineName = "VP2";
+	else if (data.GPUName == "GT200")
+		data.VPEngineName = "VP2";
+	else if (data.GPUName == "G96")
+		data.VPEngineName = "VP2";
+	else if (data.GPUName == "G98")
+		data.VPEngineName = "VP3";
+	else if (data.GPUName == "C77")
+		data.VPEngineName = "VP3";
+	else if (data.GPUName == "G96")
+		data.VPEngineName = "VP3";
+	else if (data.GPUName == "G98")
+		data.VPEngineName = "VP3";
+	else if (data.GPUName == "C79")
+		data.VPEngineName = "VP3";
+	else if (data.GPUName == "GT218")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GT216")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GT215")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF100")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF104")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF108")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF106")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF110")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF114")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF116")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GT218")
+		data.VPEngineName = "VP4";
+	else if (data.GPUName == "GF119")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GF117")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GK107")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GK104")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GK106")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GK110")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GK208")
+		data.VPEngineName = "VP5";
+	else if (data.GPUName == "GM107")
+		data.VPEngineName = "VP6";
+	else if (data.GPUName == "GM108")
+		data.VPEngineName = "VP6";
+	else if (data.GPUName == "GM204")
+		data.VPEngineName = "VP6";
+	else if (data.GPUName == "GM200")
+		data.VPEngineName = "VP6";
+	else if (data.GPUName == "GM206")
+		data.VPEngineName = "VP7";
+	else if (data.GPUName == "GP104")
+		data.VPEngineName = "VP8";
+	else if (data.GPUName == "GP106")
+		data.VPEngineName = "VP8";
+	else if (data.GPUName == "GP102")
+		data.VPEngineName = "VP8";
+	else
+		data.VPEngineName = "Unknown VPU";
+
+	if (data.VPEngineName != "Unknown VPU")
+		data.NVVPU = TRUE;
 
 	data.GeneralMem = FALSE;
 	data.DedicatedMem = FALSE;
@@ -209,9 +294,8 @@ void CGPUInfo::ReadData()
 
 void CGPUInfo::ReadSensors()
 {
-	//Min. update interval 300ms
 	static unsigned __int64 uiLastTimeRun;
-	if ((GetSTDTimer() - uiLastTimeRun) < 100)
+	if ((GetSTDTimer() - uiLastTimeRun) < 200)
 		return;
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
@@ -224,25 +308,33 @@ void CGPUInfo::ReadSensors()
 
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
-		if (wcscmp(lpMem->sensors[i].name, L"GPU Core Clock") == 0)
+		char DefChar = ' ';
+		char szsensor[512];
+		WideCharToMultiByte(CP_ACP, 0, lpMem->sensors[i].name, -1, szsensor, 511, &DefChar, NULL);
+		string sSensor(szsensor);
+		sSensor.erase(sSensor.find_last_not_of(" \t\n\r") + 1);
+		sSensor.erase(0, sSensor.find_first_not_of(" \t\n\r"));
+		StrToUC(sSensor);
+
+		if (sSensor == "GPU CORE CLOCK")
 			sensors.GPUClock = (WORD)(lpMem->sensors[i].value + 0.5);
-		if (wcscmp(lpMem->sensors[i].name, L"GPU Memory Clock") == 0)
+		if (sSensor == "GPU MEMORY CLOCK")
 			sensors.MEMClock = (WORD)(lpMem->sensors[i].value + 0.5);
-		if (wcscmp(lpMem->sensors[i].name, L"GPU Load") == 0)
+		if (sSensor == "GPU LOAD")
 			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
-		if ((data.NVVP) && (wcscmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))
+		if ((data.NVVPU) && (sSensor == "VIDEO ENGINE LOAD"))
 			sensors.VPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
-		if (wcscmp(lpMem->sensors[i].name, L"Memory Used") == 0)
+		if (sSensor == "MEMORY USED")
 		{
 			data.GeneralMem = TRUE;
 			sensors.MemoryUsedGeneral = (DWORD)(lpMem->sensors[i].value + 0.5);
 		}
-		if (wcscmp(lpMem->sensors[i].name, L"Memory Usage (Dedicated)") == 0)
+		if (sSensor == "MEMORY USAGE (DEDICATED)")
 		{
 			data.DedicatedMem = TRUE;
 			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);	
 		}
-		if (wcscmp(lpMem->sensors[i].name, L"Memory Usage (Dynamic)") == 0)
+		if (sSensor == "MEMORY USAGE (DYNAMIC)")
 		{
 			data.DynamicMem = TRUE;
 			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);	
@@ -314,5 +406,14 @@ BOOL CGPUInfo::IsValidVersionNumber(string s_string)
 	}
 
 	return TRUE;
+}
+
+
+void CGPUInfo::StrToUC(string &s_string)
+{
+	for (unsigned int i = 0; i < s_string.length(); i++)
+		s_string[i] = toupper(s_string[i]);
+
+	return;
 }
 

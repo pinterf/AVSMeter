@@ -19,6 +19,7 @@
 #pragma once
 
 #include "common.h"
+#include "cpuid\libcpuid.h"
 
 #define FG_BLACK    0
 #define FG_RED			FOREGROUND_RED
@@ -70,6 +71,17 @@ public:
 	string         GetFormattedSystemTime();
 	string         GetOSVersion();
 
+
+	//CPUID
+	BOOL           GetCPUID();
+	struct CPUData
+	{
+		string CPUName;
+		string CPUModel;
+		BYTE   CPUCores;
+		BYTE   CPULogicalCores;
+	} cpudata;
+
 	//string functions
 	string         StrFormat(const char* fmt, ...);
 	void           StrTrimLeft(string &s_string);
@@ -86,7 +98,7 @@ public:
 private:
 	HANDLE         hConsole;
 	WORD           wSaveAttributes;
-	char           CONSOLE_BUFFER[4096];
+	char           FMT_BUFFER[4096];
 };
 
 CUtils::CUtils()
@@ -189,16 +201,16 @@ string CUtils::StrFormat(const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	memset(CONSOLE_BUFFER, 0, sizeof(CONSOLE_BUFFER));
+	memset(FMT_BUFFER, 0, sizeof(FMT_BUFFER));
 
-	int result = vsprintf(CONSOLE_BUFFER, fmt, args);
+	int result = vsprintf(FMT_BUFFER, fmt, args);
 	if (result < 0)
 	{
 		va_end(args);
 		return "\nvsprintf buffer overflow\n";
 	}		
 
-	string str(CONSOLE_BUFFER);
+	string str(FMT_BUFFER);
 	va_end(args);
 
 	return str;
@@ -465,6 +477,29 @@ string CUtils::GetOSVersion()
 		sOSAddendum = StrFormat(" (Build %u)", osvi.dwBuildNumber);
 
 	return sOSVersion + sOSAddendum;
+}
+
+
+BOOL CUtils::GetCPUID()
+{
+	if (!cpuid_present())
+		return FALSE;
+
+	struct cpu_raw_data_t raw;
+	struct cpu_id_t data;
+
+	if (cpuid_get_raw_data(&raw) < 0)
+		return FALSE;
+
+	if (cpu_identify(&raw, &data) < 0)
+		return FALSE;
+
+	cpudata.CPUCores = (BYTE)data.num_cores;
+	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus;
+	cpudata.CPUModel = StrFormat("%s", data.cpu_codename);
+	cpudata.CPUName = StrFormat("%s", data.brand_str);
+
+	return TRUE;
 }
 
 

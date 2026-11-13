@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 	#endif
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2016 Groucho2004\n");
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2016, Groucho2004\n");
 
 	string sRet = ParseINIFile();
 	if (sRet != "")
@@ -406,37 +406,47 @@ int main(int argc, char* argv[])
 		utils.CursorUp(1);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
-		sOutBuf = utils.StrFormat("Log created with:            AVSMeter %s\n", sAVSMVersion.c_str());
+		sOutBuf = utils.StrFormat("Log created with:                 AVSMeter %s\n\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
 
-		sOutBuf = utils.StrFormat("OS version:                  %s\n", utils.GetOSVersion().c_str());
+		sOutBuf = utils.StrFormat("OS version:                       %s\n", utils.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		sOutBuf = utils.StrFormat("\nAvisynth version string:     %s\n", AvisynthInfo.sVersionString.c_str());
-		sLogBuffer += sOutBuf;
-		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
+		if (utils.GetCPUID())
+		{
+			sOutBuf = utils.StrFormat("CPU name:                         %s\n", utils.cpudata.CPUName.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU model:                        %s\n", utils.cpudata.CPUModel.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:   %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
+			sLogBuffer += sOutBuf;
+		}
 
-		sOutBuf = utils.StrFormat("File version:                %s\n", AvisynthInfo.sVersionNumber.c_str());		
-		sLogBuffer += sOutBuf;
-		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
-
-		sOutBuf = utils.StrFormat("Avisynth Interface Version:  %d\n", AvisynthInfo.iInterfaceVersion);
-		sLogBuffer += sOutBuf;
-		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
-
-		sOutBuf = utils.StrFormat("Muli-threading support:      %s\n", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
+		sOutBuf = utils.StrFormat("\nAvisynth version string:          %s\n", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Linker/compiler version:     %s\n", AvisynthInfo.sLinkerVersion.c_str());
+		sOutBuf = utils.StrFormat("File version:                     %s\n", AvisynthInfo.sVersionNumber.c_str());		
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth DLL location:       %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
+		sOutBuf = utils.StrFormat("Avisynth Interface Version:       %d\n", AvisynthInfo.iInterfaceVersion);
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth DLL time stamp:     %s\n", AvisynthInfo.sTimeStamp.c_str());
+		sOutBuf = utils.StrFormat("Multi-threading support:          %s\n", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
+		sLogBuffer += sOutBuf;
+		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
+
+		sOutBuf = utils.StrFormat("Linker/compiler version:          %s\n", AvisynthInfo.sLinkerVersion.c_str());
+		sLogBuffer += sOutBuf;
+		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
+
+		sOutBuf = utils.StrFormat("Avisynth DLL location:            %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
+		sLogBuffer += sOutBuf;
+		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
+
+		sOutBuf = utils.StrFormat("Avisynth DLL time stamp:          %s\n", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -447,7 +457,7 @@ int main(int argc, char* argv[])
 			if (sPluginDir != "")
 			{
 				size_t spos = sPluginDir.find(":\t");
-				sPluginDir = sPluginDir.substr(0, spos + 1) + "   " + sPluginDir.substr(spos + 2);
+				sPluginDir = sPluginDir.substr(0, spos + 1) + "        " + sPluginDir.substr(spos + 2);
 
 				sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
 				sLogBuffer += sOutBuf;
@@ -830,8 +840,18 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-		sOutBuf = utils.StrFormat("OS version:                            %s", utils.GetOSVersion().c_str());
-		sLogBuffer += sOutBuf + "\n\n";
+		sOutBuf = utils.StrFormat("\nOS version:                            %s", utils.GetOSVersion().c_str());
+		sLogBuffer += sOutBuf + "\n";
+
+		if (utils.GetCPUID())
+		{
+			sOutBuf = utils.StrFormat("CPU name:                              %s\n", utils.cpudata.CPUName.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU model:                             %s\n", utils.cpudata.CPUModel.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:        %u / %u\n\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
+			sLogBuffer += sOutBuf;
+		}
 
 		sOutBuf = utils.StrFormat("Avisynth version string:               %s", AvisynthInfo.sVersionString.c_str());
 		sLogBuffer += sOutBuf + "\n";
@@ -877,6 +897,11 @@ int main(int argc, char* argv[])
 			sGPUInfo += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("GPU name:                %s", gpuinfo.data.GPUName.c_str());
 			sGPUInfo += sOutBuf + "\n";
+			if (gpuinfo.data.NVVPU)
+			{
+				sOutBuf = utils.StrFormat("VPU version:             %s", gpuinfo.data.VPEngineName.c_str());
+				sGPUInfo += sOutBuf + "\n";
+			}
 			sOutBuf = utils.StrFormat("Memory size:             %s", gpuinfo.data.MemSize.c_str());
 			sGPUInfo += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("OpenCL version:          %s", gpuinfo.data.OpenCLVersion.c_str());
@@ -1320,10 +1345,6 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				++uiCursorOffset;
 
-				sOutBuf = utils.StrFormat("Graphics card name / GPU:       %s / %s", gpuinfo.data.CardName.c_str(), gpuinfo.data.GPUName.c_str());
-				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				++uiCursorOffset;
-
 				sOutBuf = utils.StrFormat("GPU core clock / Memory clock:  %u / %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
@@ -1332,9 +1353,9 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 
-				if (gpuinfo.data.NVVP)
+				if (gpuinfo.data.NVVPU)
 				{
-					sOutBuf = utils.StrFormat("Video engine load (cur | avg):  %u%% | %u%%", gpuinfo.sensors.VPULoad, uiVPUUsageAvg);
+					sOutBuf = utils.StrFormat("VPU usage (current | average):  %u%% | %u%%", gpuinfo.sensors.VPULoad, uiVPUUsageAvg);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 					++uiCursorOffset;
 				}
@@ -1462,10 +1483,6 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				sLogBuffer += "\n";
 
-				sOutBuf = utils.StrFormat("Graphics card name / GPU:       %s / %s", gpuinfo.data.CardName.c_str(), gpuinfo.data.GPUName.c_str());
-				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				sLogBuffer += sOutBuf + "\n";
-
 				sOutBuf = utils.StrFormat("GPU core clock / Memory clock:  %u / %u", dwMaxGPUClock, dwMaxGPUMemClock);
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
@@ -1474,9 +1491,9 @@ int main(int argc, char* argv[])
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				sLogBuffer += sOutBuf + "\n";
 
-				if (gpuinfo.data.NVVP)
+				if (gpuinfo.data.NVVPU)
 				{
-					sOutBuf = utils.StrFormat("Video engine load (average):    %u%%", uiVPUUsageAvg);
+					sOutBuf = utils.StrFormat("VPU usage (average):            %u%%", uiVPUUsageAvg);
 					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 					sLogBuffer += sOutBuf + "\n";
 				}
@@ -1598,7 +1615,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateLog)
 	{
-		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, gpuinfo.data.NVVP);
+		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, gpuinfo.data.NVVPU);
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
@@ -1609,7 +1626,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateCSV)
 	{
-		string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiPDIndex, uiFrameInterval, gpuinfo.data.NVVP);
+		string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiPDIndex, uiFrameInterval, gpuinfo.data.NVVPU);
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
@@ -2342,7 +2359,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
 			++uiFrame;
 			TDelta = timer.GetSTDTimer() - T0;
-			if ((TDelta >= 5.0) || (uiFrame == uiTotalFrames))
+			if ((TDelta >= 4.0) || (uiFrame == uiTotalFrames))
 				break;
 		}
 

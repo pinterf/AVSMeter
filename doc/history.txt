@@ -1,3 +1,9 @@
+v2.3.2
+- Added CPU info to log files (using Veselin Georgiev's LibCPUID)
+- Removed some redundant info from the console output/log
+- Added VP engine info for NVIDIA cards
+- Cosmetics
+
 v2.3.1
 - Added switch "-n" which disables the initial speed test.
 - Updated Avisynth header to the latest AVS+ version

@@ -66,7 +66,7 @@ private:
 	string  StrFormat(const char* fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
-	char    CONSOLE_BUFFER[4096];
+	char    FMT_BUFFER[4096];
 };
 
 
@@ -844,15 +844,15 @@ string CAvisynthInfo::StrFormat(const char* fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	memset(CONSOLE_BUFFER, 0, sizeof(CONSOLE_BUFFER));
-	int result = vsprintf(CONSOLE_BUFFER, fmt, args);
+	memset(FMT_BUFFER, 0, sizeof(FMT_BUFFER));
+	int result = vsprintf(FMT_BUFFER, fmt, args);
 	if (result < 0)
 	{
 		va_end(args);
 		return "\nvsprintf buffer overflow\n";
 	}		
 
-	string str(CONSOLE_BUFFER);
+	string str(FMT_BUFFER);
 	va_end(args);
 
 	return str;
