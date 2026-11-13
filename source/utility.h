@@ -56,6 +56,7 @@ public:
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
 	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
+
 	//string functions
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);

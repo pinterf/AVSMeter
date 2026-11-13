@@ -24,7 +24,9 @@ public:
 	{
 		WORD GPULoad;
 		WORD VPULoad;
-		DWORD MemoryUsed;
+		DWORD MemoryUsedGeneral;
+		DWORD MemoryUsedDedicated;
+		DWORD MemoryUsedDynamic;
 	} sensors;
 
 	struct Data
@@ -35,6 +37,9 @@ public:
 		string OpenCLVersion;
 		string DriverVersion;
 		BOOL   NVVP;
+		BOOL   GeneralMem;
+		BOOL   DynamicMem;
+		BOOL   DedicatedMem;
 	} data;
 
 	BOOL MemInit();
@@ -52,30 +57,28 @@ private:
 	unsigned __int64 uiLastTimeRun;
 
 	#pragma pack(push, 1)
+		typedef struct GPUZ_RECORD 
+		{
+			WCHAR key[256];
+			WCHAR value[256];
+		}	GPUZ_RECORD;
 
-	typedef struct GPUZ_RECORD 
-	{
-		WCHAR key[256];
-		WCHAR value[256];
-	}	GPUZ_RECORD;
+		typedef struct GPUZ_SENSOR_RECORD
+		{
+			WCHAR name[256];
+			WCHAR unit[8];
+			UINT32 digits;
+			double value;
+		} GPUZ_SENSOR_RECORD;
 
-	typedef struct GPUZ_SENSOR_RECORD
-	{
-		WCHAR name[256];
-		WCHAR unit[8];
-		UINT32 digits;
-		double value;
-	} GPUZ_SENSOR_RECORD;
-
-	typedef struct GPUZ_SH_MEM
-	{
-		UINT32 version;			// Version number, 1 for the struct here
-		volatile LONG busy;		// Is data being accessed?
-		UINT32 lastUpdate;		// GetTickCount() of last update
-		GPUZ_RECORD data[MAX_RECORDS];
-		GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
-	} GPUZ_SH_MEM, *LPGPUZ_SH_MEM;
-
+		typedef struct GPUZ_SH_MEM
+		{
+			UINT32 version;      // Version number, 1 for the struct here
+			volatile LONG busy;  // Is data being accessed?
+			UINT32 lastUpdate;   // GetTickCount() of last update
+			GPUZ_RECORD data[MAX_RECORDS];
+			GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
+		} GPUZ_SH_MEM, *LPGPUZ_SH_MEM;
 	#pragma pack(pop)
 
 	HANDLE hMapFile;
@@ -149,7 +152,7 @@ void CGPUInfo::ReadData()
 	double dCUDACaps = 0.0;
 	data.NVVP = FALSE;
 
-	for (int i = 0; i < 128; i++)
+	for (int i = 0; i < MAX_RECORDS; i++)
 	{
 		char DefChar = ' ';
 		char szvalue[260];
@@ -158,6 +161,9 @@ void CGPUInfo::ReadData()
 		sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
 		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
 		
+		if (sValue == "")
+			continue;
+
 		if (wcscmp(lpMem->data[i].key, L"CardName") == 0)
 			data.CardName = sValue;
 		if (wcscmp(lpMem->data[i].key, L"GPUName") == 0)
@@ -177,39 +183,49 @@ void CGPUInfo::ReadData()
 	if ((nCUDA != 0) && (dCUDACaps >= 1.0))
 		data.NVVP = TRUE;
 
+	data.GeneralMem = FALSE;
+	data.DedicatedMem = FALSE;
+	data.DynamicMem = FALSE;
+
 	return;
 }
 
 
 void CGPUInfo::ReadSensors()
 {
-	//Min. update interval 100ms
-	if ((GetSTDTimer() - uiLastTimeRun) < 100)
+	//Min. update interval 500ms
+	if ((GetSTDTimer() - uiLastTimeRun) < 500)
 		return;
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
-	WORD bDone = 0x0000;
-	for (int i = 0; i <128; i++)
+	sensors.GPULoad = 0;
+	sensors.MemoryUsedGeneral = 0;
+	sensors.MemoryUsedDedicated = 0;
+	sensors.MemoryUsedDynamic = 0;
+	sensors.VPULoad = 0;
+
+	for (int i = 0; i < MAX_RECORDS; i++)
 	{
 		if (wcscmp(lpMem->sensors[i].name, L"GPU Load") == 0)
-		{
 			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
-			bDone |= 0x000F;
-		}
+		if ((data.NVVP) && (wcscmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))
+			sensors.VPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
 		if (wcscmp(lpMem->sensors[i].name, L"Memory Used") == 0)
 		{
-			sensors.MemoryUsed = (DWORD)(lpMem->sensors[i].value + 0.5);	
-			bDone |= 0x00F0;
+			data.GeneralMem = TRUE;
+			sensors.MemoryUsedGeneral = (DWORD)(lpMem->sensors[i].value + 0.5);
 		}
-		if ((data.NVVP) && (wcscmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))
+		if (wcscmp(lpMem->sensors[i].name, L"Memory Usage (Dedicated)") == 0)
 		{
-			sensors.VPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
-			bDone |= 0x0F00;
+			data.DedicatedMem = TRUE;
+			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);	
 		}
-
-		if (bDone == 0x0FFF)
-			break;
+		if (wcscmp(lpMem->sensors[i].name, L"Memory Usage (Dynamic)") == 0)
+		{
+			data.DynamicMem = TRUE;
+			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);	
+		}
 	}
 
 	uiLastTimeRun = GetSTDTimer();

@@ -26,6 +26,7 @@ const AVS_Linkage *AVS_linkage = 0;
 struct _AvisynthInfo
 {
 	string sDLLPath;
+	string sPluginDir;
 	BOOL   bIs64BitVersion;
 	int    iInterfaceVersion;
 	string sVersion;
@@ -97,6 +98,8 @@ int main(int argc, char* argv[])
 
 	int iRet = 0;
 	string sAVSMVersion = utils.GetFileVersion("");
+	if (sAVSMVersion.length() > 5)
+		sAVSMVersion = sAVSMVersion.substr(0, 5);
 
 	#ifdef AVS64
 		sAVSMVersion += " (x64)";
@@ -337,9 +340,37 @@ int main(int argc, char* argv[])
 	{
 		if (!gpuinfo.bGPUZIsRunning)
 		{
-			PrintFmt(STD_ERR, COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\nStart GPU-Z and try again.\n");
-			Pause();
-			return -1;
+			PrintFmt(STD_ERR, COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\n");
+			PrintFmt(STD_ERR, COLOR_EMPHASIS, "Continue without GPU monitoring? [y/n]");
+
+			for (;;)
+			{
+				Sleep(100);
+				if (_kbhit())
+				{
+					int iKey = _getch();
+					if ((iKey == 0x59) || (iKey == 0x79)) //y
+					{
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						Settings.bMonitorGPULoad = FALSE;
+						break;
+					}
+					else if ((iKey == 0x4E) || (iKey == 0x6E)) //n
+					{
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						Pause();
+						return -1;
+					}
+					else
+						continue;
+				}
+			}
 		}
 		else
 		{
@@ -446,7 +477,10 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
+		IScriptEnvironment* AVS_env;
+
+		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			PrintFmt(STD_ERR, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
@@ -454,7 +488,7 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
-		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			PrintFmt(STD_ERR, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
@@ -513,6 +547,12 @@ int main(int argc, char* argv[])
 
 		sOutBuf = utils.StrFormat("Avisynth DLL location:   %s", AvisynthInfo.sDLLPath.c_str());
 		sLogBuffer += sOutBuf + "\n";
+
+		if (AvisynthInfo.sPluginDir != "")
+		{
+			sOutBuf = utils.StrFormat("Plugin directory:        %s", AvisynthInfo.sPluginDir.c_str());
+			sLogBuffer += sOutBuf + "\n";
+		}
 
 		PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
@@ -691,7 +731,7 @@ int main(int argc, char* argv[])
 		else
 		{
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-			PrintFmt(STD_ERR, COLOR_ERROR, "\rInvalid frame range specified in INI file:\n", sOutBuf.c_str());
+			PrintFmt(STD_ERR, COLOR_ERROR, "\rInvalid frame range specified:\n");
 			PrintFmt(STD_ERR, COLOR_ERROR, "\r\"%s\"\n", Settings.sFrameRange.c_str());
 			PrintFmt(STD_ERR, COLOR_EMPHASIS, "\rProceed with default (%u,%u)? [y/n]", uiFirstFrame, uiLastFrame);
 
@@ -700,20 +740,24 @@ int main(int argc, char* argv[])
 				Sleep(100);
 				if (_kbhit())
 				{
-					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-					utils.CursorUp(1);
-					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-					utils.CursorUp(1);
-					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-
 					int iKey = _getch();
-					if ((iKey == 0x59) || (iKey == 0x79))
+					if ((iKey == 0x59) || (iKey == 0x79)) //y
 					{
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Reading frame(s)...").c_str());
 						break;
 					}
-					else
+					else if ((iKey == 0x4E) || (iKey == 0x6E)) //n
 					{
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 						AVS_clip = 0;
 						AVS_main = 0;
@@ -737,6 +781,8 @@ int main(int argc, char* argv[])
 						Pause();
 						return 0;
 					}
+					else
+						continue;
 				}
 			}
 
@@ -913,9 +959,26 @@ int main(int argc, char* argv[])
 					++uiCursorOffset;
 				}
 
-				sOutBuf = utils.StrFormat("GPU memory usage:               %u MB", gpuinfo.sensors.MemoryUsed);
-				PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				++uiCursorOffset;
+				if (gpuinfo.data.GeneralMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage:               %u MB", gpuinfo.sensors.MemoryUsedGeneral);
+					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
+
+				if (gpuinfo.data.DedicatedMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):   %u MB", gpuinfo.sensors.MemoryUsedDedicated);
+					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
+
+				if (gpuinfo.data.DynamicMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):     %u MB", gpuinfo.sensors.MemoryUsedDynamic);
+					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
 			}
 
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
@@ -1003,9 +1066,26 @@ int main(int argc, char* argv[])
 					sLogBuffer += sOutBuf + "\n";
 				}
 
-				sOutBuf = utils.StrFormat("GPU memory usage:               %u MB", gpuinfo.sensors.MemoryUsed);
-				PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				sLogBuffer += sOutBuf + "\n";
+				if (gpuinfo.data.GeneralMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage:               %u MB", gpuinfo.sensors.MemoryUsedGeneral);
+					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					sLogBuffer += sOutBuf + "\n";
+				}
+
+				if (gpuinfo.data.DedicatedMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):   %u MB", gpuinfo.sensors.MemoryUsedDedicated);
+					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					sLogBuffer += sOutBuf + "\n";
+				}
+
+				if (gpuinfo.data.DynamicMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):     %u MB", gpuinfo.sensors.MemoryUsedDynamic);
+					PrintFmt(STD_ERR, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					sLogBuffer += sOutBuf + "\n";
+				}
 			}
 
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
@@ -1133,6 +1213,8 @@ string ParseINIFile()
 	Settings.bProcessPriority = 2;
 
 	string sAVSMVersion = utils.GetFileVersion("");
+	if (sAVSMVersion.length() > 5)
+		sAVSMVersion = sAVSMVersion.substr(0, 5);
 
 	string sCurrentLine = "";
 	BOOL bNewVersion = TRUE;
@@ -1154,7 +1236,7 @@ string ParseINIFile()
 
 			if (sCurrentLine.substr(0, 15) == "avsmeterversion")
 			{
-				if (sCurrentLine.substr(sCurrentLine.length() - 7) == sAVSMVersion)
+				if (sCurrentLine.substr(sCurrentLine.length() - 5) == sAVSMVersion)
 				{
 					bNewVersion = FALSE;
 					break;
@@ -1347,7 +1429,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 
 	sLog = s_logbuffer + "\n";
 	hLogFile << sLog;
-	sLog = "\n[Script]\n" + sAVSBuffer + "\n";
+	sLog = "\n[Script]\n" + sAVSBuffer + "\n\n";
 	hLogFile << sLog;
 
 	if (Settings.bMonitorGPULoad)
@@ -1424,14 +1506,17 @@ unsigned __stdcall CalculateFrameInterval(void* pParam)
 
 	try
 	{
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(p->hAVSDLL, "CreateScriptEnvironment");
+		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
+		IScriptEnvironment* AVS_env;
+
+		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(p->hAVSDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			p->sAVSError = "Failed to load CreateScriptEnvironment()";
 			_endthreadex(0);
 		}
 
-		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			p->sAVSError = "Could not create IScriptenvironment";
@@ -1439,6 +1524,7 @@ unsigned __stdcall CalculateFrameInterval(void* pParam)
 		}
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
+
 		AVSValue AVS_main;
 		p->sStatus = "Loading script...";
 		AVS_main = AVS_env->Invoke("Import", p->sAVSFile.c_str());
@@ -1557,7 +1643,10 @@ int GetAVSInterfaceVersion(string &s_ErrorMsg)
 
 	try
 	{
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
+		IScriptEnvironment* AVS_env;
+
+		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
@@ -1566,7 +1655,7 @@ int GetAVSInterfaceVersion(string &s_ErrorMsg)
 		}
 
 		iInterfaceVersion = 5;
-		IScriptEnvironment *AVS_env = CreateEnvironment(iInterfaceVersion);
+		AVS_env = CreateEnvironment(iInterfaceVersion);
 		if (!AVS_env)
 		{
 			s_ErrorMsg = "Could not create IScriptenvironment (AVISYNTH_INTERFACE_VERSION = 5)";
@@ -1612,6 +1701,7 @@ int GetAVSInterfaceVersion(string &s_ErrorMsg)
 BOOL GetAvisynthInfo(string &s_ErrorMsg)
 {
 	AvisynthInfo.sDLLPath = "";
+	AvisynthInfo.sPluginDir = "";
 	AvisynthInfo.bIs64BitVersion = FALSE;
 	AvisynthInfo.bIsMTVersion = FALSE;
 	AvisynthInfo.iInterfaceVersion = 0;
@@ -1731,7 +1821,10 @@ BOOL GetAvisynthInfo(string &s_ErrorMsg)
 
 	try
 	{
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		typedef IScriptEnvironment* (__stdcall *DLLFUNC)(int);
+		IScriptEnvironment* AVS_env;
+
+		DLLFUNC CreateEnvironment = (DLLFUNC)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
@@ -1739,7 +1832,7 @@ BOOL GetAvisynthInfo(string &s_ErrorMsg)
 			return FALSE;
 		}
 
-		IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 		if (!AVS_env)
 		{
 			s_ErrorMsg = "Could not create IScriptenvironment";
@@ -1748,20 +1841,29 @@ BOOL GetAvisynthInfo(string &s_ErrorMsg)
 		}
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
-		AVSValue AVS_main;
+		AVSValue foo;
 		try
 		{
-			AVS_main = AVS_env->Invoke("VersionString", AVSValue(&AVS_main, 0));
-			AvisynthInfo.sVersionString = utils.StrFormat("%s", AVS_main.AsString());
+			AvisynthInfo.sVersionString = utils.StrFormat("%s", AVS_env->Invoke("VersionString", AVSValue(&foo, 0)).AsString());
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
+			AvisynthInfo.sVersionString = "Unknown Avisynth Version";
+		}
+
+		try
+		{
+			AvisynthInfo.sPluginDir = utils.StrFormat("%s", (char*)AVS_env->GetVar("$PluginDir$").AsString());
+		}
+		catch (...)
+		{
+			AvisynthInfo.sPluginDir = "";
 		}
 
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			AvisynthInfo.bIsMTVersion = TRUE;
 
-		AVS_main = 0;
+		foo = 0;
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
