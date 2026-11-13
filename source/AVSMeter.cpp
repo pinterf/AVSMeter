@@ -30,6 +30,7 @@
 
 #define REFRESH_INTERVAL 0.25
 
+
 class CSettings
 {
 public:
@@ -1367,7 +1368,7 @@ string ParseINIFile()
 	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
-	Settings.bDisplayEfficiencyIndex = TRUE;
+	Settings.bDisplayEfficiencyIndex = FALSE;
 	Settings.bCreateLog = FALSE;
 	Settings.bCreateCSV = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
@@ -1433,7 +1434,7 @@ string ParseINIFile()
 		hINIFile << "AVSDLL=\n";
 		hINIFile << "DisplayFPS=1\n";
 		hINIFile << "DisplayTPF=0\n";
-		hINIFile << "DisplayEfficiencyIndex=1\n";
+		hINIFile << "DisplayEfficiencyIndex=0\n";
 		hINIFile << "CreateLog=0\n";
 		hINIFile << "CreateCSV=0\n";
 		hINIFile << "PauseBeforeExit=0\n";
@@ -1494,8 +1495,8 @@ string ParseINIFile()
 
 		if (sCurrentLine.substr(0, 22) == "displayefficiencyindex")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bDisplayEfficiencyIndex = FALSE;
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
+				Settings.bDisplayEfficiencyIndex = TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 9) == "createlog")
@@ -1878,30 +1879,28 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		else
 			s_avserror = "Script runtime is too short for accurate measurements";
 
-		uiFrameInterval = 50000;
+		uiFrameInterval = 20000;
 		if (dAverageFrameTime >   0.001)
-			uiFrameInterval = 20000;
-		if (dAverageFrameTime >   0.002)
 			uiFrameInterval = 10000;
-		if (dAverageFrameTime >   0.004)
+		if (dAverageFrameTime >   0.002)
 			uiFrameInterval = 5000;
-		if (dAverageFrameTime >   0.010)
+		if (dAverageFrameTime >   0.005)
 			uiFrameInterval = 2000;
-		if (dAverageFrameTime >   0.020)
+		if (dAverageFrameTime >   0.010)
 			uiFrameInterval = 1000;
-		if (dAverageFrameTime >   0.040)
+		if (dAverageFrameTime >   0.020)
 			uiFrameInterval = 500;
-		if (dAverageFrameTime >   0.100)
+		if (dAverageFrameTime >   0.050)
 			uiFrameInterval = 200;
-		if (dAverageFrameTime >   0.200)
+		if (dAverageFrameTime >   0.100)
 			uiFrameInterval = 100;
-		if (dAverageFrameTime >   0.400)
+		if (dAverageFrameTime >   0.200)
 			uiFrameInterval = 50;
-		if (dAverageFrameTime >   1.000)
+		if (dAverageFrameTime >   0.500)
 			uiFrameInterval = 20;
-		if (dAverageFrameTime >   2.000)
+		if (dAverageFrameTime >   1.000)
 			uiFrameInterval = 10;
-		if (dAverageFrameTime >  20.000)
+		if (dAverageFrameTime >  10.000)
 			uiFrameInterval = 1;
 
 		AVS_clip = 0;

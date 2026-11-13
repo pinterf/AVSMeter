@@ -35,13 +35,16 @@
     testing filters/plugins to evaluate their performance and memory
     requirements.<br>
     <b><br>
-      <img alt="" src="avsmeter.png" width="652" height="511"><br>
+      <img alt="" src="avsmeter.png" height="511" width="652"><br>
       <br>
     </b><br>
     <font face="Fixedsys"><big>Usage:&nbsp; AVSMeter script.avs
         [switches]<br>
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
 
 
 
@@ -62,6 +65,9 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
 
 
 
@@ -118,6 +124,9 @@
 
 
 
+
+
+
           Set process priority (1:low, 2:normal, 3:high)<br>
         </font></font></big><b><big><font face="Courier New"><br>
         </font></big></b><br>
@@ -128,16 +137,18 @@
     <br>
     (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
     Creates a log file with various details about the installed Avisynth
-    version, clip details, runtime results, a copy of the script and a
+    version, clip info, runtime results, a copy of the script and a
     performance data table with the measured details about each
-    frame/frame interval. <br>
+    frame/frame interval. The log file is created in the same directory
+    as the script.<br>
     <b><i>Note:</i></b> The numbering of the frames in the performance
     data section is not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
     (<b><code><font color="#ff0000"><big>3</big></font></code></b>)
-    Creates a .csv file containing the performance data formatted as
+    Creates a CSV file containing the performance data formatted as
     comma-separated values for direct import in Excel or a similar
-    spread sheet program (OpenOffice, LibreOffice).<br>
+    spread sheet program (OpenOffice, LibreOffice). The CSV file is
+    created in the same directory as the script.<br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -156,9 +167,12 @@
     (<b><code><font color="#ff0000"><big>6</big></font></code></b>)
     Specify a time limit (in seconds) after which the program stops
     reading frames and terminates.<br>
-    <b><br>
+    <br>
+    <b><font color="#3333ff"><big><b><i>Note:</i></b> Command line
+          switches override INI settings.</big></font><br>
       <br>
-      <u> INI file settings</u></b><br>
+      <u> <br>
+        INI file settings</u></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
     the default settings.<br>
@@ -196,18 +210,18 @@
     <b><br>
       "CreateLog" (<font color="Red">0</font> or 1):</b><br>
     Creates a log file with various details about the installed Avisynth
-    version, clip details, runtime results, a copy of the script and a
+    version, clip info, runtime results, a copy of the script and a
     performance data table with the measured details about each
-    frame/frame interval. <br>
-    <b><i>Note1:</i></b> The command line switch "-log" or "-l"
-    overrides the INI setting.<br>
-    <b><i>Note2:</i></b> The numbering of the frames in the performance
+    frame/frame interval. The log file is created in the same directory
+    as the script. <br>
+    <b><i>Note:</i></b> The numbering of the frames in the performance
     data section is not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
     <b> "CreateCSV" (<font color="Red">0</font> or 1):</b><br>
-    Creates a .csv file containing the performance data formatted as
+    Creates a CSV file containing the performance data formatted as
     comma-separated values for direct import in Excel or a similar
-    spread sheet program (OpenOffice, LibreOffice).<br>
+    spread sheet program (OpenOffice, LibreOffice). The CSV file is
+    created in the same directory as the script.<br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -225,8 +239,6 @@
       color="Red"><b>0,-1</b></font>" processes all frames in the
     script. "FrameRange=1500,1999" processes 500 frames starting at
     frame 1500.<br>
-    <b><i>Note:</i></b> The command line switch "-range" overrides the
-    INI setting.<br>
     <b><br>
       "InvokeDistributor" (0 or <font color="Red">1</font>):</b><br>
     For users of SEt's Avisynth MT: If set to "1", adds the
@@ -253,15 +265,11 @@
     to access the graphics card sensors through a shared memory space.
     GPU-Z has to be running (the window can be minimized to the system
     tray) before running AVSMeter.<br>
-    <b><i>Note:</i></b> The command line switch "-gpu" overrides the INI
-    setting.<br>
     <br>
     <b>"ProcessPriority</b><b>" (1</b><b><b><b>, <font color="#ff0000">2</font>
           or 3</b></b>):</b><br>
     Specify the process priority for AVSMeter and all attached processes
     (1: low, 2: normal, 3: high).<br>
-    <b><i>Note:</i></b> The command line switch "-priority" overrides
-    the INI setting.<br>
     <br>
     <b>"TimeLimit</b><b>" (1 - 999999</b><b><b><b></b></b>):</b><br>
     Specify a time limit (in seconds) after which the program stops
@@ -269,8 +277,6 @@
     disables this feature. This setting is ignored when the program is
     invoked with the "-i" ("-info") switch which only determines the
     clip properties.<br>
-    <b><i>Note:</i></b> The command line switch "-timelimit" overrides
-    the INI setting.<br>
     <br>
     <br>
   </body>

@@ -669,18 +669,34 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 
 string CAvisynthInfo::GetTimeStamp(string s_file)
 {
-	WIN32_FIND_DATA fd;
-	HANDLE hFile = FindFirstFile(s_file.c_str(), &fd); 
-
+	HANDLE hFile = CreateFile(s_file.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 		return "Cannot determine timestamp";
 
-	FindClose(hFile);
+	FILETIME ftCreate, ftAccess, ftWrite, ftLocal;
+	SYSTEMTIME fTime;
 
-	SYSTEMTIME sysTime;
-	FileTimeToSystemTime(&fd.ftLastWriteTime, &sysTime);
+	if (!GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite))
+	{
+		CloseHandle(hFile);
+		return "Cannot determine timestamp";
+	}
 
-	return StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond);
+	if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal))
+	{
+		CloseHandle(hFile);
+		return "Cannot determine timestamp";
+	}
+
+	if (!FileTimeToSystemTime(&ftLocal, &fTime))
+	{
+		CloseHandle(hFile);
+		return "Cannot determine timestamp";
+	}
+
+	CloseHandle(hFile);
+	
+	return StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
 }
 
 

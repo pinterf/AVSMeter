@@ -105,8 +105,8 @@ void CProcessInfo::Update()
 	else
 		wCPUUsage = (WORD)btCPUUsage;
 
-	//Min. update interval 1000ms
-	if ((GetSTDTimer() - uiLastTimeRunTC) > 1000)
+	//Min. update interval 5000ms
+	if ((GetSTDTimer() - uiLastTimeRunTC) > 5000)
 	{
 		wThreadCount = GetCurrentThreadCount();
 		uiLastTimeRunTC = GetSTDTimer();

@@ -1,8 +1,13 @@
+v2.1.6
+- "Efficiency index" ini setting disabled by default
+- Minor tweaks
+- Documentation update
+
 v2.1.5
 - Added "Efficiency index" display (FPS / CPU usage)
 
 v2.1.4
-- Fixed a problem with the time stamp determination of avisynth.dll
+- Fixed a problem with the time stamp determination
 - Fixed a minor timing issue
 - Some cosmetic improvements
 
