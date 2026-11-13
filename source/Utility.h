@@ -1,6 +1,3 @@
-#if !defined(_UTILITY_H)
-#define _UTILITY_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -17,6 +14,9 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
+
+#if !defined(_UTILITY_H)
+#define _UTILITY_H
 
 #include "common.h"
 
@@ -68,7 +68,7 @@ public:
 	string         GetFileTimeStamp(string s_file);
 	BOOL           FileExists(string s_file);
 	BOOL           DirectoryExists(string s_dir);
-	string         GetRealFilePath(string s_filepath);
+	string         GetWOW64FilePath(string s_filepath);
 
 	//Console functions
 	int            GetConsoleWidth();
@@ -87,7 +87,7 @@ public:
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatTPF(double d_frametime);
 	string         StrAnsiToOEM(string s_string);
-	void           StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups);
+	void           StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, BOOL b_removedups);
 	BOOL           IsNumeric(string s_string);
 
 private:
@@ -116,21 +116,14 @@ CUtils::~CUtils()
 string CUtils::SysErrorMessage()
 {
 	DWORD dwLastError = GetLastError();
-	LPTSTR msgBuf;
-
 	if (dwLastError == ERROR_SUCCESS)
 		return "";
 
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-								NULL,
-								dwLastError,
-								MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-								(LPTSTR)&msgBuf,
-								0,
-								NULL);
+	char msgBuf[2048];
+	memset(msgBuf, 0, sizeof(msgBuf));
+	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msgBuf, 2046, NULL);
 
 	string sRet(msgBuf);
-	LocalFree(msgBuf);
 	sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
 	sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
 
@@ -178,7 +171,6 @@ __int64 CUtils::FileSize(string s_file)
 {
 	WIN32_FIND_DATA fd;
 	__int64 iSize = -1;
-
 	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
 	if (hFind != INVALID_HANDLE_VALUE)
 		iSize =	(((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
@@ -193,9 +185,9 @@ BOOL CUtils::FileExists(string s_file)
 {
 	DWORD dwAttrib;
 	dwAttrib = ::GetFileAttributes(s_file.c_str());
+
 	if (dwAttrib == 0xFFFFFFFF)
 		return FALSE;
-
 	if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
 		return FALSE;
 
@@ -209,7 +201,6 @@ BOOL CUtils::DirectoryExists(string s_dir)
 	dwAttrib = ::GetFileAttributes(s_dir.c_str());
 	if (dwAttrib == 0xFFFFFFFF)
 		return FALSE;
-
 	if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
 		return TRUE;
 
@@ -221,7 +212,7 @@ string CUtils::GetFileTimeStamp(string s_file)
 {
 	string sTimeStamp = "";
 	WIN32_FIND_DATA fd;
-	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd); 
+	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
 
 	if (hFind == INVALID_HANDLE_VALUE)
 		return "Cannot determine timestamp";
@@ -244,18 +235,20 @@ string CUtils::GetFileTimeStamp(string s_file)
 
 string CUtils::StrFormat(char const *fmt, ...)
 {
+	#define MIN_BUF_SIZE   256
 	#define MAX_BUF_SIZE 16384
 	va_list args;
 	va_start(args, fmt);
-
-	vector<char> buffer(256);
+	vector<char> buffer(MIN_BUF_SIZE);
 	int iRet = -1;
-	while (iRet == -1)
+
+	for (;;)
 	{
 		iRet = _vsnprintf(&buffer[0], buffer.size() - 1, fmt, args);
-
 		if (iRet == -1)
 			buffer.resize(buffer.size() * 2);
+		else
+			break;
 
 		if (buffer.size() > MAX_BUF_SIZE)
 		{
@@ -263,6 +256,7 @@ string CUtils::StrFormat(char const *fmt, ...)
 			return "buffer overflow";
 		}
 	}
+
 	buffer[buffer.size() - 1] = '\0';
 	string sRet = &buffer[0];
 	va_end(args);
@@ -310,7 +304,6 @@ void CUtils::StrToLC(string &s_string)
 string CUtils::StrPad(string s_line)
 {
 	int iPadLen = GetConsoleWidth() - (int)s_line.length();
-
 	if ((iPadLen <= 0) || (iPadLen > 1000))
 		return s_line;
 
@@ -324,14 +317,10 @@ string CUtils::StrFormatFPS(double d_fps)
 {
 	string sRet = "";
 
-	if (d_fps < 9.999)
-		sRet = StrFormat("%.3f", d_fps);
-	else if (d_fps < 99.99)
-		sRet = StrFormat("%.2f", d_fps);
-	else if (d_fps < 999.9)
-		sRet = StrFormat("%.1f", d_fps);
-	else
-		sRet = StrFormat("%u", (unsigned int)(d_fps + 0.5));
+	if (d_fps < 9.999)      sRet = StrFormat("%.3f", d_fps);
+	else if (d_fps < 99.99) sRet = StrFormat("%.2f", d_fps);
+	else if (d_fps < 999.9) sRet = StrFormat("%.1f", d_fps);
+	else                    sRet = StrFormat("%u", (unsigned int)(d_fps + 0.5));
 
 	return sRet;
 }
@@ -341,18 +330,12 @@ string CUtils::StrFormatTPF(double d_frametime)
 {
 	string sRet = "";
 
-	if (d_frametime < 0.1)
-		sRet = StrFormat("%.5f", d_frametime);
-	else if (d_frametime < 1.0)
-		sRet = StrFormat("%.4f", d_frametime);
-	else if (d_frametime < 10.0)
-		sRet = StrFormat("%.3f", d_frametime);
-	else if (d_frametime < 100.0)
-		sRet = StrFormat("%.2f", d_frametime);
-	else if (d_frametime < 1000.0)
-		sRet = StrFormat("%.1f", d_frametime);
-	else
-		sRet = StrFormat("%u", (unsigned int)(d_frametime + 0.5));
+	if (d_frametime < 0.1)         sRet = StrFormat("%.5f", d_frametime);
+	else if (d_frametime < 1.0)    sRet = StrFormat("%.4f", d_frametime);
+	else if (d_frametime < 10.0)   sRet = StrFormat("%.3f", d_frametime);
+	else if (d_frametime < 100.0)  sRet = StrFormat("%.2f", d_frametime);
+	else if (d_frametime < 1000.0) sRet = StrFormat("%.1f", d_frametime);
+	else                           sRet = StrFormat("%u", (unsigned int)(d_frametime + 0.5));
 
 	return sRet;
 }
@@ -402,7 +385,6 @@ string CUtils::GetFileVersion(string s_file)
 
 	if (sFileVersion != "0.0.0.0")
 		return sFileVersion;
-
 	if (sProductVersion != "0.0.0.0")
 		return sProductVersion;
 
@@ -440,27 +422,28 @@ BOOL CUtils::IsNumeric(string s_string)
 }
 
 
-void CUtils::StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups)
+void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, BOOL b_removedups)
 {
-	set <string> mDuplicates;
-	mDuplicates.insert("Dummy_Dummy_Dummy");
+	StrTrim(s_string);
 	string sToken = "";
-	string sTemp = "";
-	size_t current;
+	string sTokenLC = "";
+	set <string> mDuplicates;
+
+	size_t current = 0;
 	size_t next = -1;
 	do
 	{
 		current = next + 1;
-		next = s_string.find_first_of(s_separator, current);
+		next = s_string.find_first_of(s_delimiter, current);
 		sToken = s_string.substr(current, next - current);
 		StrTrim(sToken);
-		sTemp = sToken;
-		StrToLC(sTemp);
-		if ((sToken != "") && (mDuplicates.find(sTemp) == mDuplicates.end()))
+		sTokenLC = sToken;
+		StrToLC(sTokenLC);
+		if ((sToken != "") && (mDuplicates.find(sTokenLC) == mDuplicates.end()))
 		{
-			Tokens.push_back(sToken);
+			tokens.push_back(sToken);
 			if (b_removedups)
-				mDuplicates.insert(sTemp);
+				mDuplicates.insert(sTokenLC);
 		}
 	}
 	while (next != string::npos);
@@ -478,7 +461,7 @@ string CUtils::StrAnsiToOEM(string s_string)
 }
 
 
-string CUtils::GetRealFilePath(string s_filepath)
+string CUtils::GetWOW64FilePath(string s_filepath)
 {
 	string sRealFilePath = s_filepath;
 
@@ -512,10 +495,6 @@ string CUtils::GetRealFilePath(string s_filepath)
 			typedef UINT (WINAPI *LPFN_GETSYSTEMWOW64DIRECTORY)(LPTSTR, UINT);
 			LPFN_GETSYSTEMWOW64DIRECTORY getSystemWow64Directory;
 
-			HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-			if (hKernel32 == NULL)
-				return sRealFilePath;
-
 			getSystemWow64Directory = (LPFN_GETSYSTEMWOW64DIRECTORY)GetProcAddress(hKernel32, "GetSystemWow64DirectoryA");
 			if (getSystemWow64Directory == NULL)
 				return sRealFilePath;
@@ -533,4 +512,3 @@ string CUtils::GetRealFilePath(string s_filepath)
 
 
 #endif //_UTILITY_H
-

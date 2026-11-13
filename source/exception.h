@@ -1,6 +1,3 @@
-#if !defined(_EXCEPTION_H)
-#define _EXCEPTION_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -18,6 +15,9 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if !defined(_EXCEPTION_H)
+#define _EXCEPTION_H
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -33,8 +33,11 @@
 //	volatile int *pInt = 0x00000000;
 //	*pInt = 20;
 
+string GetWOW64FilePath(string s_filepath);
+string GetExceptionModule(LPVOID address);
+void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept);
 
-string GetRealFilePath(string s_filepath)
+string GetWOW64FilePath(string s_filepath)
 {
 	string sRealFilePath = s_filepath;
 
@@ -43,8 +46,7 @@ string GetRealFilePath(string s_filepath)
 	LPFN_ISWOW64PROCESS fnIsWow64Process;
 
 	HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-	if (hKernel32 == NULL)
-		return sRealFilePath;
+	if (hKernel32 == NULL) return sRealFilePath;
 
 	fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
 	if (fnIsWow64Process != NULL)
@@ -68,13 +70,8 @@ string GetRealFilePath(string s_filepath)
 			typedef UINT (WINAPI *LPFN_GETSYSTEMWOW64DIRECTORY)(LPTSTR, UINT);
 			LPFN_GETSYSTEMWOW64DIRECTORY getSystemWow64Directory;
 
-			HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-			if (hKernel32 == NULL)
-				return sRealFilePath;
-
 			getSystemWow64Directory = (LPFN_GETSYSTEMWOW64DIRECTORY)GetProcAddress(hKernel32, "GetSystemWow64DirectoryA");
-			if (getSystemWow64Directory == NULL)
-				return sRealFilePath;
+			if (getSystemWow64Directory == NULL) return sRealFilePath;
 
 			if (getSystemWow64Directory(szSysWOW64Directory, sizeof(szSysWOW64Directory)) > 1)
 			{
@@ -111,14 +108,12 @@ string GetExceptionModule(LPVOID address)
 		}
 	}
 
-	if (iCurModule == -1)
-		return "";
+	if (iCurModule == -1) return "";
 
-	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH))
-		return "";
+	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH)) return "";
 
 	string sModule(modulename);
-	sModule = GetRealFilePath(sModule);
+	sModule = GetWOW64FilePath(sModule);
 
 	return sModule;
 }
@@ -131,8 +126,7 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 	string sExceptionName = "Unknown system exception";
 	string sExceptionModule = GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress);
 
-	if (sExceptionModule == "")
-		sExceptionModule = "Cannot determine module";
+	if (sExceptionModule == "") sExceptionModule = "Cannot determine module";
 
 	switch (pExcept->ExceptionRecord->ExceptionCode)
 	{
@@ -228,4 +222,3 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 
 
 #endif //_EXCEPTION_H
-

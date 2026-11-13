@@ -1,6 +1,3 @@
-#if !defined(_AVISYNTHINFO_H)
-#define _AVISYNTHINFO_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -17,6 +14,9 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
+
+#if !defined(_AVISYNTHINFO_H)
+#define _AVISYNTHINFO_H
 
 #include "common.h"
 #include "exception.h"
@@ -44,7 +44,7 @@ public:
 	BOOL    bIs64BitAVSDLL;
 	BOOL    bLoadError;
 	BOOL    bIsAVSPlus;
-	BOOL    bIsMTVersion;	
+	BOOL    bIsMTVersion;
 	virtual ~CAvisynthInfo();
 
 private:
@@ -52,7 +52,7 @@ private:
 	int            GetInterfaceVersion(string &s_ErrorMsg);
   void           EnumPluginDirs();
 	void           EnumPluginDLLs();
-	BOOL           SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
+	BOOL           GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
 	void           AVSCheckPlugins();
 	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
 	BOOL           IsRuntimeInstalled(string s_version);
@@ -61,14 +61,15 @@ private:
 
 static BOOL CompareNoCase(string first, string second)
 {
-  unsigned int ui = 0;
-  while ((ui < first.length()) && (ui < second.length()))
+  size_t i = 0;
+  while ((i < first.length()) && (i < second.length()))
   {
-    if (tolower (first[ui]) < tolower (second[ui]))
+    if (tolower (first[i]) < tolower (second[i]))
 			return true;
-    else if (tolower (first[ui]) > tolower (second[ui]))
+    else if (tolower (first[i]) > tolower (second[i]))
 			return false;
-    ui++;
+ 
+   i++;
   }
 
   if (first.length() < second.length())
@@ -76,7 +77,6 @@ static BOOL CompareNoCase(string first, string second)
   else
 		return false;
 }
-
 
 const AVS_Linkage *AVS_linkage = 0;
 
@@ -87,118 +87,6 @@ CAvisynthInfo::CAvisynthInfo()
 
 CAvisynthInfo::~CAvisynthInfo()
 {
-}
-
-
-int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
-{
-	int iInterfaceVersion = 0;
-	s_ErrorMsg = "";
-	string sSysError = "";
-
-	string sDependencies = "";
-	string sFailedDependencies = "";
-	string sHint = "";
-	GetDLLDependencies(sDLLPath, sDependencies, sFailedDependencies, sHint);
-
-	if (sDependencies != "")
-		vPluginDependencies.push_back(sDependencies);
-
-	HINSTANCE hDLL;
-	if (sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(sAVSDLL.c_str());
-
-	if (!hDLL)
-	{
-		sSysError = utils.SysErrorMessage();
-		if (sSysError != "")
-			s_ErrorMsg = utils.StrFormat("Failed to load avisynth.dll:\n%s", sSysError.c_str());
-		else
-			s_ErrorMsg = "Failed to load avisynth.dll.";
-
-		if (sFailedDependencies != "")
-		{
-			s_ErrorMsg += utils.StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
-			if (sHint != "")
-				s_ErrorMsg += utils.StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
-		}
-
-		return 0;
-	}
-
-	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-	if (!CreateEnvironment)
-	{
-		s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
-		::FreeLibrary(hDLL);
-		return 0;
-	}
-
-	iInterfaceVersion = 5; //try the lowest version we want to support
-	IScriptEnvironment *AVS_env = CreateEnvironment(iInterfaceVersion);
-	if (!AVS_env)
-	{
-		s_ErrorMsg = "Could not create IScriptenvironment (AVISYNTH_INTERFACE_VERSION = 5)";
-		::FreeLibrary(hDLL);
-		return 0;
-	}
-
-	AVS_linkage = AVS_env->GetAVSLinkage();
-
-	try
-	{
-		_set_se_translator(SE_Translator);
-		try
-		{
-			AVS_env->CheckVersion(6);
-			iInterfaceVersion = 6;
-			AVS_env->CheckVersion(7); //who knows...
-			iInterfaceVersion = 7;
-		}
-		catch (AvisynthError)
-		{
-		}
-	}
-	catch (AvisynthError err)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
-	}
-	catch (exception& ex)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = ex.what();
-	}
-	catch (...)
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.SysErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
-	}
-
-	Sleep(100);
-	AVS_env->DeleteScriptEnvironment();
-	AVS_env = 0;
-	AVS_linkage = 0;
-
-	if (!::FreeLibrary(hDLL))
-	{
-		iInterfaceVersion = 0;
-		s_ErrorMsg = utils.SysErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot unload avisynth.dll:\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot unload avisynth.dll";
-	}
-
-	Sleep(50);
-
-	return iInterfaceVersion;
 }
 
 
@@ -262,17 +150,14 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
 		DWORD rvaNames = pExp->AddressOfNames;
 		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
-		string sName = "";
-		size_t pos = 0;
 
 		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
 			DWORD rvaName = prvaNames[dwName];
-			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
+			string sName((char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL));
 			utils.StrToLC(sName);
 
-			pos = sName.find("avs_linkage");
-			if (pos != std::string::npos)
+			if (sName.find("avs_linkage") != string::npos)
 			{
 				bAVSLinkage = TRUE;
 				break;
@@ -307,14 +192,14 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	if (!bRet)
 		return FALSE;
 
-	sDLLPath = utils.GetRealFilePath(sDLLPath);
-	sFileVersion = utils.GetFileVersion(sDLLPath);
-
 	if (!bAVSLinkage)
 	{
 		s_ErrorMsg = "Avisynth version is too old.\nUpdate to Avisynth 2.6 or Avisynth+";
 		return FALSE;
 	}
+
+	sDLLPath = utils.GetWOW64FilePath(sDLLPath);
+	sFileVersion = utils.GetFileVersion(sDLLPath);
 
 	sTimeStamp = utils.GetFileTimeStamp(sDLLPath);
 
@@ -339,32 +224,33 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		return FALSE;
 	}
 
-	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-	if (!CreateEnvironment)
-	{
-		s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
-		::FreeLibrary(hDLL);
-		return FALSE;
-	}
-
-	IScriptEnvironment *AVS_env = CreateEnvironment(iInterfaceVersion);
-	if (!AVS_env)
-	{
-		s_ErrorMsg = "Cannot create IScriptenvironment";
-		::FreeLibrary(hDLL);
-		return FALSE;
-	}
-
-	AVS_linkage = AVS_env->GetAVSLinkage();
-	AVSValue foo;
+	IScriptEnvironment *AVS_env = NULL;
 
 	try
 	{
 		_set_se_translator(SE_Translator);
 
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return FALSE;
+		}
+
+		AVS_env = CreateEnvironment(iInterfaceVersion);
+		if (!AVS_env)
+		{
+			s_ErrorMsg = "Cannot create IScriptenvironment";
+			::FreeLibrary(hDLL);
+			return FALSE;
+		}
+
+		AVS_linkage = AVS_env->GetAVSLinkage();
+		AVSValue foo;
+
 		if (AVS_env->FunctionExists("AutoloadPlugins"))
 			bIsAVSPlus = TRUE;
-
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
 
@@ -372,14 +258,12 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		{
 			sVersionNumber = utils.StrFormat("%f", AVS_env->Invoke("VersionNumber", AVSValue(&foo, 0)).AsFloat());
 			sVersionNumber.erase(sVersionNumber.find_last_not_of("0") + 1);
-			while (sVersionNumber.length() < 4)
-				sVersionNumber += "0";
+			while (sVersionNumber.length() < 4) sVersionNumber += "0";
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
 			sVersionNumber = "Cannot invoke \"VersionNumber\"";
 		}
-
 
 		try
 		{
@@ -415,6 +299,12 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		{
 			sPluginFunctions = "";
 		}
+
+		foo = 0;
+		Sleep(100);
+		AVS_env->DeleteScriptEnvironment();
+		AVS_env = 0;
+		AVS_linkage = 0;
 	}
 	catch (AvisynthError err)
 	{
@@ -436,12 +326,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			s_ErrorMsg = "Cannot load avisynth.dll";
 	}
 
-	foo = 0;
-	Sleep(100);
-	AVS_env->DeleteScriptEnvironment();
-	AVS_env = 0;
-	AVS_linkage = 0;
-
 	if (!::FreeLibrary(hDLL))
 	{
 		bRet = FALSE;
@@ -455,8 +339,125 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	EnumPluginDirs();
 	EnumPluginDLLs();
+	AVSCheckPlugins();
 
 	return bRet;
+}
+
+
+int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
+{
+	int iInterfaceVersion = 0;
+	s_ErrorMsg = "";
+	string sSysError = "";
+
+	string sDependencies = "";
+	string sFailedDependencies = "";
+	string sHint = "";
+	GetDLLDependencies(sDLLPath, sDependencies, sFailedDependencies, sHint);
+
+	if (sDependencies != "")
+		vPluginDependencies.push_back(sDependencies);
+
+	HINSTANCE hDLL;
+	if (sAVSDLL == "")
+		hDLL = ::LoadLibrary("avisynth");
+	else
+		hDLL = ::LoadLibrary(sAVSDLL.c_str());
+
+	if (!hDLL)
+	{
+		sSysError = utils.SysErrorMessage();
+		if (sSysError != "")
+			s_ErrorMsg = utils.StrFormat("Failed to load avisynth.dll:\n%s", sSysError.c_str());
+		else
+			s_ErrorMsg = "Failed to load avisynth.dll.";
+
+		if (sFailedDependencies != "")
+		{
+			s_ErrorMsg += utils.StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
+			if (sHint != "")
+				s_ErrorMsg += utils.StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
+		}
+
+		return 0;
+	}
+
+	IScriptEnvironment *AVS_env = NULL;
+
+	try
+	{
+		_set_se_translator(SE_Translator);
+
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return 0;
+		}
+
+		iInterfaceVersion = 5; //try the lowest version we want to support
+		AVS_env = CreateEnvironment(iInterfaceVersion);
+		if (!AVS_env)
+		{
+			s_ErrorMsg = "Could not create IScriptenvironment (AVISYNTH_INTERFACE_VERSION = 5)";
+			::FreeLibrary(hDLL);
+			return 0;
+		}
+
+		AVS_linkage = AVS_env->GetAVSLinkage();
+
+		try
+		{
+			AVS_env->CheckVersion(6);
+			iInterfaceVersion = 6;
+			AVS_env->CheckVersion(7); //who knows...
+			iInterfaceVersion = 7;
+		}
+		catch (AvisynthError)
+		{
+		}
+
+		Sleep(100);
+		AVS_env->DeleteScriptEnvironment();
+		AVS_env = 0;
+		AVS_linkage = 0;
+	}
+	catch (AvisynthError err)
+	{
+		iInterfaceVersion = 0;
+		s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
+	}
+	catch (exception& ex)
+	{
+		iInterfaceVersion = 0;
+		s_ErrorMsg = ex.what();
+	}
+	catch (...)
+	{
+		iInterfaceVersion = 0;
+		s_ErrorMsg = utils.SysErrorMessage();
+		if (s_ErrorMsg != "")
+			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
+		else
+			s_ErrorMsg = "Cannot load avisynth.dll";
+	}
+
+
+	if (!::FreeLibrary(hDLL))
+	{
+		iInterfaceVersion = 0;
+		s_ErrorMsg = utils.SysErrorMessage();
+		if (s_ErrorMsg != "")
+			s_ErrorMsg = "Cannot unload avisynth.dll:\n" + s_ErrorMsg;
+		else
+			s_ErrorMsg = "Cannot unload avisynth.dll";
+	}
+
+	Sleep(50);
+
+	return iInterfaceVersion;
 }
 
 
@@ -469,229 +470,97 @@ void CAvisynthInfo::EnumPluginDirs()
 	//- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
 
-	set <string> mDuplicates;
 	LONG lRes;
-	HKEY hKeyResult = 0;
+	HKEY hKeyResult;
+	char szPlugDir[2050];
+	DWORD dwType;
+	DWORD dwBytes;
 
-	if (!bIs64BitAVSDLL)
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
 	{
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
+		memset(szPlugDir, 0, 2048);
+		dwType = REG_SZ;
+		dwBytes = 2048;
+		if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
 		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			string sPluginDir(szPlugDir);
+			utils.StrTrim(sPluginDir);
+
+			if ((sPluginDir != "") && (bIsAVSPlus))
 			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if ((sTemp != "") && (bIsAVSPlus))
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir+   (HKCU, x86):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
+				#ifdef AVSM64
+					vPluginDirs.push_back("PluginDir+   (HKCU, x64):\t" + sPluginDir);
+				#else
+					vPluginDirs.push_back("PluginDir+   (HKCU, x86):\t" + sPluginDir);
+				#endif
 			}
-
-			RegCloseKey(hKeyResult);
 		}
 
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
+		memset(szPlugDir, 0, 2048);
+		dwType = REG_SZ;
+		dwBytes = 2048;
+		if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
 		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			string sPluginDir(szPlugDir);
+			utils.StrTrim(sPluginDir);
+
+			if (sPluginDir != "")
 			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if ((sTemp != "") && (bIsAVSPlus))
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir+   (HKLM, x86):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
+				#ifdef AVSM64
+					vPluginDirs.push_back("PluginDir2_5 (HKCU, x64):\t" + sPluginDir);
+				#else
+					vPluginDirs.push_back("PluginDir2_5 (HKCU, x86):\t" + sPluginDir);
+				#endif
 			}
-
-			RegCloseKey(hKeyResult);
 		}
 
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
-		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if (sTemp != "")
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir2_5 (HKCU, x86):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
-			}
-
-			RegCloseKey(hKeyResult);
-		}
-
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
-		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if (sTemp != "")
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir2_5 (HKLM, x86):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
-			}
-
-			RegCloseKey(hKeyResult);
-		}
+		RegCloseKey(hKeyResult);
 	}
-	else //64 Bit
+
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
 	{
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
+		memset(szPlugDir, 0, 2048);
+		dwType = REG_SZ;
+		dwBytes = 2048;
+		if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
 		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			string sPluginDir(szPlugDir);
+			utils.StrTrim(sPluginDir);
+
+			if ((sPluginDir != "") && (bIsAVSPlus))
 			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if ((sTemp != "") && (bIsAVSPlus))
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir+   (HKCU, x64):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
+				#ifdef AVSM64
+					vPluginDirs.push_back("PluginDir+   (HKLM, x64):\t" + sPluginDir);
+				#else
+					vPluginDirs.push_back("PluginDir+   (HKLM, x86):\t" + sPluginDir);
+				#endif
 			}
-
-			RegCloseKey(hKeyResult);
 		}
 
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
+		memset(szPlugDir, 0, 2048);
+		dwType = REG_SZ;
+		dwBytes = 2048;
+		if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
 		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			string sPluginDir(szPlugDir);
+			utils.StrTrim(sPluginDir);
+
+			if (sPluginDir != "")
 			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if ((sTemp != "") && (bIsAVSPlus))
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir+   (HKLM, x64):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
+				#ifdef AVSM64
+					vPluginDirs.push_back("PluginDir2_5 (HKLM, x64):\t" + sPluginDir);
+				#else
+					vPluginDirs.push_back("PluginDir2_5 (HKLM, x86):\t" + sPluginDir);
+				#endif
 			}
-
-			RegCloseKey(hKeyResult);
 		}
 
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
-		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if (sTemp != "")
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir2_5 (HKCU, x64):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
-			}
-
-			RegCloseKey(hKeyResult);
-		}
-
-		hKeyResult = 0;
-		lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-		if (lRes == ERROR_SUCCESS)
-		{
-			char szPlugDir[MAX_PATH + 1] = "";
-			DWORD dwType = REG_SZ;
-			DWORD dwBytes = MAX_PATH;
-			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-			{
-				string sTemp(szPlugDir);
-				utils.StrTrim(sTemp);
-				string sTempLower = sTemp;
-				utils.StrToLC(sTempLower);
-
-				if (sTemp != "")
-				{
-					if (mDuplicates.find(sTempLower) == mDuplicates.end())
-					{
-						vPluginDirs.push_back("PluginDir2_5 (HKLM, x64):\t" + sTemp);
-						mDuplicates.insert(sTempLower);
-					}
-				}
-			}
-
-			RegCloseKey(hKeyResult);
-		}
+		RegCloseKey(hKeyResult);
 	}
 
 	if (vPluginDirs.size() < 1)
@@ -726,7 +595,7 @@ void CAvisynthInfo::EnumPluginDLLs()
 				if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
 				{
 					sCurrentFile = sDir + "\\" + fd.cFileName;
-					if (!SYSCheckPlugin(sCurrentFile, sMessage, bIs64BitPlugin))
+					if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin))
 					{
 						if (sMessage != "")
 							vPluginErrors.push_back(sMessage);
@@ -735,29 +604,19 @@ void CAvisynthInfo::EnumPluginDLLs()
 					{
 						if (bIs64BitPlugin)
 						{
-							if (sMessage == "AVSC25")
-								vPlugins.push_back("C 2.5 / 64 Bit|" + sCurrentFile);
-							if (sMessage == "AVSC20")
-								vPlugins.push_back("C 2.0 / 64 Bit|" + sCurrentFile);
-							if (sMessage == "AVS26CPP")
-								vPlugins.push_back("CPP 2.6 / 64 Bit|" + sCurrentFile);
-							if (sMessage == "AVS25CPP")
-								vPlugins.push_back("CPP 2.5 / 64 Bit|" + sCurrentFile);
-							if (sMessage == "AVS20CPP")
-								vPlugins.push_back("CPP 2.0 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVSC25")   vPlugins.push_back("C 2.5 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVSC20")   vPlugins.push_back("C 2.0 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVS26CPP") vPlugins.push_back("CPP 2.6 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVS25CPP") vPlugins.push_back("CPP 2.5 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVS20CPP") vPlugins.push_back("CPP 2.0 / 64 Bit|" + sCurrentFile);
 						}
 						else
 						{
-							if (sMessage == "AVSC25")
-								vPlugins.push_back("C 2.5 / 32 Bit|" + sCurrentFile);
-							if (sMessage == "AVSC20")
-								vPlugins.push_back("C 2.0 / 32 Bit|" + sCurrentFile);
-							if (sMessage == "AVS26CPP")
-								vPlugins.push_back("CPP 2.6 / 32 Bit|" + sCurrentFile);
-							if (sMessage == "AVS25CPP")
-								vPlugins.push_back("CPP 2.5 / 32 Bit|" + sCurrentFile);
-							if (sMessage == "AVS20CPP")
-								vPlugins.push_back("CPP 2.0 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVSC25")   vPlugins.push_back("C 2.5 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVSC20")   vPlugins.push_back("C 2.0 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVS26CPP") vPlugins.push_back("CPP 2.6 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVS25CPP") vPlugins.push_back("CPP 2.5 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVS20CPP") vPlugins.push_back("CPP 2.0 / 32 Bit|" + sCurrentFile);
 						}
 					}
 				}
@@ -770,17 +629,13 @@ void CAvisynthInfo::EnumPluginDLLs()
 
 	sort(vPlugins.begin(), vPlugins.end(), CompareNoCase);
 
-	AVSCheckPlugins();
-
 	return;
 }
 
 
-BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL)
+BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL)
 {
 	BOOL bRet = TRUE;
-	s_Msg = "";
-	BOOL bIsPlugin = FALSE;
 	b_Is64BitDLL = FALSE;
 
 	LOADED_IMAGE li;
@@ -825,52 +680,47 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitD
 		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
 		string sName = "";
 
+		s_Msg = "";
 		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
 			DWORD rvaName = prvaNames[dwName];
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
 			utils.StrToLC(sName);
 
-			if (sName.find("avisynthplugininit3") != std::string::npos)
+			if (sName.find("avisynthplugininit3") != string::npos)
 			{
-				bIsPlugin = TRUE;
 				s_Msg = "AVS26CPP";
 				break;
 			}
 
-			if (sName.find("avisynthplugininit2") != std::string::npos)
+			if (sName.find("avisynthplugininit2") != string::npos)
 			{
-				bIsPlugin = TRUE;
 				s_Msg = "AVS25CPP";
 				break;
 			}
 
-			if (sName.find("avisynthplugininit") != std::string::npos)
+			if (sName.find("avisynthplugininit") != string::npos)
 			{
-				bIsPlugin = TRUE;
 				s_Msg = "AVS20CPP";
 				break;
 			}
 
-			if (sName.find("avisynth_c_plugin_init@4") != std::string::npos)
+			if (sName.find("avisynth_c_plugin_init@4") != string::npos)
 			{
-				bIsPlugin = TRUE;
 				s_Msg = "AVSC25";
 				break;
 			}
 
-			if (sName.find("avisynth_c_plugin_init") != std::string::npos)
+			if (sName.find("avisynth_c_plugin_init") != string::npos)
 			{
-				bIsPlugin = TRUE;
 				s_Msg = "AVSC20";
 				break;
 			}
 		}
 
-		if (!bIsPlugin)
+		if (s_Msg == "")
 		{
 			UnMapAndLoad(&li);
-			s_Msg = "";
 			return FALSE;
 		}
 	}
@@ -907,17 +757,30 @@ void CAvisynthInfo::AVSCheckPlugins()
 	if (!hDLL)
 		return;
 
-	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-	if (!CreateEnvironment)
+	IScriptEnvironment *AVS_env = NULL;
+	
+	try
 	{
-		::FreeLibrary(hDLL);
-		return;
-	}
+		_set_se_translator(SE_Translator);
+	
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			::FreeLibrary(hDLL);
+			return;
+		}
 
-	IScriptEnvironment *AVS_env = CreateEnvironment(iInterfaceVersion);
-	if (!AVS_env)
+		AVS_env = CreateEnvironment(iInterfaceVersion);
+		if (!AVS_env)
+		{
+			::FreeLibrary(hDLL);
+			return;
+		}
+	}
+	catch (exception& ex)
 	{
 		::FreeLibrary(hDLL);
+		string dummy = ex.what();
 		return;
 	}
 
@@ -929,7 +792,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 	string sPlugErrorLC = "";
 	string sNote = "";
 	string sPlugin = "";
-	string sPluginType = "";	
+	string sPluginType = "";
 	unsigned int uiPlugin = 0;
 	size_t spos = 0;
 	string sDependencies = "";
@@ -973,7 +836,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 
 			sPlugErrorLC = sPlugError;
 			utils.StrToLC(sPlugErrorLC);
-			if (sPlugErrorLC.find("too many plugins loaded") != std::string::npos)
+			if (sPlugErrorLC.find("too many plugins loaded") != string::npos)
 				bMaxPlugsExceeded = TRUE;
 		}
 
@@ -996,8 +859,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			if (sFailedDependencies != "")
 			{
 				sNote += utils.StrFormat("\"%s\"\n\nDependencies that could not be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
-				if (sHint != "")
-						sNote += utils.StrFormat("\n\nNote: \"%s\"", sHint.c_str());
+				if (sHint != "") sNote += utils.StrFormat("\n\nNote: \"%s\"", sHint.c_str());
 			}
 		}
 
@@ -1118,18 +980,43 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	utils.StrToLC(sTemp);
 
 	s_hint = "";
-	if ((sTemp.find("msvcm80.dll") != std::string::npos) || (sTemp.find("msvcp80.dll") != std::string::npos) || (sTemp.find("msvcr80.dll") != std::string::npos) || (sTemp.find("vcomp.dll") != std::string::npos))
-		s_hint += "Visual Studio 2005 Runtime doesn't seem to be installed\n";
-	if ((sTemp.find("msvcm90.dll") != std::string::npos) || (sTemp.find("msvcp90.dll") != std::string::npos) || (sTemp.find("msvcr90.dll") != std::string::npos) || (sTemp.find("vcomp90.dll") != std::string::npos))
-		s_hint += "Visual Studio 2008 Runtime doesn't seem to be installed\n";
-	if ((sTemp.find("msvcm100.dll") != std::string::npos) || (sTemp.find("msvcp100.dll") != std::string::npos) || (sTemp.find("msvcr100.dll") != std::string::npos) || (sTemp.find("vcomp100.dll") != std::string::npos))
-		s_hint += "Visual Studio 2010 Runtime doesn't seem to be installed\n";
-	if ((sTemp.find("msvcm110.dll") != std::string::npos) || (sTemp.find("msvcp110.dll") != std::string::npos) || (sTemp.find("msvcr110.dll") != std::string::npos) || (sTemp.find("vcomp110.dll") != std::string::npos))
-		s_hint += "Visual Studio 2012 Runtime doesn't seem to be installed\n";
-	if ((sTemp.find("msvcm120.dll") != std::string::npos) || (sTemp.find("msvcp120.dll") != std::string::npos) || (sTemp.find("msvcr120.dll") != std::string::npos) || (sTemp.find("vcomp120.dll") != std::string::npos))
-		s_hint += "Visual Studio 2013 Runtime doesn't seem to be installed\n";
-	if ((sTemp.find("msvcm140.dll") != std::string::npos) || (sTemp.find("msvcp140.dll") != std::string::npos) || (sTemp.find("msvcr140.dll") != std::string::npos) || (sTemp.find("vcomp140.dll") != std::string::npos) || (sTemp.find("vcruntime140.dll") != std::string::npos))
-		s_hint += "Visual Studio 2015 Runtime doesn't seem to be installed\n";
+	if ((sTemp.find("msvcm80.dll") != string::npos) ||
+			(sTemp.find("msvcp80.dll") != string::npos) ||
+			(sTemp.find("msvcr80.dll") != string::npos) ||
+			(sTemp.find("vcomp.dll") != string::npos))
+				s_hint += "Visual Studio 2005 Runtime doesn't seem to be installed\n";
+
+	if ((sTemp.find("msvcm90.dll") != string::npos) ||
+			(sTemp.find("msvcp90.dll") != string::npos) ||
+			(sTemp.find("msvcr90.dll") != string::npos) ||
+			(sTemp.find("vcomp90.dll") != string::npos))
+				s_hint += "Visual Studio 2008 Runtime doesn't seem to be installed\n";
+
+	if ((sTemp.find("msvcm100.dll") != string::npos) ||
+			(sTemp.find("msvcp100.dll") != string::npos) ||
+			(sTemp.find("msvcr100.dll") != string::npos) ||
+			(sTemp.find("vcomp100.dll") != string::npos))
+				s_hint += "Visual Studio 2010 Runtime doesn't seem to be installed\n";
+
+	if ((sTemp.find("msvcm110.dll") != string::npos) ||
+			(sTemp.find("msvcp110.dll") != string::npos) ||
+			(sTemp.find("msvcr110.dll") != string::npos) ||
+			(sTemp.find("vcomp110.dll") != string::npos))
+				s_hint += "Visual Studio 2012 Runtime doesn't seem to be installed\n";
+
+	if ((sTemp.find("msvcm120.dll") != string::npos) ||
+			(sTemp.find("msvcp120.dll") != string::npos) ||
+			(sTemp.find("msvcr120.dll") != string::npos) ||
+			(sTemp.find("vcomp120.dll") != string::npos))
+				s_hint += "Visual Studio 2013 Runtime doesn't seem to be installed\n";
+
+	if ((sTemp.find("msvcm140.dll") != string::npos) ||
+			(sTemp.find("msvcp140.dll") != string::npos) ||
+			(sTemp.find("msvcr140.dll") != string::npos) ||
+			(sTemp.find("vcomp140.dll") != string::npos) ||
+			(sTemp.find("vcruntime140.dll") != string::npos) ||
+			(sTemp.find("api-ms-win-crt") != string::npos))
+				s_hint += "Visual Studio 2015 Runtime doesn't seem to be installed\n";
 
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
@@ -1142,7 +1029,7 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 	BOOL bInstalled = FALSE;
 	LONG lRes;
 	HKEY hKeyResult = 0;
-	
+
 	char szSubKey[2048] = "";
 	vector<string> vSubKeys;
 	DWORD dwBytes = 2050;
@@ -1179,13 +1066,18 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 				BOOL bRedist = FALSE;
 				BOOL b64Bit = FALSE;
 
-				if (sValue.find(s_version) != std::string::npos) bVersion = TRUE;
-				if (sValue.find("visual c++") != std::string::npos) bVC = TRUE;
-				if ((sValue.find("redistributable") != std::string::npos) || (sValue.find("runtime") != std::string::npos)) bRedist = TRUE;
-				if (sValue.find("x64") != std::string::npos) b64Bit = TRUE;
-
-				if (bVersion && bVC && bRedist && !b64Bit && !bIs64BitAVSDLL) bInstalled = TRUE;
-				if (bVersion && bVC && bRedist && b64Bit && bIs64BitAVSDLL) bInstalled = TRUE;
+				if (sValue.find(s_version) != string::npos)
+					bVersion = TRUE;
+				if (sValue.find("visual c++") != string::npos)
+					bVC = TRUE;
+				if ((sValue.find("redistributable") != string::npos) || (sValue.find("runtime") != string::npos))
+					bRedist = TRUE;
+				if (sValue.find("x64") != string::npos)
+					b64Bit = TRUE;
+				if (bVersion && bVC && bRedist && !b64Bit && !bIs64BitAVSDLL)
+					bInstalled = TRUE;
+				if (bVersion && bVC && bRedist && b64Bit && bIs64BitAVSDLL)
+					bInstalled = TRUE;
 			}
 		}
 		RegCloseKey(hKeyResult);
@@ -1196,17 +1088,4 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 
 
 #endif //_AVISYNTHINFO_H
-
-
-
-
-
-
-
-
-
-
-
-
-
 

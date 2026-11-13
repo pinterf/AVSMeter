@@ -1,6 +1,3 @@
-#if !defined(_PROCESSINFO_H)
-#define _PROCESSINFO_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -20,6 +17,9 @@
 	Windows part for CPU usage by (c) 2009 Ben Watson	derived from
 	http://www.philosophicalgeek.com/2009/01/03/determine-cpu-usage-of-current-process-c-and-c/
 */
+
+#if !defined(_PROCESSINFO_H)
+#define _PROCESSINFO_H
 
 #include "common.h"
 

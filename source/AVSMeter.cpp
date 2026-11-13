@@ -32,6 +32,7 @@
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
 #define REFRESH_INTERVAL 0.333333
+#define MIN_RUNTIME      500 //milliseconds
 
 class CSettings
 {
@@ -51,14 +52,13 @@ public:
 	BOOL      bInvokeDistributor;
 	BOOL      bAllowOnlyOneInstance;
 	BOOL      bUseColor;
-	BOOL      bMonitorGPULoad;
+	BOOL      bGPUInfo;
 	BYTE      nProcessPriority;
 	BOOL      bConUseStdOut;
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
 	string    sSystemDateTime;
 	BOOL      bLogFileDateTimeSuffix;
-	BOOL      bSimpleMode;
 };
 
 
@@ -77,11 +77,11 @@ public:
 };
 
 
-CAvisynthInfo AvisynthInfo;
-CUtils utils;
-CSysInfo sys;
-CTimer timer;
-CSettings Settings;
+static CUtils utils;
+static CTimer timer;
+static CSettings Settings;
+static CAvisynthInfo AvisynthInfo;
+static CSysInfo sys;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error);
 string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, BOOL bNVVP, BOOL bOmitPerfData);
@@ -89,7 +89,7 @@ string       CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata
 string       ParseINIFile();
 BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
-void         Slouch();
+void         WaitForKBHit();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 
 
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 	if (sINIRet != "")
 	{
 		PrintConsole(TRUE, COLOR_ERROR, sINIRet.c_str());
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nOne instance of AVSMeter is already running\n");
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 	}
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
 	if (argc < 2)
 	{
 		PrintUsage();
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
@@ -190,13 +190,6 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if ((sArgTest == "-s") || (sArgTest == "-simple"))
-		{
-			sCommandLine += sCmdToken + " ";
-			Settings.bSimpleMode = TRUE;
-			continue;
-		}
-
 		if (sArgTest == "-csv")
 		{
 			sCommandLine += sCmdToken + " ";
@@ -207,7 +200,7 @@ int main(int argc, char* argv[])
 		if (sArgTest == "-gpu")
 		{
 			sCommandLine += sCmdToken + " ";
-			Settings.bMonitorGPULoad = TRUE;
+			Settings.bGPUInfo = TRUE;
 			continue;
 		}
 
@@ -221,7 +214,7 @@ int main(int argc, char* argv[])
 			if (sTemp.length() < 3)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 
@@ -229,7 +222,7 @@ int main(int argc, char* argv[])
 			if ((spos < 1) || (spos > 27))
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 
@@ -243,7 +236,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 			continue;
@@ -259,14 +252,14 @@ int main(int argc, char* argv[])
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-					Slouch();
+					WaitForKBHit();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 
@@ -283,14 +276,14 @@ int main(int argc, char* argv[])
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-					Slouch();
+					WaitForKBHit();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 
@@ -309,7 +302,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sArg.c_str());
-						Slouch();
+						WaitForKBHit();
 						return -1;
 					}
 					else
@@ -331,7 +324,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
-						Slouch();
+						WaitForKBHit();
 						return -1;
 					}
 					else
@@ -341,7 +334,7 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
@@ -351,13 +344,13 @@ int main(int argc, char* argv[])
 		if (bInfoOnly)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 		if (sAVSFile != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 	}
@@ -382,7 +375,7 @@ int main(int argc, char* argv[])
 		if (AvisynthInfo.bLoadError)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 
@@ -390,14 +383,14 @@ int main(int argc, char* argv[])
 			if (!AvisynthInfo.bIs64BitAVSDLL)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 		#else
 			if (AvisynthInfo.bIs64BitAVSDLL)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
-				Slouch();
+				WaitForKBHit();
 				return -1;
 			}
 		#endif
@@ -407,7 +400,7 @@ int main(int argc, char* argv[])
 		else
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
 
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
@@ -418,14 +411,14 @@ int main(int argc, char* argv[])
 	}
 
 	CGPUInfo gpuinfo;
-	if (Settings.bMonitorGPULoad)
+	if (Settings.bGPUInfo)
 	{
-		gpuinfo.Initialize();
+		gpuinfo.GPUZInit();
 		if (!gpuinfo.bInitialized)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 	}
@@ -434,7 +427,7 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
@@ -450,31 +443,6 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (Settings.bMonitorGPULoad)
-		{
-			sOutBuf = utils.StrFormat("Video card:                 %s", gpuinfo.data.CardName.c_str());
-			sLogBuffer += sOutBuf + "\n";
-
-			if (gpuinfo.data.VPEngineName != "")
-			{
-				sOutBuf = utils.StrFormat("GPU / VPU version:          %s / %s", gpuinfo.data.GPUName.c_str(), gpuinfo.data.VPEngineName.c_str());
-				sLogBuffer += sOutBuf + "\n";
-			}
-			else
-			{
-				sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
-				sLogBuffer += sOutBuf + "\n";
-			}
-
-			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
-			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
-			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
-			sLogBuffer += sOutBuf;
-		}
-
-
 		if (sys.bCPUIDSuccess)
 		{
 			sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.CPUBrandString.c_str());
@@ -482,9 +450,22 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.CPUFeatures.find("*") != std::string::npos)
-				sLogBuffer += "                            (* CPU feature not supported by OS)\n";          
+				sLogBuffer += "                            (* CPU feature not supported by OS)\n";
 		}
 
+		if (Settings.bGPUInfo)
+		{
+			sOutBuf = utils.StrFormat("\nVideo card:                 %s", gpuinfo.data.CardName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
+			sLogBuffer += sOutBuf;
+		}
 
 		sLogBuffer += "\n\n[Avisynth core info]";
 		sOutBuf = utils.StrFormat("\nVersionString:              %s\n", AvisynthInfo.sVersionString.c_str());
@@ -515,30 +496,36 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		string sPluginDir = "";
-		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
-		{
-			sPluginDir = AvisynthInfo.vPluginDirs[uiPlugDir];
-			if (sPluginDir != "")
-			{
-				size_t spos = sPluginDir.find(":\t");
-				sPluginDir = sPluginDir.substr(0, spos + 1) + "   " + sPluginDir.substr(spos + 2);
 
-				sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+		if (AvisynthInfo.vPluginDirs.size() > 0)
+		{
+			string sPluginDir = "";
+			for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
+			{
+				sPluginDir = AvisynthInfo.vPluginDirs[uiPlugDir];
+				if (sPluginDir != "")
+				{
+					size_t spos = sPluginDir.find(":\t");
+					sPluginDir = sPluginDir.substr(0, spos + 1) + "   " + sPluginDir.substr(spos + 2);
+
+					sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
 			}
 		}
 
-		string sPluginDLL = "";
-		string sOldPluginType = "";
-		string sPluginType = "";
-		string sPluginVersion = "";
-		unsigned int uiPlugin = 0;
-		size_t spos = 0;
 
+		//Plugin info
 		if (AvisynthInfo.vPlugins.size() > 0)
 		{
+			unsigned int uiPlugin = 0;
+			string sPluginDLL = "";
+			string sPluginType = "";
+			string sOldPluginType = "";
+			string sPluginVersion = "";
+			size_t spos = 0;
+
 			PrintConsole(TRUE, COLOR_DEFAULT, "\n");
 			sLogBuffer += "\n";
 
@@ -573,34 +560,36 @@ int main(int argc, char* argv[])
 			}
 		}
 
+
 		//Internal Functions
-		string sFunction = "";
 		if (AvisynthInfo.vInternalFunctions.size() > 0)
 		{
+			string sFunction = "";
 			sOutBuf = "\n\n[Internal (core) functions]\n";
 			sLogBufferFunctions += sOutBuf;
+
+			for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
+			{
+				sFunction = AvisynthInfo.vInternalFunctions[IFunc];
+				sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
+				sLogBufferFunctions += sOutBuf;
+			}
 		}
 
-		for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
-		{
-			sFunction = AvisynthInfo.vInternalFunctions[IFunc];
-			sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
-			sLogBufferFunctions += sOutBuf;
-		}
 
-		//Plugin Functions
-		sFunction = "";
+		//External (plugin) Functions
 		if (AvisynthInfo.vPluginFunctions.size() > 0)
 		{
+			string sFunction = "";
 			sOutBuf = "\n\n[External (plugin) functions]\n";
 			sLogBufferFunctions += sOutBuf;
-		}
 
-		for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
-		{
-			sFunction = AvisynthInfo.vPluginFunctions[PFunc];
-			sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
-			sLogBufferFunctions += sOutBuf;
+			for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
+			{
+				sFunction = AvisynthInfo.vPluginFunctions[PFunc];
+				sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
+				sLogBufferFunctions += sOutBuf;
+			}
 		}
 
 		//Plugin Dependencies
@@ -612,36 +601,36 @@ int main(int argc, char* argv[])
 				sOutBuf = "\n\n[DLL dependencies (x86)]\n";
 
 			sLogBufferDeps += sOutBuf;
+
+			for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
+			{
+				sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
+				sLogBufferDeps += sOutBuf;
+			}
 		}
 
-		for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
-		{
-			sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
-			sLogBufferDeps += sOutBuf;
-		}
-
-		//Plug errors
-		string sPluginError = "";
-		string sLineSep(utils.GetConsoleWidth() - 2, '-');
-
+		//Plugin errors
 		if (AvisynthInfo.vPluginErrors.size() > 0)
 		{
+			string sPluginError = "";
+			string sLineSep(utils.GetConsoleWidth() - 2, '-');
 			sOutBuf = "\n\n[Plugin errors/warnings]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 			sOutBuf = sLineSep + "\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
+
+			for (unsigned int err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
+			{
+				sPluginError = AvisynthInfo.vPluginErrors[err];
+				sOutBuf = utils.StrFormat("\n%s\n\n", sPluginError.c_str());
+				sOutBuf += sLineSep + "\n";
+				sLogBuffer += sOutBuf;
+				PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
+			}
 		}
 
-		for (unsigned int err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
-		{
-			sPluginError = AvisynthInfo.vPluginErrors[err];
-			sOutBuf = utils.StrFormat("\n%s\n\n", sPluginError.c_str());
-			sOutBuf += sLineSep + "\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
-		}
 
 		if (Settings.bCreateLog)
 		{
@@ -681,28 +670,28 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		Slouch();
+		WaitForKBHit();
 		return 0;
 	}
 
 	if (sAVSFile == "")
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
 
-	if ((!bInfoOnly) && (!Settings.bSimpleMode))
+	if (!bInfoOnly)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Loading script...").c_str());
-		Sleep(200);
+		Sleep(100);
 		uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
 		if (sErrorMsg != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 
@@ -718,39 +707,42 @@ int main(int argc, char* argv[])
 	if (!hDLL)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
-		Slouch();
+		WaitForKBHit();
 		return -1;
 	}
 
-	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-	if (!CreateEnvironment)
-	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
-		Slouch();
-		return -1;
-	}
 
-	IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
-	if (!AVS_env)
-	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
-		Slouch();
-		return -1;
-	}
-
-	AVS_linkage = AVS_env->GetAVSLinkage();
-	AVSValue AVS_main;
-	AVSValue AVS_temp;
-	PClip AVS_clip;
-	VideoInfo	AVS_vidinfo;
+	IScriptEnvironment *AVS_env = NULL;
 
 	try
 	{
 		_set_se_translator(SE_Translator);
 
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
+			WaitForKBHit();
+			return -1;
+		}
+
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		if (!AVS_env)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
+			WaitForKBHit();
+			return -1;
+		}
+
+		AVS_linkage = AVS_env->GetAVSLinkage();
+		AVSValue AVS_main;
+		AVSValue AVS_temp;
+		PClip AVS_clip;
+		VideoInfo	AVS_vidinfo;
+
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Loading script...").c_str());
 		AVS_main = AVS_env->Invoke("Import", sAVSFile.c_str());
-		Sleep(200);
+		Sleep(100);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 		if (!AVS_main.IsClip())
@@ -807,31 +799,6 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (Settings.bMonitorGPULoad)
-		{
-			sOutBuf = utils.StrFormat("Video card:                 %s", gpuinfo.data.CardName.c_str());
-			sLogBuffer += sOutBuf + "\n";
-
-			if (gpuinfo.data.VPEngineName != "")
-			{
-				sOutBuf = utils.StrFormat("GPU / VPU version:          %s / %s", gpuinfo.data.GPUName.c_str(), gpuinfo.data.VPEngineName.c_str());
-				sLogBuffer += sOutBuf + "\n";
-			}
-			else
-			{
-				sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
-				sLogBuffer += sOutBuf + "\n";
-			}
-
-			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
-			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
-			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
-			sLogBuffer += sOutBuf;
-		}
-
-
 		if (sys.bCPUIDSuccess)
 		{
 			sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.CPUBrandString.c_str());
@@ -839,7 +806,21 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.CPUFeatures.find("*") != std::string::npos)
-				sLogBuffer += "                            (* CPU feature not supported by OS)\n";          
+				sLogBuffer += "                            (* CPU feature not supported by OS)\n";
+		}
+
+		if (Settings.bGPUInfo)
+		{
+			sOutBuf = utils.StrFormat("\nVideo card:                 %s", gpuinfo.data.CardName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
+			sLogBuffer += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
+			sLogBuffer += sOutBuf;
 		}
 
 		sLogBuffer += "\n\n[Avisynth core info]";
@@ -1023,7 +1004,8 @@ int main(int argc, char* argv[])
 
 		sOutBuf = "Audio channels:    ";
 		sLogBuffer += sOutBuf;
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
 
 		if (AVS_vidinfo.nchannels)
 			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.nchannels);
@@ -1031,11 +1013,13 @@ int main(int argc, char* argv[])
 			sOutBuf = "                n/a";
 
 		sLogBuffer += sOutBuf + "\n";
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		sOutBuf = "Audio bits/sample: ";
 		sLogBuffer += sOutBuf;
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
 
 		switch (AVS_vidinfo.sample_type)
 		{
@@ -1048,11 +1032,13 @@ int main(int argc, char* argv[])
 		}
 
 		sLogBuffer += sOutBuf + "\n";
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		sOutBuf = "Audio sample rate: ";
 		sLogBuffer += sOutBuf;
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
 
 		if (AVS_vidinfo.audio_samples_per_second)
 			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.audio_samples_per_second);
@@ -1060,11 +1046,13 @@ int main(int argc, char* argv[])
 			sOutBuf = "                n/a";
 
 		sLogBuffer += sOutBuf + "\n";
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		sOutBuf = "Audio samples:     ";
 		sLogBuffer += sOutBuf;
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
 
 		if (AVS_vidinfo.num_audio_samples)
 			sOutBuf = utils.StrFormat("%19I64d", AVS_vidinfo.num_audio_samples);
@@ -1072,7 +1060,8 @@ int main(int argc, char* argv[])
 			sOutBuf = "                n/a";
 
 		sLogBuffer += sOutBuf + "\n";
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
+		if (AVS_vidinfo.HasAudio())
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		if (bInfoOnly)
 		{
@@ -1093,7 +1082,7 @@ int main(int argc, char* argv[])
 			AVS_linkage = 0;
 			::FreeLibrary(hDLL);
 
-			Slouch();
+			WaitForKBHit();
 			return 0;
 		}
 
@@ -1127,9 +1116,8 @@ int main(int argc, char* argv[])
 
 		while ((uiFramesToProcess / uiFrameInterval) > 400000)
 			uiFrameInterval *= 10;
-	
-		if (!Settings.bSimpleMode)
-			perfdata.reserve((uiFramesToProcess / uiFrameInterval) + 2);
+
+		perfdata.reserve((uiFramesToProcess / uiFrameInterval) + 2);
 
 		unsigned int uiFramesRead = 0;
 		BOOL bFirstScr = TRUE;
@@ -1158,8 +1146,7 @@ int main(int argc, char* argv[])
 		double dFPSMin = 1.0e+20;
 		double dFPSMax = 0.0;
 
-		if (Settings.bMonitorGPULoad)
-			gpuinfo.ReadSensors();
+		if (Settings.bGPUInfo) gpuinfo.ReadSensors();
 
 		processinfo.Update();
 
@@ -1183,12 +1170,11 @@ int main(int argc, char* argv[])
 
 			dCurrentTime = timer.GetTimer();
 
-			if (!Settings.bSimpleMode)
-				processinfo.Update();
+			processinfo.Update();
 
 			++uiIntervalCounter;
 
-			if ((Settings.bMonitorGPULoad) && (!Settings.bSimpleMode))
+			if (Settings.bGPUInfo)
 			{
 				gpuinfo.ReadSensors();
 				uiGPUUsageCur = (unsigned int)gpuinfo.sensors.GPULoad;
@@ -1234,30 +1220,27 @@ int main(int argc, char* argv[])
 			if (dFPSCurrent < dFPSMin)
 				dFPSMin = dFPSCurrent;
 
-			if (!Settings.bSimpleMode)
+			CPerformanceData pdata;
+			pdata.current_frame = uiCurrentFrame;
+			pdata.fps_current = (float)dFPSCurrent;
+			pdata.fps_average = (float)dFPSAverage;
+			pdata.cpu_usage = processinfo.btCPUUsage;
+
+			if (Settings.bGPUInfo)
 			{
-				CPerformanceData pdata;
-				pdata.current_frame = uiCurrentFrame;
-				pdata.fps_current = (float)dFPSCurrent;
-				pdata.fps_average = (float)dFPSAverage;
-				pdata.cpu_usage = processinfo.btCPUUsage;
-
-				if (Settings.bMonitorGPULoad)
-				{
-					pdata.gpu_usage = gpuinfo.sensors.GPULoad;
-					pdata.vpu_usage = gpuinfo.sensors.VPULoad;
-				}
-				else
-				{
-					pdata.gpu_usage = 0;
-					pdata.vpu_usage = 0;
-				}
-
-				pdata.num_threads = processinfo.wThreadCount;
-				pdata.phys_mem = dwPhysicalMemCurrentMB;
-				pdata.virt_mem = dwVirtualMemCurrentMB;
-				perfdata.push_back(pdata);
+				pdata.gpu_usage = gpuinfo.sensors.GPULoad;
+				pdata.vpu_usage = gpuinfo.sensors.VPULoad;
 			}
+			else
+			{
+				pdata.gpu_usage = 0;
+				pdata.vpu_usage = 0;
+			}
+
+			pdata.num_threads = processinfo.wThreadCount;
+			pdata.phys_mem = dwPhysicalMemCurrentMB;
+			pdata.virt_mem = dwVirtualMemCurrentMB;
+			perfdata.push_back(pdata);
 
 			dLastIntervalTime = dCurrentTime;
 
@@ -1279,86 +1262,83 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			++uiCursorOffset;
 
-			if ((Settings.bDisplayFPS) && (!Settings.bSimpleMode))
+			if (Settings.bDisplayFPS)
 			{
 				sOutBuf = utils.StrFormat("FPS (cur | min | max | avg):    %s | %s | %s | %s", utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 			}
 
-			if ((Settings.bDisplayTPF) && (!Settings.bSimpleMode))
+			if (Settings.bDisplayTPF)
 			{
 				sOutBuf = utils.StrFormat("TPF (cur | max | min | avg):    %s | %s | %s | %s ms", utils.StrFormatTPF(1000.0 / dFPSCurrent).c_str(), utils.StrFormatTPF(1000.0 / dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / dFPSAverage).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 				++uiCursorOffset;
 			}
 
-			if (!Settings.bSimpleMode)
+			sOutBuf = utils.StrFormat("Memory usage (phys | virt):     %u | %u MiB", dwPhysicalMemCurrentMB, dwVirtualMemCurrentMB);
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+			++uiCursorOffset;
+
+			sOutBuf = utils.StrFormat("Thread count:                   %u", processinfo.wThreadCount);
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+			++uiCursorOffset;
+
+			sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", uiCPUUsageCur, uiCPUUsageAvg);
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+			++uiCursorOffset;
+
+			if (Settings.bDisplayEfficiencyIndex)
 			{
-				sOutBuf = utils.StrFormat("Memory usage (phys | virt):     %u | %u MiB", dwPhysicalMemCurrentMB, dwVirtualMemCurrentMB);
+				sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / (double)uiCPUUsageAvg).c_str());
 				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				++uiCursorOffset;
-
-				sOutBuf = utils.StrFormat("Thread count:                   %u", processinfo.wThreadCount);
-				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				++uiCursorOffset;
-
-				sOutBuf = utils.StrFormat("CPU usage (current | average):  %u%% | %u%%", uiCPUUsageCur, uiCPUUsageAvg);
-				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-				++uiCursorOffset;
-
-				if (Settings.bDisplayEfficiencyIndex)
-				{
-					sOutBuf = utils.StrFormat("Efficiency index:               %s", utils.StrFormatTPF(dFPSAverage / (double)uiCPUUsageAvg).c_str());
-					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-					++uiCursorOffset;
-				}
-
-				if (Settings.bMonitorGPULoad)
-				{
-					PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
-					++uiCursorOffset;
-
-					sOutBuf = utils.StrFormat("GPU core clock | memory clock:  %u | %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
-					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-					++uiCursorOffset;
-
-					sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", uiGPUUsageCur, uiGPUUsageAvg);
-					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-					++uiCursorOffset;
-
-					if (gpuinfo.data.NVVPU)
-					{
-						sOutBuf = utils.StrFormat("VPU usage (current | average):  %u%% | %u%%", uiVPUUsageCur, uiVPUUsageAvg);
-						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-						++uiCursorOffset;
-					}
-
-					if (gpuinfo.data.GeneralMem)
-					{
-						sOutBuf = utils.StrFormat("GPU memory usage:               %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
-						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-						++uiCursorOffset;
-					}
-
-					if (gpuinfo.data.DedicatedMem)
-					{
-						sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):   %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
-						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-						++uiCursorOffset;
-					}
-
-					if (gpuinfo.data.DynamicMem)
-					{
-						sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):     %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
-						PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
-						++uiCursorOffset;
-					}
-				}
-
-				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 				++uiCursorOffset;
 			}
+
+			if (Settings.bGPUInfo)
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+				++uiCursorOffset;
+
+				sOutBuf = utils.StrFormat("GPU core clock | memory clock:  %u | %u", gpuinfo.sensors.GPUClock, gpuinfo.sensors.MEMClock);
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				++uiCursorOffset;
+
+				sOutBuf = utils.StrFormat("GPU usage (current | average):  %u%% | %u%%", uiGPUUsageCur, uiGPUUsageAvg);
+				PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+				++uiCursorOffset;
+
+				if (gpuinfo.data.NVVPU)
+				{
+					sOutBuf = utils.StrFormat("VPU usage (current | average):  %u%% | %u%%", uiVPUUsageCur, uiVPUUsageAvg);
+					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
+
+				if (gpuinfo.data.GeneralMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage:               %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
+					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
+
+				if (gpuinfo.data.DedicatedMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):   %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
+					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
+
+				if (gpuinfo.data.DynamicMem)
+				{
+					sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):     %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
+					PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+					++uiCursorOffset;
+				}
+			}
+
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+			++uiCursorOffset;
 
 			sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
@@ -1390,16 +1370,12 @@ int main(int argc, char* argv[])
 
 		processinfo.CloseProcess();
 
-		if (Settings.bMonitorGPULoad)
-			gpuinfo.MemRelease();
+		if (Settings.bGPUInfo)
+			gpuinfo.GPUZRelease();
 
 		sLogBuffer += "\n\n[Runtime info]\n";
 
-		__int64 iMinElapsed = 500;
-		if (Settings.bSimpleMode)
-			iMinElapsed = -1;
-
-		if (iElapsedMS >= iMinElapsed)
+		if (iElapsedMS >= MIN_RUNTIME)
 		{
 			if (!bFirstScr)
 				utils.CursorUp(uiCursorOffset);
@@ -1417,7 +1393,7 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf + "\n";
 
-			if ((!Settings.bSimpleMode) && (uiFramesRead >= uiFrameInterval))
+			if (uiFramesRead >= uiFrameInterval)
 			{
 				if (Settings.bDisplayFPS)
 				{
@@ -1452,7 +1428,7 @@ int main(int argc, char* argv[])
 					sLogBuffer += sOutBuf + "\n";
 				}
 
-				if (Settings.bMonitorGPULoad)
+				if (Settings.bGPUInfo)
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 					sLogBuffer += "\n";
@@ -1526,6 +1502,14 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			bRuntimeTooShort = TRUE;
 		}
+
+		AVS_clip = 0;
+		AVS_main = 0;
+		AVS_temp = 0;
+		Sleep(100);
+		AVS_env->DeleteScriptEnvironment();
+		AVS_env = 0;
+		AVS_linkage = 0;
 	}
 	catch (AvisynthError err)
 	{
@@ -1585,13 +1569,6 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
 	}
 
-	AVS_clip = 0;
-	AVS_main = 0;
-	AVS_temp = 0;
-	Sleep(100);
-	AVS_env->DeleteScriptEnvironment();
-	AVS_env = 0;
-	AVS_linkage = 0;
 	::FreeLibrary(hDLL);
 
 	if (Settings.bCreateLog)
@@ -1600,7 +1577,7 @@ int main(int argc, char* argv[])
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 	}
@@ -1611,12 +1588,12 @@ int main(int argc, char* argv[])
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
-			Slouch();
+			WaitForKBHit();
 			return -1;
 		}
 	}
 
-	Slouch();
+	WaitForKBHit();
 
 	return iRet;
 }
@@ -1636,8 +1613,7 @@ string ParseINIFile()
 		size_t i = 0;
 		for (i = (sProgramPath.length() - 1); i > 0; i--)
 		{
-		 if (sProgramPath[i] == '\\')
-			break;
+		 if (sProgramPath[i] == '\\') break;
 		}
 		sProgramPath = sProgramPath.substr(0, i);
 		sINIFile = sProgramPath + "\\AVSMeter.ini";
@@ -1660,7 +1636,7 @@ string ParseINIFile()
 	Settings.bInvokeDistributor = TRUE;
 	Settings.bAllowOnlyOneInstance = TRUE;
 	Settings.bUseColor = TRUE;
-	Settings.bMonitorGPULoad = FALSE;
+	Settings.bGPUInfo = FALSE;
 	Settings.nProcessPriority = 2;
 	Settings.bConUseStdOut = FALSE;
 	Settings.iTimeLimit = -1;
@@ -1695,18 +1671,10 @@ string ParseINIFile()
 		utils.StrTrim(sCurrentLine);
 		sOrgLine = sCurrentLine;
 		utils.StrToLC(sCurrentLine);
+		utils.StrTrim(sCurrentLine);
 
 		if ((sCurrentLine.substr(0, 1) == "#") || (sCurrentLine == ""))
 			continue;
-
-		iBoolValue = -1;
-		if (sCurrentLine.length() > 3)
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 2) == "=0")
-				iBoolValue = 0;
-			if (sCurrentLine.substr(sCurrentLine.length() - 2) == "=1")
-				iBoolValue = 1;
-		}
 
 		if (sCurrentLine.substr(0, 12) == "logdirectory")
 		{
@@ -1718,6 +1686,7 @@ string ParseINIFile()
 				sRet = utils.StrFormat("\nLog directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
 				return sRet;
 			}
+			continue;
 		}
 
 		if (sCurrentLine.substr(0, 6) == "avsdll")
@@ -1729,146 +1698,7 @@ string ParseINIFile()
 				sRet = utils.StrFormat("\nAvisynth.dll specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sAVSDLL.c_str());
 				return sRet;
 			}
-		}
-
-		if (sCurrentLine.substr(0, 10) == "displayfps")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bDisplayFPS = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 10) == "displaytpf")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bDisplayTPF = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 22) == "displayefficiencyindex")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bDisplayEfficiencyIndex = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 9) == "createlog")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bCreateLog = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 9) == "createcsv")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bCreateCSV = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 21) == "logfiledatetimesuffix")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bLogFileDateTimeSuffix = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 15) == "pausebeforeexit")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bPauseBeforeExit = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 17) == "invokedistributor")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bInvokeDistributor = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 20) == "allowonlyoneinstance")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bAllowOnlyOneInstance = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 14) == "monitorgpuload")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bMonitorGPULoad = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 8) == "usecolor")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bUseColor = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 12) == "conusestdout")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bConUseStdOut = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 16) == "logestimatedtime")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bLogEstimatedTime = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 21) == "autocompleteextension")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bAutoCompleteExtension = (iBoolValue == 0) ? FALSE : TRUE;
+			continue;
 		}
 
 		if (sCurrentLine.substr(0, 15) == "processpriority")
@@ -1881,13 +1711,14 @@ string ParseINIFile()
 				{
 					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
 					return sRet;
-				}				
+				}
 			}
 			else
 			{
 				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
 				return sRet;
 			}
+			continue;
 		}
 
 		if (sCurrentLine.substr(0, 9) == "timelimit")
@@ -1910,6 +1741,7 @@ string ParseINIFile()
 				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sOrgLine.c_str());
 				return sRet;
 			}
+			continue;
 		}
 
 		if (sCurrentLine.substr(0, 10) == "framerange")
@@ -1920,23 +1752,79 @@ string ParseINIFile()
 			Settings.iStopFrame = 0xFFFFFFFFFF;
 
 			sTemp = sCurrentLine.substr(11);
-			if (sTemp.length() < 3)
-				continue;
+			if (sTemp.length() < 3) continue;
 
 			spos = sTemp.find(",");
-			if ((spos < 1) || (spos > 27))
-				continue;
+			if ((spos < 1) || (spos > 27)) continue;
 
 			if ((utils.IsNumeric(sTemp.substr(0, spos))) && (utils.IsNumeric(sTemp.substr(spos + 1))))
 			{
 				Settings.iStartFrame = _atoi64(sTemp.substr(0, spos).c_str());
 				Settings.iStopFrame = _atoi64(sTemp.substr(spos + 1).c_str());
 			}
+			continue;
+		}
+
+
+		iBoolValue = -1;
+		if (sCurrentLine.length() > 3)
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 2) == "=0") iBoolValue = 0;
+			if (sCurrentLine.substr(sCurrentLine.length() - 2) == "=1") iBoolValue = 1;
+		}
+
+		if (iBoolValue != -1)
+		{
+			if (sCurrentLine.substr(0, 10) == "displayfps")
+				Settings.bDisplayFPS = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 10) == "displaytpf")
+				Settings.bDisplayTPF = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 22) == "displayefficiencyindex")
+				Settings.bDisplayEfficiencyIndex = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 9) == "createlog")
+				Settings.bCreateLog = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 9) == "createcsv")
+				Settings.bCreateCSV = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 21) == "logfiledatetimesuffix")
+				Settings.bLogFileDateTimeSuffix = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 15) == "pausebeforeexit")
+				Settings.bPauseBeforeExit = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 17) == "invokedistributor")
+				Settings.bInvokeDistributor = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 20) == "allowonlyoneinstance")
+				Settings.bAllowOnlyOneInstance = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 14) == "monitorgpuload")
+				Settings.bGPUInfo = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 8) == "usecolor")
+				Settings.bUseColor = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 12) == "conusestdout")
+				Settings.bConUseStdOut = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 16) == "logestimatedtime")
+				Settings.bLogEstimatedTime = (iBoolValue == 0) ? FALSE : TRUE;
+
+			if (sCurrentLine.substr(0, 21) == "autocompleteextension")
+				Settings.bAutoCompleteExtension = (iBoolValue == 0) ? FALSE : TRUE;
+		}
+		else
+		{
+			sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+			return sRet;
 		}
 	}
 
 	hINIFile.close();
-
 
 	//Write INI file with new settings
 	if (!WriteINIFile(sINIFile))
@@ -2001,7 +1889,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
 	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
 	sComment += "# shared memory interface. GPU-Z must be running in order to use this feature\n";
-	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bMonitorGPULoad);
+	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"TimeLimit\" (1 - 999999):\n";
@@ -2152,12 +2040,12 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	sLog = "\n[Script]\n" + sAVSBuffer + "\n\n";
 	hLogFile << sLog;
 
-	if (Settings.bMonitorGPULoad)
+	if (Settings.bGPUInfo)
 		hLogFile << s_gpuinfo;
 
 	if ((cs_pdata.size() > 0) && !bOmitPerfData)
 	{
-		if (Settings.bMonitorGPULoad)
+		if (Settings.bGPUInfo)
 		{
 			if (bNVVP)
 				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads  PhysMEM(MiB)  VirtMEM(MiB)\n";
@@ -2178,7 +2066,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 			uiFrame = cs_pdata[i].current_frame + 1;
 			stemp1 = utils.StrFormat("%u", uiFrame);
 			string spad((12 - stemp1.length()), ' ');
-			if (Settings.bMonitorGPULoad)
+			if (Settings.bGPUInfo)
 			{
 				if (bNVVP)
 					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
@@ -2254,7 +2142,7 @@ string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL
 
 	if (cs_pdata.size() > 0)
 	{
-		if (Settings.bMonitorGPULoad)
+		if (Settings.bGPUInfo)
 		{
 			if (bNVVP)
 				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),GPU(%),VPU(%),Threads,PhysMEM(MiB),VirtMEM(MiB)\n";
@@ -2271,7 +2159,7 @@ string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL
 		for (unsigned int i = 0; i < cs_pdata.size(); i++)
 		{
 			uiFrame = cs_pdata[i].current_frame + 1;
-			if (Settings.bMonitorGPULoad)
+			if (Settings.bGPUInfo)
 			{
 				if (bNVVP)
 					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_average, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
@@ -2292,7 +2180,7 @@ string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL
 }
 
 
-void Slouch()
+void WaitForKBHit()
 {
 	if (Settings.bPauseBeforeExit)
 	{
@@ -2312,13 +2200,13 @@ void Slouch()
 
 void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 {
-	if (!fmt)	return;
+	if (!fmt)
+		return;
 
 	va_list args;
 	va_start(args, fmt);
 
-	if (wAttributes && Settings.bUseColor)
-		utils.SetRGB(wAttributes);
+	if (wAttributes && Settings.bUseColor) utils.SetRGB(wAttributes);
 
 	if (bUseStdOut)
 	{
@@ -2331,8 +2219,7 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 		fflush(stderr);
 	}
 
-	if (wAttributes && Settings.bUseColor)
-		utils.ResetRGB();
+	if (wAttributes && Settings.bUseColor) utils.ResetRGB();
 
 	va_end(args);
 
@@ -2346,10 +2233,8 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	unsigned int uiFrameInterval = 10;
 
 	HINSTANCE hDLL;
-	if (Settings.sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
+	if (Settings.sAVSDLL == "") hDLL = ::LoadLibrary("avisynth");
+	else                        hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
 
 	if (!hDLL)
 	{
@@ -2357,31 +2242,33 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		return uiFrameInterval;
 	}
 
-	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
-	if (!CreateEnvironment)
-	{
-		s_error = "Failed to load CreateScriptEnvironment()";
-		::FreeLibrary(hDLL);
-		return uiFrameInterval;
-	}
-
-	IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
-	if (!AVS_env)
-	{
-		s_error = "Could not create IScriptenvironment";
-		::FreeLibrary(hDLL);
-		return uiFrameInterval;
-	}
-
-	AVS_linkage = AVS_env->GetAVSLinkage();
-	AVSValue AVS_main;
-	AVSValue AVS_temp;
-	PClip AVS_clip;
-	VideoInfo	AVS_vidinfo;
+	IScriptEnvironment *AVS_env = NULL;
 
 	try
 	{
 		_set_se_translator(SE_Translator);
+
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			s_error = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return uiFrameInterval;
+		}
+
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+		if (!AVS_env)
+		{
+			s_error = "Could not create IScriptenvironment";
+			::FreeLibrary(hDLL);
+			return uiFrameInterval;
+		}
+
+		AVS_linkage = AVS_env->GetAVSLinkage();
+		AVSValue AVS_main;
+		AVSValue AVS_temp;
+		PClip AVS_clip;
+		VideoInfo	AVS_vidinfo;
 
 		AVS_main = AVS_env->Invoke("Import", s_avsfile.c_str());
 
@@ -2427,7 +2314,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		}
 
 		double dAverageFrameTime = 0.0;
-		if (TDelta > 0.5)
+		if (TDelta > ((double)MIN_RUNTIME / 1000.0))
 		{
 			if (fabs(TDelta - TDeltaTest) > 0.2)
 				AVS_env->ThrowError("QueryPerformanceCounter() inaccuracy. Try running AVSMeter again.");
@@ -2448,6 +2335,14 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		if (dAverageFrameTime >  1.000) uiFrameInterval =   20;
 		if (dAverageFrameTime >  2.000) uiFrameInterval =   10;
 		if (dAverageFrameTime > 20.000) uiFrameInterval =    1;
+
+		AVS_clip = 0;
+		AVS_main = 0;
+		AVS_temp = 0;
+		Sleep(100);
+		AVS_env->DeleteScriptEnvironment();
+		AVS_env = 0;
+		AVS_linkage = 0;
 	}
 	catch (AvisynthError err)
 	{
@@ -2464,14 +2359,6 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		s_error = utils.SysErrorMessage();
 		uiFrameInterval = 10;
 	}
-
-	AVS_clip = 0;
-	AVS_main = 0;
-	AVS_temp = 0;
-	Sleep(100);
-	AVS_env->DeleteScriptEnvironment();
-	AVS_env = 0;
-	AVS_linkage = 0;
 
 	if (!::FreeLibrary(hDLL))
 		uiFrameInterval = 10;
@@ -2491,8 +2378,7 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Monitor GPU/VPU usage\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -simple [-s]        Simple mode (w/o statistics)\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  settings read the documentation (AVSMeter.html) included\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  in the distribution package.\n");

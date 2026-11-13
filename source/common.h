@@ -1,6 +1,3 @@
-#if !defined(_COMMON_H)
-#define _COMMON_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -18,6 +15,9 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if !defined(_COMMON_H)
+#define _COMMON_H
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -32,20 +32,15 @@
 #include <wintrust.h>
 #include <imagehlp.h>
 #include <conio.h>
-#include <time.h>
-#include <iostream>
 #include <fstream>
-#include <algorithm>
 #include <vector>
 #include <set>
-#include <map>
 #include <eh.h>
 
 using std::string;
 using std::ifstream;
 using std::ofstream;
 using std::vector;
-using std::map;
 using std::sort;
 using std::set;
 using std::transform;
@@ -55,4 +50,3 @@ using std::exception;
 
 
 #endif //_COMMON_H
-

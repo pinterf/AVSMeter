@@ -1,6 +1,3 @@
-#if !defined(_TIMER_H)
-#define _TIMER_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -17,6 +14,9 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
+
+#if !defined(_TIMER_H)
+#define _TIMER_H
 
 #include "common.h"
 
@@ -45,7 +45,6 @@ BOOL CTimer::TestTimer()
 {
 	LARGE_INTEGER liPerfCounter = {0,0};
 	LARGE_INTEGER liPerfFreq = {0,0};
-
 	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
 		return FALSE;
 

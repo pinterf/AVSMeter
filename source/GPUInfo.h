@@ -1,6 +1,3 @@
-#if !defined(_GPUINFO_H)
-#define _GPUINFO_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -18,6 +15,9 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 	GPU-Z shared memory interface by W1zzard from techpowerup
 */
+
+#if !defined(_GPUINFO_H)
+#define _GPUINFO_H
 
 #include "common.h"
 #include "exception.h"
@@ -48,7 +48,6 @@ public:
 		string GPUZVersion;
 		string CardName;
 		string GPUName;
-		string VPEngineName;
 		string MemSize;
 		string OpenCLVersion;
 		string DriverVersion;
@@ -58,8 +57,8 @@ public:
 		BOOL   DedicatedMem;
 	} data;
 
-	void Initialize();
-	void MemRelease();
+	void GPUZInit();
+	void GPUZRelease();
 	void ReadSensors();
 	void ReadData();
 	BOOL bInitialized;
@@ -93,55 +92,16 @@ private:
 
 	HANDLE hMapFile;
 	LPVOID pMapAddr;
-	map <string, string> mVPUNames;
 	CUtils utils;
 };
 
 
 CGPUInfo::CGPUInfo()
 {
-	bInitialized = FALSE;
 	sensors.GPULoad = 0;
 	sError = "";
 	pMapAddr = NULL;
-
-	mVPUNames.clear();
-	mVPUNames["G96"]   = "VP2";
-	mVPUNames["G84"]   = "VP2";
-	mVPUNames["G86"]   = "VP2";
-	mVPUNames["G92"]   = "VP2";
-	mVPUNames["GT200"] = "VP2";
-	mVPUNames["G94"]   = "VP2";
-	mVPUNames["G96"]   = "VP3";
-	mVPUNames["C77"]   = "VP3";
-	mVPUNames["G98"]   = "VP3";
-	mVPUNames["C79"]   = "VP3";
-	mVPUNames["GT216"] = "VP4";
-	mVPUNames["GT218"] = "VP4";
-	mVPUNames["GF106"] = "VP4";
-	mVPUNames["GF108"] = "VP4";
-	mVPUNames["GF110"] = "VP4";
-	mVPUNames["GF100"] = "VP4";
-	mVPUNames["GF116"] = "VP4";
-	mVPUNames["GF114"] = "VP4";
-	mVPUNames["GF104"] = "VP4";
-	mVPUNames["GT215"] = "VP4";
-	mVPUNames["GF117"] = "VP5";
-	mVPUNames["GK104"] = "VP5";
-	mVPUNames["GK208"] = "VP5";
-	mVPUNames["GK110"] = "VP5";
-	mVPUNames["GF119"] = "VP5";
-	mVPUNames["GK107"] = "VP5";
-	mVPUNames["GK106"] = "VP5";
-	mVPUNames["GM204"] = "VP6";
-	mVPUNames["GM200"] = "VP6";
-	mVPUNames["GM108"] = "VP6";
-	mVPUNames["GM107"] = "VP6";
-	mVPUNames["GM206"] = "VP7";
-	mVPUNames["GP104"] = "VP8";
-	mVPUNames["GP107"] = "VP8";
-	mVPUNames["GP106"] = "VP8";
-	mVPUNames["GP102"] = "VP8";
+	hMapFile = NULL;
 }
 
 CGPUInfo::~CGPUInfo()
@@ -149,7 +109,7 @@ CGPUInfo::~CGPUInfo()
 }
 
 
-void CGPUInfo::Initialize()
+void CGPUInfo::GPUZInit()
 {
 	sError = "";
 	string sTemp = "";
@@ -176,10 +136,8 @@ void CGPUInfo::Initialize()
 		sError = utils.SysErrorMessage();
 		if (sError == "")
 			sError = "Error initializing GPU-Z memory interface";
-
 		if (hMapFile)
 			CloseHandle(hMapFile);
-
 		return;
 	}
 
@@ -191,7 +149,7 @@ void CGPUInfo::Initialize()
 }
 
 
-void CGPUInfo::MemRelease()
+void CGPUInfo::GPUZRelease()
 {
 	if (!bInitialized)
 		return;
@@ -232,12 +190,6 @@ void CGPUInfo::ReadData()
 		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
 		transform(sKey.begin(), sKey.end(), sKey.begin(), ::toupper);
 
-		if (sKey == "")
-			continue;
-
-		if (sValue == "")
-			continue;
-
 		if (sKey == "CARDNAME")	       data.CardName = sValue;
 		if (sKey == "GPUNAME")         data.GPUName = sValue;
 		if (sKey == "MEMSIZE")         data.MemSize = sValue;
@@ -249,11 +201,6 @@ void CGPUInfo::ReadData()
 
 	if ((nCUDA != 0) && (dCUDACaps >= 1.0))
 		data.NVVPU = TRUE;
-
-	if (mVPUNames.find(data.GPUName) == mVPUNames.end())
-		data.VPEngineName = "";
-	else
-		data.VPEngineName = mVPUNames.find(data.GPUName)->second;
 
 	return;
 }
@@ -303,13 +250,13 @@ void CGPUInfo::ReadSensors()
 		if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dedicated)") == 0)
 		{
 			data.DedicatedMem = TRUE;
-			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);	
+			sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);
 			continue;
 		}
 		if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dynamic)") == 0)
 		{
 			data.DynamicMem = TRUE;
-			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);	
+			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);
 		}
 	}
 
@@ -318,4 +265,3 @@ void CGPUInfo::ReadSensors()
 
 
 #endif //_GPUINFO_H
-

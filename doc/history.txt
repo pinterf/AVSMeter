@@ -1,3 +1,8 @@
+v2.5.2
+- Improved exception handling for Avisynth core (avisynth.dll)
+- Updated Avisynth headers
+- Refactoring and cleanup
+
 v2.5.1
 - New CPU feature detection, removed libcpuid dependency
 - WoW64 process detection may have given wrong results in some rare cases, this should be fixed

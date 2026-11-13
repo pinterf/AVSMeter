@@ -3,7 +3,7 @@
 // Avisynth v2.6.  Copyright 2009 Ian Brabham.
 // Avisynth+ project
 // 20160613: new 16 bit planar pixel_type constants go live!
-// 20160725: pixel_type constants 10-12-14 bit + planar RGB + BRG48/64 
+// 20160725: pixel_type constants 10-12-14 bit + planar RGB + BRG48/64
 // 20161005: Fallback of VideoInfo functions to defaults if no function exists
 // 20170117: global variables for VfW output OPT_xxxx
 // 20170310: new MT mode: MT_SPECIAL_MT
@@ -678,14 +678,14 @@ enum {
   bool IsSameColorspace(const VideoInfo& vi) const AVS_BakedCode(return AVS_LinkCall(IsSameColorspace)(vi))
 
   // AVS+ extensions
-  // 20161005: 
+  // 20161005:
   //   Mapping of AVS+ extensions to classic 2.6 functions.
   //   In order to use these extended AVS+ functions for plugins that should work
-  //   either with AVS+ or with Classic (8 bit) Avs 2.6 ans earlier AVS+ versions, there is an 
+  //   either with AVS+ or with Classic (8 bit) Avs 2.6 ans earlier AVS+ versions, there is an
   //   automatic fallback mechanism.
   //   From AVS+'s point of view these are not "baked" codes, the primary functions should exist.
   //   Examples:
-  //   Is444() is mapped to IsYV24() for classic AVS2.6 
+  //   Is444() is mapped to IsYV24() for classic AVS2.6
   //   ComponentSize() returns constant 1 (1 bytes per pixel component)
   //   BitsPerComponent() returns constant 8 (Classic AVS2.6 is 8 bit only)
 
@@ -1060,7 +1060,7 @@ private:
     #ifdef X86_64
     // if ever, only x64 will support. It breaks struct size on 32 bit
     __int64 longlong; // 8 bytes
-    double double_pt; // 8 bytes 
+    double double_pt; // 8 bytes
     #endif
   };
 

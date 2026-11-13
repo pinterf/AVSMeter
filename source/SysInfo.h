@@ -1,6 +1,3 @@
-#if !defined(_SYSINFO_H)
-#define _SYSINFO_H
-
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -18,12 +15,13 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if !defined(_SYSINFO_H)
+#define _SYSINFO_H
+
 #include "common.h"
 #include "utility.h"
 
-#if (defined (_MSC_FULL_VER) && _MSC_FULL_VER >= 160040219)
 #include <immintrin.h>
-#endif
 
 class CSysInfo
 {
@@ -33,12 +31,11 @@ public:
 	string         GetOSVersion();
 	string         GetFormattedSystemDateTime();
 	BOOL           Is64BitOS();
-	//CPUID
 	void           GetCPUInfo();
-	BOOL           bCPUIDSuccess;
 	string         CPUBrandString;
 	string         CPUVendorString;
 	string         CPUFeatures;
+	BOOL           bCPUIDSuccess;
 
 private:
 	CUtils            utils;
@@ -51,7 +48,6 @@ private:
 
 CSysInfo::CSysInfo()
 {
-	bCPUIDSuccess = FALSE;
 }
 
 CSysInfo::~CSysInfo()
@@ -129,8 +125,8 @@ string CSysInfo::GetOSVersion()
 			sOSVersion = utils.StrFormat("Windows 10 %s", sArchitecture.c_str());
 	}
 
-	if (osvi.wServicePackMajor > 0)
-		sOSAddendum = utils.StrFormat(" Service Pack %u (Build %u)", osvi.wServicePackMajor, osvi.dwBuildNumber);
+	if ((osvi.wServicePackMajor > 0) || (osvi.wServicePackMinor > 0))
+		sOSAddendum = utils.StrFormat(" Service Pack %u.%u (Build %u)", osvi.wServicePackMajor, osvi.wServicePackMinor, osvi.dwBuildNumber);
 	else
 		sOSAddendum = utils.StrFormat(" (Build %u)", osvi.dwBuildNumber);
 
@@ -149,39 +145,27 @@ string CSysInfo::GetFormattedSystemDateTime()
 
 void CSysInfo::GetCPUInfo()
 {
+	bCPUIDSuccess = FALSE;
 	CPUBrandString = "";
-	CPUVendorString = "";
-	char szCPUBrandString[65];
-	char szCPUVendorString[65];
-	unsigned nIds, i;
+	char szCPUBrandString[128];
+	unsigned nIDs, i;
 	int CPURegs[4];
 
-	cpuid(CPURegs, 0);
-	memset(szCPUVendorString, 0, sizeof(szCPUVendorString));
-	memcpy(szCPUVendorString,     &CPURegs[1], 4);   // copy EBX
-	memcpy(szCPUVendorString + 4, &CPURegs[3], 4); // copy EDX
-	memcpy(szCPUVendorString + 8, &CPURegs[2], 4); // copy ECX
-	CPUVendorString = utils.StrFormat("%s", szCPUVendorString);
+	cpuid(CPURegs, 0x80000000);
+	nIDs = CPURegs[0];
 
-	if (CPUVendorString.length() > 3)
-		bCPUIDSuccess = TRUE;
-	else
+	if (nIDs < 0x80000004)
 		return;
 
-	cpuid(CPURegs, 0x80000000);
-	nIds = CPURegs[0];
 	memset(szCPUBrandString, 0, sizeof(szCPUBrandString));
 
-	for (i = 0x80000000; i <= nIds; ++i)
+	for (i = 0x80000000; i <= nIDs; ++i)
 	{
 		cpuid(CPURegs, i);
 
-		if  (i == 0x80000002)
-			memcpy(szCPUBrandString, CPURegs, sizeof(CPURegs));
-		if  (i == 0x80000003)
-			memcpy(szCPUBrandString + 16, CPURegs, sizeof(CPURegs));
-		if  (i == 0x80000004)
-			memcpy(szCPUBrandString + 32, CPURegs, sizeof(CPURegs));
+		if (i == 0x80000002) memcpy(szCPUBrandString, CPURegs, sizeof(CPURegs));
+		if (i == 0x80000003) memcpy(szCPUBrandString + 16, CPURegs, sizeof(CPURegs));
+		if (i == 0x80000004) memcpy(szCPUBrandString + 32, CPURegs, sizeof(CPURegs));
 	}
 
 	CPUBrandString = utils.StrFormat("%s", szCPUBrandString);
@@ -190,6 +174,7 @@ void CSysInfo::GetCPUInfo()
 	CPUBrandString = RemoveMultipleWhiteSpaces(CPUBrandString);
 
 	CPUFeatures = GetCPUFeatures();
+	bCPUIDSuccess = TRUE;
 
 	return;
 }
@@ -197,30 +182,30 @@ void CSysInfo::GetCPUInfo()
 
 string CSysInfo::GetCPUFeatures()
 {
-	BOOL CPU_FEATURE_MMX;
-	BOOL CPU_FEATURE_SSE;
-	BOOL CPU_FEATURE_SSE2;
-	BOOL CPU_FEATURE_SSE3;
-	BOOL CPU_FEATURE_SSSE3;
-	BOOL CPU_FEATURE_SSE41;
-	BOOL CPU_FEATURE_SSE42;
-	BOOL CPU_FEATURE_SSE4A;
-	BOOL CPU_FEATURE_AVX;
-	BOOL CPU_FEATURE_AVX2;
-	BOOL CPU_FEATURE_AVX512F;
-	BOOL CPU_FEATURE_AVX512VL;
-	BOOL CPU_FEATURE_AVX512BW;
-	BOOL CPU_FEATURE_AVX512DQ;
-	BOOL CPU_FEATURE_AVX512ER;
-	BOOL CPU_FEATURE_AVX512CD;
-	BOOL CPU_FEATURE_AVX512PF;
-	BOOL CPU_FEATURE_AVX512IFMA;
-	BOOL CPU_FEATURE_AVX512VBMI;
-	BOOL CPU_FEATURE_3DNOW;
-	BOOL CPU_FEATURE_3DNOWEXT;
-	BOOL CPU_FEATURE_MMXEXT;
-	BOOL CPU_FEATURE_FMA3;
-	BOOL CPU_FEATURE_FMA4;
+	BOOL CPU_FEATURE_MMX =        FALSE;
+	BOOL CPU_FEATURE_SSE =        FALSE;
+	BOOL CPU_FEATURE_SSE2 =       FALSE;
+	BOOL CPU_FEATURE_SSE3 =       FALSE;
+	BOOL CPU_FEATURE_SSSE3 =      FALSE;
+	BOOL CPU_FEATURE_SSE41 =      FALSE;
+	BOOL CPU_FEATURE_SSE42 =      FALSE;
+	BOOL CPU_FEATURE_SSE4A =      FALSE;
+	BOOL CPU_FEATURE_AVX =        FALSE;
+	BOOL CPU_FEATURE_AVX2 =       FALSE;
+	BOOL CPU_FEATURE_AVX512F =    FALSE;
+	BOOL CPU_FEATURE_AVX512VL =   FALSE;
+	BOOL CPU_FEATURE_AVX512BW =   FALSE;
+	BOOL CPU_FEATURE_AVX512DQ =   FALSE;
+	BOOL CPU_FEATURE_AVX512ER =   FALSE;
+	BOOL CPU_FEATURE_AVX512CD =   FALSE;
+	BOOL CPU_FEATURE_AVX512PF =   FALSE;
+	BOOL CPU_FEATURE_AVX512IFMA = FALSE;
+	BOOL CPU_FEATURE_AVX512VBMI = FALSE;
+	BOOL CPU_FEATURE_3DNOW =      FALSE;
+	BOOL CPU_FEATURE_3DNOWEXT =   FALSE;
+	BOOL CPU_FEATURE_MMXEXT =     FALSE;
+	BOOL CPU_FEATURE_FMA3 =       FALSE;
+	BOOL CPU_FEATURE_FMA4 =       FALSE;
 
 	int CPURegs[4];
 	cpuid(CPURegs, 0);
@@ -271,15 +256,7 @@ string CSysInfo::GetCPUFeatures()
 
 	BOOL OS_AVX =        FALSE;
 	BOOL OS_AVX2 =       FALSE;
-	BOOL OS_AVX512F =    FALSE;
-	BOOL OS_AVX512DQ =   FALSE;
-	BOOL OS_AVX512IFMA = FALSE;
-	BOOL OS_AVX512PF =   FALSE;
-	BOOL OS_AVX512ER =   FALSE;
-	BOOL OS_AVX512CD =   FALSE;
-	BOOL OS_AVX512BW =   FALSE;
-	BOOL OS_AVX512VL =   FALSE;
-	BOOL OS_AVX512VBMI = FALSE;
+	BOOL OS_AVX512 =     FALSE;
 	BOOL OS_FMA3 =       FALSE;
 	BOOL OS_FMA4 =       FALSE;
 
@@ -291,91 +268,122 @@ string CSysInfo::GetCPUFeatures()
 	cpuid(CPURegs, 1);
 	BOOL XSAVE = (CPURegs[2] & (1 << 27)) != 0;
 
-	if (XSAVE && CPU_FEATURE_AVX)
-		xcrFeatureMask = xgetbv(0);
+	if (XSAVE)
+		xcrFeatureMask = xgetbv(_XCR_XFEATURE_ENABLED_MASK);
 
-	if ((xcrFeatureMask & 0x6) == 0x6) OS_AVX = TRUE;
-	OS_AVX2 = OS_AVX & CPU_FEATURE_AVX2;
-	OS_FMA3 = OS_AVX & CPU_FEATURE_FMA3;
-	OS_FMA4 = OS_AVX & CPU_FEATURE_FMA4;
+	if ((xcrFeatureMask & 0x6) == 0x6)
+		OS_AVX = TRUE;
+
+	OS_AVX2 = OS_AVX;
+	OS_FMA3 = OS_AVX;
+	OS_FMA4 = OS_AVX;
+
 	if ((xcrFeatureMask & (0x7 << 5)) && (xcrFeatureMask & (0x3 << 1)))
-	{
-		OS_AVX512F =    CPU_FEATURE_AVX512F;
-		OS_AVX512DQ =   CPU_FEATURE_AVX512DQ;
-		OS_AVX512IFMA = CPU_FEATURE_AVX512IFMA;
-		OS_AVX512PF =   CPU_FEATURE_AVX512PF;
-		OS_AVX512ER =   CPU_FEATURE_AVX512ER;
-		OS_AVX512CD =   CPU_FEATURE_AVX512CD;
-		OS_AVX512BW =   CPU_FEATURE_AVX512BW;
-		OS_AVX512VL =   CPU_FEATURE_AVX512VL;
-		OS_AVX512VBMI = CPU_FEATURE_AVX512VBMI;
-	}
-
+		OS_AVX512 = OS_AVX;
 
 	string sFeatures = "";
-	if (CPU_FEATURE_MMX)                         sFeatures += "MMX, ";
-	if (CPU_FEATURE_SSE)                         sFeatures += "SSE, ";
-	if (CPU_FEATURE_SSE2)                        sFeatures += "SSE2, ";
-	if (CPU_FEATURE_SSE3)                        sFeatures += "SSE3, ";
-	if (CPU_FEATURE_SSSE3)                       sFeatures += "SSSE3, ";
-	if (CPU_FEATURE_SSE41)                       sFeatures += "SSE4.1, ";
-	if (CPU_FEATURE_SSE42)                       sFeatures += "SSE4.2, ";
-	if (CPU_FEATURE_SSE4A)                       sFeatures += "SSE4A, ";
-	if (CPU_FEATURE_3DNOW)                       sFeatures += "3DNOW, ";
-	if (CPU_FEATURE_3DNOWEXT)                    sFeatures += "3DNOWEXT, ";
-	if (CPU_FEATURE_MMXEXT)                      sFeatures += "MMXEXT, ";
+	if (CPU_FEATURE_MMX)                     sFeatures += "MMX, ";
+	if (CPU_FEATURE_SSE)                     sFeatures += "SSE, ";
+	if (CPU_FEATURE_SSE2)                    sFeatures += "SSE2, ";
+	if (CPU_FEATURE_SSE3)                    sFeatures += "SSE3, ";
+	if (CPU_FEATURE_SSSE3)                   sFeatures += "SSSE3, ";
+	if (CPU_FEATURE_SSE41)                   sFeatures += "SSE4.1, ";
+	if (CPU_FEATURE_SSE42)                   sFeatures += "SSE4.2, ";
+	if (CPU_FEATURE_SSE4A)                   sFeatures += "SSE4A, ";
+	if (CPU_FEATURE_3DNOW)                   sFeatures += "3DNOW, ";
+	if (CPU_FEATURE_3DNOWEXT)                sFeatures += "3DNOWEXT, ";
+	if (CPU_FEATURE_MMXEXT)                  sFeatures += "MMXEXT, ";
 
-	if (CPU_FEATURE_AVX)                         sFeatures += "AVX";
-	if (CPU_FEATURE_AVX & !OS_AVX)               sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX)
+	{
+		sFeatures += "AVX";
+		if (!OS_AVX) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX2)                        sFeatures += "AVX2";
-	if (CPU_FEATURE_AVX2 & !OS_AVX2)             sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX2)
+	{
+		sFeatures += "AVX2";
+		if (!OS_AVX2) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512F)                     sFeatures += "AVX512F";
-	if (CPU_FEATURE_AVX512F & !OS_AVX512F)       sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512F)
+	{
+		sFeatures += "AVX512F";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512DQ)                    sFeatures += "AVX512DQ";
-	if (CPU_FEATURE_AVX512DQ & !OS_AVX512DQ)     sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512DQ)
+	{
+		sFeatures += "AVX512DQ";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512PF)                    sFeatures += "AVX512PF";
-	if (CPU_FEATURE_AVX512PF & !OS_AVX512PF)     sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512PF)
+	{
+		sFeatures += "AVX512PF";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512ER)                    sFeatures += "AVX512ER";
-	if (CPU_FEATURE_AVX512ER & !OS_AVX512ER)     sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512ER)
+	{
+		sFeatures += "AVX512ER";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512CD)                    sFeatures += "AVX512CD";
-	if (CPU_FEATURE_AVX512CD & !OS_AVX512CD)     sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512CD)
+	{
+		sFeatures += "AVX512CD";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512BW)                    sFeatures += "AVX512BW";
-	if (CPU_FEATURE_AVX512BW & !OS_AVX512BW)     sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512BW)
+	{
+		sFeatures += "AVX512BW";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512VL)                    sFeatures += "AVX512VL";
-	if (CPU_FEATURE_AVX512VL & !OS_AVX512VL)     sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512VL)
+	{
+		sFeatures += "AVX512VL";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512IFMA)                  sFeatures += "AVX512IFMA";
-	if (CPU_FEATURE_AVX512IFMA & !OS_AVX512IFMA) sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512IFMA)
+	{
+		sFeatures += "AVX512IFMA";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_AVX512VBMI)                  sFeatures += "AVX512VBMI";
-	if (CPU_FEATURE_AVX512VBMI & !OS_AVX512VBMI) sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_AVX512VBMI)
+	{
+		sFeatures += "AVX512VBMI";
+		if (!OS_AVX512) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_FMA3)                        sFeatures += "FMA3";
-	if (CPU_FEATURE_FMA3 & !OS_FMA3)             sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_FMA3)
+	{
+		sFeatures += "FMA3";
+		if (!OS_FMA3) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
-	if (CPU_FEATURE_FMA4)                        sFeatures += "FMA4";
-	if (CPU_FEATURE_FMA4 & !OS_FMA4)             sFeatures += "*";
-	sFeatures += ", ";
+	if (CPU_FEATURE_FMA4)
+	{
+		sFeatures += "FMA4";
+		if (!OS_FMA4) sFeatures += "*";
+		sFeatures += ", ";
+	}
 
 	sFeatures.erase(sFeatures.find_last_not_of(", ") + 1);
 
@@ -421,7 +429,7 @@ unsigned __int64 CSysInfo::xgetbv(int ctr)
 			mov ecx, ctr
 			_emit 0x0F
 			_emit 0x01
-			_emit 0xD0 ; // xgetbv
+			_emit 0xD0
 			mov a, eax
 			mov d, edx
 		}
@@ -434,8 +442,7 @@ string CSysInfo::RemoveMultipleWhiteSpaces(string s)
 {
 	string search = "  ";
 	size_t index;
-	while((index = s.find(search)) != string::npos )
-		s.erase(index,1);
+	while((index = s.find(search)) != string::npos) s.erase(index,1);
 
 	return s;
 }
@@ -443,13 +450,12 @@ string CSysInfo::RemoveMultipleWhiteSpaces(string s)
 
 BOOL CSysInfo::Is64BitOS()
 {
-	if (sizeof(void*) == 8) //64 on 64
-		return TRUE;
+	if (sizeof(void*) == 8)
+		return TRUE; //64 on 64
 
 	BOOL bWoW64Process = FALSE;
 	typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
 	LPFN_ISWOW64PROCESS fnIsWow64Process;
-
 	HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
 	if (hKernel32 == NULL)
 		return FALSE;
@@ -457,7 +463,6 @@ BOOL CSysInfo::Is64BitOS()
 	fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
 	if (fnIsWow64Process != NULL)
 		fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
-
 	if (bWoW64Process)
 		return TRUE;
 
@@ -466,4 +471,3 @@ BOOL CSysInfo::Is64BitOS()
 
 
 #endif //_SYSINFO_H
-
