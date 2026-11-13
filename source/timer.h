@@ -1,3 +1,6 @@
+#ifndef _TIMER_H
+#define _TIMER_H
+
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -14,8 +17,6 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
-
-#pragma once
 
 #include "common.h"
 
@@ -110,3 +111,5 @@ string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 	return sTime;
 }
 
+
+#endif //_TIMER_H

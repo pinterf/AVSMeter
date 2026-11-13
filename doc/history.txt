@@ -1,3 +1,10 @@
+v2.3.6
+- Added enumeration of all color spaces supported by the latest AVS+,
+  including 16/32 Bit formats
+- Added "VersionNumber()" (defined in internal.h) to the Avisynth info
+- Fixed a buffer overflow problem in the string formatting code
+- Refactoring and cosmetics
+
 v2.3.5
 - Minor restructuring of the log files
 - Added GPU hardware info to the avsinfo log if the "-gpu" switch is used

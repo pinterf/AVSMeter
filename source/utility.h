@@ -1,3 +1,6 @@
+#ifndef _UTILITY_H
+#define _UTILITY_H
+
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -14,9 +17,6 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
-
-
-#pragma once
 
 #include "common.h"
 #include "cpuid\libcpuid.h"
@@ -71,7 +71,6 @@ public:
 	string         GetFormattedSystemTime();
 	string         GetOSVersion();
 
-
 	//CPUID
 	void           GetCPUID();
 	BOOL           bCPUIDSuccess;
@@ -81,11 +80,13 @@ public:
 		string       CPUCodeName;
 		BYTE         CPUCores;
 		BYTE         CPULogicalCores;
+		BYTE         NumCPUs;
+		BYTE         CPUTotalLogicalCores;
 		unsigned int CPURealClock; //MHz
 	} cpudata;
 
 	//string functions
-	string         StrFormat(const char* fmt, ...);
+	inline string  StrFormat(char const *fmt, ...);
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);
 	void           StrTrim(string &s_string);
@@ -100,7 +101,6 @@ public:
 private:
 	HANDLE         hConsole;
 	WORD           wSaveAttributes;
-	char           FMT_BUFFER[4096];
 };
 
 CUtils::CUtils()
@@ -198,25 +198,26 @@ string CUtils::GetFormattedSystemTime()
 }
 
 
-string CUtils::StrFormat(const char* fmt, ...)
+inline string CUtils::StrFormat(char const *fmt, ...)
 {
-	if (!fmt)	return "";
-
 	va_list args;
 	va_start(args, fmt);
-	memset(FMT_BUFFER, 0, sizeof(FMT_BUFFER));
 
-	int result = vsprintf(FMT_BUFFER, fmt, args);
-	if (result < 0)
+	vector<char> buffer(256);
+	int iRet = -1;
+	while (iRet == -1)
 	{
-		va_end(args);
-		return "\nvsprintf buffer overflow\n";
+		iRet = _vsnprintf(&buffer[0], buffer.size() - 1, fmt, args);
+		if (iRet == -1)
+			buffer.resize(buffer.size() * 2);
+		if (buffer.size() > 16384)
+			return "\nBuffer overflow";
 	}
-
-	string str(FMT_BUFFER);
+	buffer[buffer.size() - 1] = '\0';
+	string sRet = &buffer[0];
 	va_end(args);
 
-	return str;
+	return sRet;
 }
 
 
@@ -497,8 +498,13 @@ void CUtils::GetCPUID()
 	if (cpu_identify(&raw, &data) < 0)
 		return;
 
-	cpudata.CPUCores = (BYTE)data.num_cores;
-	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus;
+	if ((cpudata.CPUTotalLogicalCores > cpudata.CPULogicalCores) && (cpudata.CPULogicalCores > 0))
+		cpudata.NumCPUs = (BYTE)data.total_logical_cpus / (BYTE)data.num_logical_cpus;
+	else
+		cpudata.NumCPUs = 1;
+
+	cpudata.CPUCores = (BYTE)data.num_cores * cpudata.NumCPUs;
+	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus * cpudata.NumCPUs;
 	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
 	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
 
@@ -514,3 +520,4 @@ void CUtils::GetCPUID()
 }
 
 
+#endif //_UTILITY_H

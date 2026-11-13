@@ -1,3 +1,6 @@
+#ifndef _AVISYNTHINFO_H
+#define _AVISYNTHINFO_H
+
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -15,8 +18,6 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
 #include "common.h"
 
 #define BUFSIZE 2048
@@ -29,7 +30,6 @@ public:
 	string  sAVSDLL;
 	BOOL    GetInfo(string &s_ErrorMsg);
 	void    EnumPluginDLLs();
-	void    StrTokenize(string s_string, set<string, StrCaseInsensitiveCompare> &Tokens);
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	set     <string, StrCaseInsensitiveCompare> mPluginDirs;
@@ -44,8 +44,9 @@ public:
 	BYTE    NumPlugDirRefs;
 	string  sDLLPath;
 	string  sLinkerVersion;
-	string  sVersionNumber;
+	string  sFileVersion;
 	string  sVersionString;
+	string  sVersionNumber;
 	string  sTimeStamp;
 	BOOL    bIs64BitVersion;
 	BOOL    bLoadError;
@@ -54,20 +55,20 @@ public:
 	virtual ~CAvisynthInfo();
 
 private:
-	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
-	string  GetFileVersion(string s_file);
-	string  GetTimeStamp(string s_file);
-	int     GetInterfaceVersion(string &s_ErrorMsg);
-  void    EnumPluginDirs();
-	BOOL    SYSCheckPlugin(string s_dll, string &s_Msg);
-	void    AVSCheckPlugins();
-	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
-	void    FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint);
-	__int64 FileSize(string s_file);
-	string  StrFormat(const char* fmt, ...);
-	void    StrTrim(string &s_string);
-	void    StrToLC(string &s_string);
-	char    FMT_BUFFER[4096];
+	void           StrTokenize(string s_string, set<string, StrCaseInsensitiveCompare> &Tokens);
+	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
+	string         GetFileVersion(string s_file);
+	string         GetTimeStamp(string s_file);
+	int            GetInterfaceVersion(string &s_ErrorMsg);
+  void           EnumPluginDirs();
+	BOOL           SYSCheckPlugin(string s_dll, string &s_Msg);
+	void           AVSCheckPlugins();
+	void           GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
+	void           FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint);
+	__int64        FileSize(string s_file);
+	inline string  StrFormat(char const *fmt, ...);
+	void           StrTrim(string &s_string);
+	void           StrToLC(string &s_string);
 };
 
 
@@ -193,7 +194,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	bIsMTVersion = FALSE;
 	bIsAVSPlus = FALSE;
 	iInterfaceVersion = 0;
-	sVersionNumber = "";
+	sFileVersion = "";
 	sVersionString = "Unknown Avisynth Version";
 	BOOL bAVSLinkage = FALSE;
 	bLoadError = FALSE;
@@ -330,11 +331,11 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		return FALSE;
 
 
-	sVersionNumber = GetFileVersion(sDLLPath);
+	sFileVersion = GetFileVersion(sDLLPath);
 
 	if (!bAVSLinkage)
 	{
-		s_ErrorMsg = StrFormat("Avisynth version is too old (%s).\nPlease update to Avisynth 2.6 or Avisynth+.", sVersionNumber.c_str());
+		s_ErrorMsg = "Avisynth version is too old.\nPlease update to Avisynth 2.6 or Avisynth+.";
 		return FALSE;
 	}
 
@@ -384,6 +385,25 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		AVS_linkage = AVS_env->GetAVSLinkage();
 		AVSValue foo;
 
+		if (AVS_env->FunctionExists("AutoloadPlugins"))
+			bIsAVSPlus = TRUE;
+
+		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
+			bIsMTVersion = TRUE;
+
+		try
+		{
+			sVersionNumber = StrFormat("%f", AVS_env->Invoke("VersionNumber", AVSValue(&foo, 0)).AsFloat());
+			sVersionNumber.erase(sVersionNumber.find_last_not_of("0") + 1);
+			while (sVersionNumber.length() < 4)
+				sVersionNumber += "0";
+		}
+		catch (IScriptEnvironment::NotFound)
+		{
+			sVersionNumber = "Unknown Avisynth Version";
+		}
+
+
 		try
 		{
 			sVersionString = StrFormat("%s", AVS_env->Invoke("VersionString", AVSValue(&foo, 0)).AsString());
@@ -393,12 +413,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			sVersionString = "Unknown Avisynth Version";
 		}
 
-		if (AVS_env->FunctionExists("AutoloadPlugins"))
-			bIsAVSPlus = TRUE;
-
-		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
-			bIsMTVersion = TRUE;
-	
 
 		string sInternalFunctions = "";
 		try
@@ -843,24 +857,26 @@ string CAvisynthInfo::GetTimeStamp(string s_file)
 }
 
 
-string CAvisynthInfo::StrFormat(const char* fmt, ...)
+inline string CAvisynthInfo::StrFormat(char const *fmt, ...)
 {
-	if (!fmt)	return "";
-
 	va_list args;
 	va_start(args, fmt);
-	memset(FMT_BUFFER, 0, sizeof(FMT_BUFFER));
-	int result = vsprintf(FMT_BUFFER, fmt, args);
-	if (result < 0)
-	{
-		va_end(args);
-		return "\nvsprintf buffer overflow\n";
-	}
 
-	string str(FMT_BUFFER);
+	vector<char> buffer(256);
+	int iRet = -1;
+	while (iRet == -1)
+	{
+		iRet = _vsnprintf(&buffer[0], buffer.size() - 1, fmt, args);
+		if (iRet == -1)
+			buffer.resize(buffer.size() * 2);
+		if (buffer.size() > 16384)
+			return "\nBuffer overflow";
+	}
+	buffer[buffer.size() - 1] = '\0';
+	string sRet = &buffer[0];
 	va_end(args);
 
-	return str;
+	return sRet;
 }
 
 
@@ -1110,7 +1126,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			sAVSError = StrFormat("%s", (PCSTR)err.msg);
 			StrTrim(sAVSError);
 			bPlugError = TRUE;
-			s_Msg = StrFormat("%s", sPlugin.c_str(), sAVSError.c_str());
+			s_Msg = StrFormat("%s", sAVSError.c_str());
 			StrTrim(s_Msg);
 		}
 
@@ -1542,8 +1558,8 @@ void CAvisynthInfo::StrTokenize(string s_string, set<string, StrCaseInsensitiveC
 	}
 	while (next != string::npos);
 
-
 	return;
 }
 
 
+#endif //_AVISYNTHINFO_H

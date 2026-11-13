@@ -1,3 +1,6 @@
+#ifndef _COMMON_H
+#define _COMMON_H
+
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -18,8 +21,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#pragma once
-
 #define BUFSIZE 2048
 
 #include <windows.h>
@@ -35,9 +36,12 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <vector>
 #include <set>
 #include <map>
 #include <eh.h>
+#include "avs_headers\avisynth.h"
+const AVS_Linkage *AVS_linkage = 0;
 
 using namespace std;
 
@@ -51,9 +55,6 @@ struct StrCaseInsensitiveCompare
 		return _stricmp(a.c_str(), b.c_str()) < 0;
 	}
 };
-
-#include "avs_headers\avisynth.h"
-const AVS_Linkage *AVS_linkage = 0;
 
 //test STATUS_FLOAT_DIVIDE_BY_ZERO:
 //		int a = 0;
@@ -287,3 +288,4 @@ static string SysErrorMessage()
 	return sRet;
 }
 
+#endif //_COMMON_H

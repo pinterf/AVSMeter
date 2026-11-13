@@ -1,3 +1,6 @@
+#ifndef _GPUINFO_H
+#define _GPUINFO_H
+
 /*
 	This file is part of AVSMeter, Copyright(C) Groucho2004.
 
@@ -15,8 +18,6 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 	GPU-Z shared memory interface by W1zzard from techpowerup
 */
-
-#pragma once
 
 #include "common.h"
 
@@ -381,3 +382,4 @@ void CGPUInfo::StrToUC(string &s_string)
 	return;
 }
 
+#endif //_GPUINFO_H
