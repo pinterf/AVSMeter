@@ -17,7 +17,7 @@
 
 
 #include <winres.h>
-#include "res.h"
+#include "version.h"
 
 IDI_MAINFRAME ICON DISCARDABLE "AVSMeter.ico"
 

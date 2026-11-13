@@ -20,8 +20,8 @@
 #define _RES_H
 
 #define PRODUCTNAME_STR "AVSMeter"
-#define VERSION_NUM      2,9,3,0
-#define VERSION_STR     "2.9.3"
+#define VERSION_NUM      2,9,4,0
+#define VERSION_STR     "2.9.4"
 #define COPYRIGHT_STR   "Copyright (c) 2012-2019, Groucho2004"
 #define COMMENTS_STR    "AVSMeter - Avisynth Script Testing"
 

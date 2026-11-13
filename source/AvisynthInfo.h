@@ -679,41 +679,43 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			return TRUE;
 		}
 
-		string sName = "";
 		DWORD dwName = 0;
+
 		for (dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
-			sName = "";
 			DWORD rvaName = prvaNames[dwName];
-			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-			utils.StrToLC(sName);
-
-			if (sName.find("avisynthplugininit3") != string::npos)
+			std::string sExportFunc((char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL));
+			std::transform(sExportFunc.begin(), sExportFunc.end(), sExportFunc.begin(), ::tolower); //convert to lower case for comparison
+	
+			if (sExportFunc.find("avisynthplugininit3") != string::npos) //CPP 2.6, 32 or 64 bit
 			{
 				s_Msg = "AVSCPP26";
 				break;
 			}
-
-			if (sName.find("avisynthplugininit2") != string::npos)
+	
+			if (sExportFunc.find("avisynthplugininit2") != string::npos) //CPP 2.5, 32 or 64 bit
 			{
 				s_Msg = "AVSCPP25";
 				break;
 			}
-
-			if (sName.find("avisynthplugininit") != string::npos)
-				s_Msg = "AVSCPP20";
-
-			if (sName.find("avisynth_c_plugin_init@4") != string::npos) //32 bit implied
+	
+			if ((sExportFunc.find("avisynthplugininit") != string::npos) && !b_Is64BitDLL) //CPP 2.0
+				s_Msg = "AVSCPP20"; //don't break here, keep looping
+	
+			if ((sExportFunc.find("avisynth_c_plugin_init@4") != string::npos) && !b_Is64BitDLL) //32 bit C2.5
 			{
 				s_Msg = "AVSC25";
 				break;
 			}
-
-			if ((sName.find("avisynth_c_plugin_init") != string::npos) && (b_Is64BitDLL))
+	
+			if ((sExportFunc.find("avisynth_c_plugin_init") != string::npos) && b_Is64BitDLL) //64 bit C2.5
+			{
 				s_Msg = "AVSC25";
-
-			if ((sName.find("avisynth_c_plugin_init") != string::npos) && (!b_Is64BitDLL))
-				s_Msg = "AVSC20";
+				break;
+			}
+	
+			if ((sExportFunc == "avisynth_c_plugin_init") && !b_Is64BitDLL) //C2.0
+				s_Msg = "AVSC20"; //don't break here, keep looping
 		}
 	}
 	catch (exception& ex)

@@ -24,7 +24,7 @@
 #include "ProcessInfo.h"
 #include "GPUInfo.h"
 #include "Timer.h"
-#include "res.h"
+#include "version.h"
 
 
 #define COLOR_DEFAULT           0
