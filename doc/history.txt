@@ -1,3 +1,6 @@
+v1.7.6
+- Added audio info to the log file
+
 v1.7.5
 - Refactoring
 - New (undocumented) INI setting: "AllowOnlyOneInstance". When set to "1" (default), only one

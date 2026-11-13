@@ -1,4 +1,10 @@
-#define AVSM_VERSION "1.7.5"
+// AVSMeter by Groucho2004
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
+#define AVSM_VERSION "1.7.6"
 
 #include <windows.h>
 #include <conio.h>
@@ -370,6 +376,43 @@ int main(int argc, char* argv[])
 
 		fprintf(stderr, "%s\n", sConsoleOut.c_str());
 		sLogBuffer += sConsoleOut + "\n";
+
+		sConsoleOut = "Audio channels:    ";
+		sLogBuffer += sConsoleOut;
+		if (AVS_vidinfo.AudioChannels())
+			sConsoleOut = utils.StrFormat("%19d", AVS_vidinfo.AudioChannels());
+		else
+			sConsoleOut = "                n/a";
+
+		sLogBuffer += sConsoleOut + "\n";
+
+		sConsoleOut = "Audio bits/sample: ";
+		sLogBuffer += sConsoleOut;
+		if (AVS_vidinfo.SampleType())
+			sConsoleOut = utils.StrFormat("%19d", AVS_vidinfo.SampleType());
+		else
+			sConsoleOut = "                n/a";
+
+		sLogBuffer += sConsoleOut + "\n";
+
+		sConsoleOut = "Audio samples/sec: ";
+		sLogBuffer += sConsoleOut;
+		if (AVS_vidinfo.SamplesPerSecond())
+			sConsoleOut = utils.StrFormat("%19d", AVS_vidinfo.SamplesPerSecond());
+		else
+			sConsoleOut = "                n/a";
+
+		sLogBuffer += sConsoleOut + "\n";
+
+		sConsoleOut = "Audio samples:     ";
+		sLogBuffer += sConsoleOut;
+		if (AVS_vidinfo.num_audio_samples)
+			sConsoleOut = utils.StrFormat("%19d", AVS_vidinfo.num_audio_samples);
+		else
+			sConsoleOut = "                n/a";
+
+		sLogBuffer += sConsoleOut + "\n";
+
 
 		if (bInfoOnly)
 		{

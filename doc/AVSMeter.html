@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <meta content="en-us" http-equiv="Content-Language">
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <title>AVSMeter</title>
+    <style type="text/css">
+			body { font-family: verdana, arial, helvetica, sans-serif; color: #000000; font-size: 12px; background-color: #C8D4D8; text-align: Left; line-height: 150%; padding: 0px; margin: 6px }
+			h1 { font-family: verdana, arial, helvetica, sans-serif; font-size: 26px; line-height: 150%; color: #000000; padding: 0px 0px 0px 8px; margin-left: 0px; margin-right: 0px; margin-top: 12px; margin-bottom: 12px }
+			h2 { font-family: verdana, arial, helvetica, sans-serif; font-size: 22px; line-height: 150%; color: #000000; background-color: #90A0C0; padding:  0px 0px 0px 8px; margin-left: 0px; margin-right: 0px; margin-top: 12px; margin-bottom: 12px; border: #8080D0; border-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px }
+			h3 { font-family: verdana, arial, helvetica, sans-serif; font-size: 18px; line-height: 150%; color: #000000; padding: 0px 0px 0px 8px; margin-left: 0px; margin-right: 0px; margin-top: 12px; margin-bottom: 12px; border: #8080D0; border-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px }
+			h4 { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px; font-style: normal; font-weight: bold; text-decoration: underline }
+			a { color: #005090; text-decoration: none; font-family: verdana, arial, helvetica, sans-serif }
+			a:link  { color: #005090}
+			a:visited { color: #005090}
+			a:hover { background-color: #FF6060; color: #005090 }
+			table { font-size: 12px; margin-left: 0px; margin-top: 12px; margin-bottom: 12px; line-height: 150% }
+			pre { font-size: 12px; font-family: Courier, monospace; margin-top: 10px; margin-bottom: 10px; background-color: #D0D0C0; padding-left: 12px; padding-top: 12px; padding-right: 12px; padding-bottom: 12px; border: #908030; border-style: solid; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px }
+			code { font-family: Courier, monospace; font-size: 12px; letter-spacing: 1px; color: #660033 }
+			var { font-family: Verdana, Arial, Helvetica, sans-serif; font-weight: normal; font-size: 12px; font-style: italic; letter-spacing: 1px; color: #660033 }
+			tt { font-family: Courier, monospace; font-size: 12px }
+			em { font-family: Courier, monospace; font-weight: normal; color: #FFFFFF; font-style: normal }
+			strong { font-family: Courier, monospace; font-weight: bold; color: #FFFF66; font-style: normal }
+			cite { border: 1px #3030A0 dotted; padding-left: 2px; padding-right: 2px; padding-top: 1px; padding-bottom: 1px }
+			kbd { color: #808000; font-family: Verdana, Arial, Helvetica, sans-serif; font-weight: normal; font-size: 10px; font-style: normal }
+		</style>
+  </head>
+  <body>
+    <br>
+    AVSMeter is a CLI (command line interface) tool that "runs" an
+    Avisynth script with virtually no overhead, displays clip info, CPU
+    and memory usage and the minimum, maximum and average frames
+    processed per second. It measures how fast Avisynth can serve frames
+    to a client application (x264, for example) and comes in handy when
+    testing filters/plugins to evaluate their performance and memory
+    requirements.<br>
+    <b><br>
+      <img alt="" src="AVSMeter.png" height="511" width="652"><br>
+      <br>
+      Usage:</b><br>
+    Usage: AVSMeter script.avs [-l] [-i]<br>
+    The "-l" switch creates a log file ("script.avs.log") which contains
+    information about the Avisynth version used, clip info, runtime
+    info, a table with statistics for each frame interval and a copy of
+    the script itself.<br>
+    The "-i" switch displays/logs just the clip info.<br>
+    <br>
+    AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
+    directory from where it is started. If not, it will be created with
+    the default settings.<br>
+    <br>
+    Supported settings for the INI file (default values in <font
+      color="Red">red</font>):<br>
+    <b><br>
+      "CreateLog" (<font color="Red">0</font> or 1):</b><br>
+    Determines if a log will be created or not. Note: The command line
+    switch "-log" overrides the ("0") INI setting.<br>
+    <b><br>
+      "PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
+    If set to "1", pauses the program at the end and returns to the
+    console prompt only after pressing "ESC".<br>
+    <b><br>
+      "FrameRange" (first,last):</b><br>
+    Specify the range of frames to be processed. "FrameRange=<font
+      color="Red"><b>0,-1</b></font>" processes all frames in the
+    script. "FrameRange=1500,1999" processes 500 frames starting at
+    frame 1500. The smallest supported interval depends on how many
+    frames/second are processed. The script has to run for at least ~200
+    ms, otherwise no data is captured.<br>
+    <b><br>
+      "InvokeDistributor" (0 or <font color="Red">1</font>):</b><br>
+    For Avisynth MT users: If set to "1", adds the "Distributor" call
+    internally if the script uses MT Mode 1~4 (via "SetMTMode"). Note:
+    Setting this value to "1" <b>and</b> adding the Distributor call in
+    the script will unnecessarily increase the number of threads which
+    leads to increased memory usage and suboptimal performance. The
+    "InvokeDistributor" setting is ignored when using non-MT versions of
+    Avisynth.<br>
+    <small><br>
+    </small>There are 3 versions:<br>
+    [AVS2.5_x86] - For Avisynth 2.5x<br>
+    [AVS2.6_x86] - For Avisynth 2.6 Alpha4 and above (including SEt's MT
+    version) and Avisynth+<br>
+    [AVS2.6_x64] - For Avisynth+ 64 Bit<br>
+    <br>
+    <br>
+  </body>
+</html>
