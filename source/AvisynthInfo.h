@@ -609,10 +609,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			}
 
 			if (sName.find("avisynthplugininit") != string::npos)
-			{
 				s_Msg = "AVSCPP20";
-				break;
-			}
 
 			if (sName.find("avisynth_c_plugin_init@4") != string::npos)
 			{
@@ -621,10 +618,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			}
 
 			if (sName.find("avisynth_c_plugin_init") != string::npos)
-			{
 				s_Msg = "AVSC20";
-				break;
-			}
 		}
 	}
 	catch (exception& ex)
