@@ -19,6 +19,8 @@
 */
 
 #include "common.h"
+#include "exception.h"
+#include "avs_headers\avisynth.h"
 
 class CAvisynthInfo
 {

@@ -77,7 +77,7 @@ public:
 	void           StrToLC(string &s_string);
 	string         StrPad(string s_line);
 	string         StrFormatFPS(double d_fps);
-	string         StrFormatFrameTime(double d_frametime);
+	string         StrFormatTPF(double d_frametime);
 	string         StrAnsiToOEM(string s_string);
 	void           StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups);
 	BOOL           IsNumeric(string s_string);

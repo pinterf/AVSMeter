@@ -1,3 +1,9 @@
+v2.4.1
+- Added "Simple mode" (switch "-s"). This mode just runs the script without
+  gathering any runtime/performance data.
+- Updated advisory messages for missing dependencies
+- Re-structured the documentation a bit
+
 v2.4.0
 - Export a third log file when using the "-avsinfo -log" switch containing
   DLL dependencies for avisynth.dll and all auto-load plugins

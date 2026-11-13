@@ -195,7 +195,7 @@ string CUtils::StrFormatFPS(double d_fps)
 }
 
 
-string CUtils::StrFormatFrameTime(double d_frametime)
+string CUtils::StrFormatTPF(double d_frametime)
 {
 	string sRet = "";
 

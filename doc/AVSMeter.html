@@ -30,15 +30,33 @@
           AVSMeter<br>
           <br>
         </big></big></big>
-    <hr size="2" width="100%"><br>
-    AVSMeter is a CLI (command line interface) tool that "runs" an
-    Avisynth script with virtually no overhead, displays clip info,
-    CPU/GPU and memory usage and the minimum, maximum and average frames
-    processed per second.<br>
-    Measuring how fast Avisynth can serve frames to a client application
-    (x264, VirtualDub) and establishing CPU/GPU/memory usage helps with
-    optimizing scripts and tracking down crashes, slowdowns and
-    bottlenecks.<br>
+    <hr size="2" width="100%">AVSMeter is a CLI (command line interface)
+    tool which measures the speed/efficiency of Avisynth scripts and
+    checks if Avisynth and its plugin sub-system are set up correctly.<br>
+    <br>
+    <b> Features:</b><br>
+    <ul>
+      <li>"Running" scripts with virtually no overhead, displaying clip
+        info, CPU/GPU usage / memory usage and the minimum, maximum and
+        average frames processed per second. Measuring how fast Avisynth
+        can serve frames to a client application (x264, VirtualDub) and
+        establishing CPU/GPU/memory usage helps with optimizing scripts
+        and tracking down crashes, slowdowns and bottlenecks.<br>
+        <br>
+      </li>
+      <li> Performing a thorough test of the Avisynth installation and
+        associated plugins, checking if external dependencies are
+        installed, etc.<br>
+        <br>
+      </li>
+      <li>Running scripts in "simple mode" without gathering/displaying
+        any runtime/performance data. This is useful if AVSMeter is used
+        with a script where the performance info is irrelevant, for
+        example audio conversion or creating a video from an image
+        sequence.</li>
+    </ul>
+    <br>
+    <br>
     <br>
     <b> <img alt="" src="avsmeter.png" height="607" width="652"><br>
       <br>
@@ -47,6 +65,15 @@
         [switches]<br>
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
+
+
+
+
 
 
 
@@ -97,6 +124,15 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
+
+
+
+
 
 
 
@@ -213,11 +249,19 @@
 
 
 
+
+
+
+
+
+
+
+
+
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
-    <big><font face="Courier New"><font face="Fixedsys">&nbsp;-n &nbsp;
-          &nbsp; &nbsp; &nbsp;
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Skip initial
-          speed test (<font color="#ff0000">7</font>)</font></font></big><b><big><font
+    <big><font face="Courier New"><font face="Fixedsys">&nbsp;-simple
+          [-s]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Simple mode
+          (w/o statistics) (<font color="#ff0000">7</font>)</font></font></big><b><big><font
           face="Courier New"><br>
           <br>
         </font></big></b><br>
@@ -272,18 +316,10 @@
     reading frames and terminates.<br>
     <br>
     (<b><code><font color="#ff0000"><big>7</big></font></code></b>)
-    AVSMeter runs a quick test on a few frames at the start in order to
-    measure the frames/second that Avisynth returns for a given script.
-    The result is used to determine a suitable interval for measuring
-    CPU/GPU/memory usage and minimize the overhead of these
-    measurements.<br>
-    If "-n" is used, that test will be omitted. This can be useful if,
-    for example, AVSMeter is used with a script that just writes a
-    single image or a sequence of images where the speed test is
-    irrelevant.<br>
-    For normal operation, i.e. testing the speed of a script, this
-    switch should not be used, otherwise the accuracy of the FPS/TPF
-    measurements may be reduced, particularly for fast scripts.<br>
+    "Simple mode" just runs the script without gathering any
+    runtime/performance data. This is useful if AVSMeter is used with a
+    script where the performance info is irrelevant, for example audio
+    conversion or creating a video from an image sequence.<br>
     <br>
     <b><font color="#3333ff"><big><b><i>Note:</i></b> If applicable,
           command line switches override INI settings.</big></font><br>
@@ -345,20 +381,6 @@
     "LogDirectory" points to a valid directory.<nobr><b></b></nobr><br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
-    <br>
-    <b>"SkipSpeedTest" (<font color="Red">0</font> or 1):</b><br>
-    AVSMeter runs a quick test on a few frames at the start in order to
-    measure the frames/second that Avisynth returns for a given script.
-    The result is used to determine a suitable interval for measuring
-    CPU/GPU/memory usage and minimize the overhead of these
-    measurements.<br>
-    If "SkipSpeedTest" is set to "1", this test is omitted. This can be
-    useful if, for example, AVSMeter is used with a script that just
-    writes a single image or a sequence of images where the speed test
-    is irrelevant.<br>
-    For normal operation, i.e. testing the speed of a script, that
-    setting should be "0", otherwise the accuracy of the FPS/TPF
-    measurements may be reduced, particularly for fast scripts.<br>
     <br>
     <b>"LogFileDateTimeSuffix" (<font color="Red">0</font> or 1):</b><br>
     If set to "1", adds a date/time suffix to all .log and .csv files.<br>

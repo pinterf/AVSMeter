@@ -26,10 +26,9 @@ class CSysInfo
 public:
 	CSysInfo();
 	virtual        ~CSysInfo();
-	string         GetOSVersion();
 	DWORD          GetTotalPhysicalMemory(); //MB
+	string         GetOSVersion();
 	string         GetFormattedSystemTime();
-	string         StrFormat(char const *fmt, ...);
 
 	//CPUID
 	void           GetCPUID();
@@ -47,6 +46,7 @@ public:
 
 private:
 	string         RemoveMultipleWhiteSpaces(string s);
+	string         StrFormat(char const *fmt, ...);
 };
 
 

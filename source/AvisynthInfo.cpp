@@ -16,8 +16,6 @@
 */
 
 #include "AvisynthInfo.h"
-#include "exception.h"
-#include "avs_headers\avisynth.h"
 const AVS_Linkage *AVS_linkage = 0;
 
 CAvisynthInfo::CAvisynthInfo()
@@ -1287,9 +1285,9 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	if ((sTemp.find("msvcm140.dll") != std::string::npos) || (sTemp.find("msvcp140.dll") != std::string::npos) || (sTemp.find("msvcr140.dll") != std::string::npos))
 		s_hint += "Microsoft Visual Studio 2015 Runtime Distributable\n";
 	if (sTemp.find("libfftw3f-3.dll") != std::string::npos)
-		s_hint += "libfftw3f-3.dll can be downloaded here:\n      http://www.fftw.org/install/windows.html\n";
+		s_hint += "libfftw3f-3.dll can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      libfftw3f-3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, i.e. System32/SysWOW64\n";
 	if (sTemp.find("fftw3.dll") != std::string::npos)
-		s_hint += "fftw3.dll (libfftw3f-3.dll) can be downloaded here:\n      http://www.fftw.org/install/windows.html\n";
+		s_hint += "fftw3.dll (libfftw3f-3.dll) can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      fftw3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, i.e. System32/SysWOW64\n";
 
 	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
