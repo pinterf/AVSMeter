@@ -1,3 +1,6 @@
+v3.0.0.3
+- Refined/fixed function duplicate check
+
 v3.0.0.0
 - Added check for duplicate functions
   This checks for duplicates functions within .avsi files,

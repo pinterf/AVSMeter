@@ -62,6 +62,7 @@ struct stSettings
 	BOOL      bSpecifyCustomPluginDir;
 	BOOL      bLogUseFileSaveDialog;
 	BOOL      bDisableFFTWDLLWarning;
+	size_t    nLoadPluginInterval;
 } Settings;
 
 
@@ -122,8 +123,11 @@ int main(int argc, char* argv[])
 	Settings.bAutoCompleteExtension = FALSE;
 	Settings.bLogUseFileSaveDialog = FALSE;
 	Settings.bDisableFFTWDLLWarning = FALSE;
+	Settings.nLoadPluginInterval = 40;
 
 	string sINIRet = ParseINIFile();
+
+	AvisynthInfo.nLoadPlugInterval = Settings.nLoadPluginInterval;
 
 	int iRet = 0;
 
@@ -1919,6 +1923,27 @@ string ParseINIFile()
 			continue;
 		}
 
+		if (sCurrentLine.substr(0, 18) == "loadplugininterval")
+		{
+			sTemp = sCurrentLine.substr(19);
+			if (utils.IsNumeric(sTemp))
+			{
+				Settings.nLoadPluginInterval = (BYTE)atol(sTemp.c_str());
+				if ((Settings.nLoadPluginInterval < 1) || (Settings.nLoadPluginInterval > 49))
+				{
+					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be between \'1\' and \'49\'\n", sOrgLine.c_str());
+					return sRet;
+				}
+			}
+			else
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be between \'1\' and \'49\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			continue;
+		}
+
+
 		iBoolValue = -1;
 		if (sCurrentLine.length() > 3)
 		{
@@ -2020,6 +2045,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings += utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
 	sSettings += utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
 	sSettings += utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
+	sSettings += utils.StrFormat("LoadPluginInterval=%u\n", Settings.nLoadPluginInterval);
 
 	hINIFile << sSettings;
 
