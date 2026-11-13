@@ -109,7 +109,7 @@ string CSysInfo::GetOSVersion()
 }
 
 
-string CSysInfo::GetFormattedSystemTime()
+string CSysInfo::GetFormattedSystemDateTime()
 {
 	SYSTEMTIME st;
 	GetLocalTime(&st);
@@ -133,12 +133,12 @@ void CSysInfo::GetCPUID()
 		return;
 
 	if ((cpudata.CPUTotalLogicalCores > cpudata.CPULogicalCores) && (cpudata.CPULogicalCores > 0))
-		cpudata.NumCPUs = (BYTE)data.total_logical_cpus / (BYTE)data.num_logical_cpus;
+		cpudata.NumCPUs = data.total_logical_cpus / data.num_logical_cpus;
 	else
 		cpudata.NumCPUs = 1;
 
-	cpudata.CPUCores = (BYTE)data.num_cores * cpudata.NumCPUs;
-	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus * cpudata.NumCPUs;
+	cpudata.CPUCores = data.num_cores * cpudata.NumCPUs;
+	cpudata.CPULogicalCores = data.num_logical_cpus * cpudata.NumCPUs;
 	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
 	cpudata.CPUCodeName = RemoveMultipleWhiteSpaces(cpudata.CPUCodeName);
 	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
@@ -201,19 +201,6 @@ void CSysInfo::GetCPUID()
 	bCPUIDSuccess = TRUE;
 
 	return;
-}
-
-
-DWORD CSysInfo::GetTotalPhysicalMemory()
-{
-	DWORD dwMemSize = 0;
-	MEMORYSTATUSEX msx;
-	msx.dwLength = sizeof(msx);
-
-	if (GlobalMemoryStatusEx(&msx))
-		dwMemSize = (DWORD)(((double)(msx.ullTotalPhys) / 1048576.0) + 0.5);
-
-	return dwMemSize;
 }
 
 

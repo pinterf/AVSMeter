@@ -24,8 +24,7 @@
 
 #include "common.h"
 
-static HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName);
-static BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName);
+static string GetExceptionModule(LPVOID address);
 
 //test STATUS_FLOAT_DIVIDE_BY_ZERO:
 //	int a = 0;
@@ -37,26 +36,15 @@ static BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 //	*pInt = 20;
 
 
-static void SE_Translator(unsigned int u, EXCEPTION_POINTERS* pExcept)
+static void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 {
-  char msg[1024];
-	char module[1024];
+  char msg[2048];
+	string sModule = "";
 	string sExceptionName = "Unknown system exception";
-	string sTempModulePath = "";
-	string sExceptionModule = "Cannot determine module";
+	string sExceptionModule = GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress);
 
-	if (GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress, module))
-	{
-		sTempModulePath = module;
-
-		HANDLE hFile = CreateFile(sTempModulePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (hFile != INVALID_HANDLE_VALUE)
-		{
-			if (!GetFileNameFromHandle(hFile, sExceptionModule))
-				sExceptionModule = sTempModulePath;
-		}
-		CloseHandle(hFile);
-	}
+	if (sExceptionModule == "")
+		sExceptionModule = "Cannot determine module";
 
 	switch (pExcept->ExceptionRecord->ExceptionCode)
 	{
@@ -151,12 +139,13 @@ static void SE_Translator(unsigned int u, EXCEPTION_POINTERS* pExcept)
 }
 
 
-static HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName)
+static string GetExceptionModule(LPVOID address)
 {
+	char modulename[2048];
 	HMODULE hModules[2048];
 	DWORD dwSizeNeeded = 0;
 	if(!EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &dwSizeNeeded) || dwSizeNeeded < sizeof(HMODULE))
-		return NULL;
+		return "";
 
 	int iCurModule = -1;
 	for (unsigned int i = 0; i < (dwSizeNeeded / sizeof(HMODULE)); i++)
@@ -174,70 +163,59 @@ static HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName)
 	}
 
 	if (iCurModule == -1)
-		return NULL;
+		return "";
 
-	if (!GetModuleFileName(hModules[iCurModule], moduleName, MAX_PATH))
-		return NULL;
+	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH))
+		return "";
 
- return hModules[iCurModule];
-}
+	string sModule(modulename);
 
-
-static BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
-{
-	BOOL bSuccess = FALSE;
-	char msg[1024];
-	char pszFilename[MAX_PATH + 1];
-	HANDLE hFileMap;
-
-	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
-
-	if (hFileMap)
+	#ifndef AVS64
+	SYSTEM_INFO stInfo;
+	GetNativeSystemInfo(&stInfo);
+	if ((stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) || (stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64))
 	{
-		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-		if (pMem)
+		HANDLE hFile = CreateFile(sModule.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		if (hFile != INVALID_HANDLE_VALUE)
 		{
-			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
+			char pszFilename[2048];
+			HANDLE hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);;
+			if (hFileMap)
 			{
-				char szTemp[MAX_PATH];
-				szTemp[0] = '\0';
-				if (GetLogicalDriveStrings(MAX_PATH - 1, szTemp))
+				void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
+				if (pMem)
 				{
-					char szName[MAX_PATH];
-					char szDrive[3] = TEXT(" :");
-					BOOL bFound = FALSE;
-					char* p = szTemp;
-
-					do
+					if (GetMappedFileName(GetCurrentProcess(), pMem, pszFilename, 2046))
 					{
-						*szDrive = *p;
-						if (QueryDosDevice(szDrive, szName, MAX_PATH))
+						char pszWinDir[2048];
+						GetWindowsDirectory(pszWinDir, 2046);
+						string sWinDir(pszWinDir);
+						sWinDir = sWinDir.substr(2);
+						string sTestSystem32 = sWinDir + "\\system32\\";
+						string sTestSysWOW64 = sWinDir + "\\syswow64\\";
+						transform(sTestSystem32.begin(), sTestSystem32.end(), sTestSystem32.begin(), ::tolower);
+						transform(sTestSysWOW64.begin(), sTestSysWOW64.end(), sTestSysWOW64.begin(), ::tolower);
+						string sTempDLLPath = sModule;
+						string sRealDLLPath(pszFilename);
+						transform(sRealDLLPath.begin(), sRealDLLPath.end(), sRealDLLPath.begin(), ::tolower);
+						transform(sTempDLLPath.begin(), sTempDLLPath.end(), sTempDLLPath.begin(), ::tolower);
+						if ((sRealDLLPath.find(sTestSysWOW64) != std::string::npos) && (sTempDLLPath.find(sTestSystem32) != std::string::npos))
 						{
-							size_t uNameLen = strlen(szName);
-							if (uNameLen < MAX_PATH)
-							{
-								bFound = _strnicmp(pszFilename, szName, uNameLen) == 0 && *(pszFilename + uNameLen) == '\\';
-								if (bFound)
-								{
-									_snprintf(msg, sizeof(msg), "%s%s", szDrive, pszFilename+uNameLen);
-									sFileName = msg;
-								}
-							}
+							size_t spos = sTempDLLPath.find("\\system32\\");
+							if (spos > 2)
+								sModule = sModule.substr(0, spos) + "\\SysWOW64\\" + sModule.substr(spos + 10);
 						}
-
-						while (*p++);
-					} while (!bFound && *p); // end of string
+					}
 				}
+				UnmapViewOfFile(pMem);
 			}
-			bSuccess = TRUE;
-			UnmapViewOfFile(pMem);
+			CloseHandle(hFileMap);
 		}
-		CloseHandle(hFileMap);
+		CloseHandle(hFile);
 	}
-	else
-	  return FALSE;
+	#endif //AVS64
 
-  return (bSuccess);
+	return sModule;
 }
 
 
@@ -266,3 +244,4 @@ static string SysErrorMessage()
 }
 
 #endif //_EXCEPTION_H
+

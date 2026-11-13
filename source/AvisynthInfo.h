@@ -36,12 +36,10 @@ public:
 	vector  <string> vPluginDependencies;
 	vector  <string> vPluginErrors;
 	string  sDLLPath;
-	string  sLinkerVersion;
 	string  sFileVersion;
 	string  sVersionString;
 	string  sVersionNumber;
 	string  sTimeStamp;
-	string  sTimeStampUTC;
 	BOOL    bIs64BitAVS;
 	BOOL    bLoadError;
 	BOOL    bIsAVSPlus;
@@ -50,9 +48,8 @@ public:
 
 private:
 	void           StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups);
-	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string         GetFileVersion(string s_file);
-	string         GetTimeStamp(string s_file, BOOL bUTC);
+	string         GetTimeStamp(string s_file);
 	int            GetInterfaceVersion(string &s_ErrorMsg);
   void           EnumPluginDirs();
 	void           EnumPluginDLLs();

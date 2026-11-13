@@ -88,7 +88,6 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 	try
 	{
 		_set_se_translator(SE_Translator);
-
 		try
 		{
 			AVS_env->CheckVersion(6);
@@ -154,7 +153,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	bLoadError = FALSE;
 	BOOL bRet = TRUE;
 	s_ErrorMsg = "";
-	string sTempDLLPath = "";
 
 	LOADED_IMAGE li;
 	BOOL bLoaded;
@@ -179,7 +177,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	try
 	{
 		_set_se_translator(SE_Translator);
-		sTempDLLPath = StrFormat("%s", li.ModuleName);
+		sDLLPath = StrFormat("%s", li.ModuleName);
 		if (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_I386)
 		{
 			#ifdef AVS64
@@ -197,8 +195,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 				return FALSE;
 			#endif
 		}
-
-		sLinkerVersion = StrFormat("%u.%u", li.FileHeader->OptionalHeader.MajorLinkerVersion, li.FileHeader->OptionalHeader.MinorLinkerVersion);
 
 		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
@@ -250,50 +246,61 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		return FALSE;
 
 
-	//This seems to be the only reliable way to determine the real path of avisynth.dll (System32/SysWoW64)
-	//across OS versions without having the file system redirector interfere
-	try
+	#ifndef AVS64
+	SYSTEM_INFO stInfo;
+	GetNativeSystemInfo(&stInfo);
+	if ((stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) || (stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64))
 	{
-		_set_se_translator(SE_Translator);
-		HANDLE hFile = CreateFile(sTempDLLPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		HANDLE hFile = CreateFile(sDLLPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 		if (hFile != INVALID_HANDLE_VALUE)
 		{
-			if (!GetFileNameFromHandle(hFile, sDLLPath))
-				sDLLPath = sTempDLLPath;
+			char pszFilename[2048];
+			HANDLE hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);;
+			if (hFileMap)
+			{
+				void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
+				if (pMem)
+				{
+					if (GetMappedFileName(GetCurrentProcess(), pMem, pszFilename, 2046))
+					{
+						char pszWinDir[2048];
+						GetWindowsDirectory(pszWinDir, 2046);
+						string sWinDir(pszWinDir);
+						sWinDir = sWinDir.substr(2);
+						string sTestSystem32 = sWinDir + "\\system32\\";
+						string sTestSysWOW64 = sWinDir + "\\syswow64\\";
+						StrToLC(sTestSystem32);
+						StrToLC(sTestSysWOW64);
+						string sTempDLLPath = sDLLPath;
+						string sRealDLLPath(pszFilename);
+						StrToLC(sRealDLLPath);
+						StrToLC(sTempDLLPath);
+	
+						if ((sRealDLLPath.find(sTestSysWOW64) != std::string::npos) && (sTempDLLPath.find(sTestSystem32) != std::string::npos))
+						{
+							size_t spos = sTempDLLPath.find("\\system32\\");
+							if (spos > 2)
+								sDLLPath = sDLLPath.substr(0, spos) + "\\SysWOW64\\" + sDLLPath.substr(spos + 10);
+						}
+					}
+				}
+				UnmapViewOfFile(pMem);
+			}
+			CloseHandle(hFileMap);
 		}
-
 		CloseHandle(hFile);
 	}
-	catch (exception& ex)
-	{
-		bRet = FALSE;
-		s_ErrorMsg = ex.what();
-	}
-	catch (...)
-	{
-		bRet = FALSE;
-		s_ErrorMsg = SysErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot open avisynth.dll:\n" + s_ErrorMsg;
-		else
-			s_ErrorMsg = "Cannot open avisynth.dll";
-	}
-
-	if (!bRet)
-		return FALSE;
-
+	#endif //AVS64
 
 	sFileVersion = GetFileVersion(sDLLPath);
 
 	if (!bAVSLinkage)
 	{
-		s_ErrorMsg = "Avisynth version is too old.\nPlease update to Avisynth 2.6 or Avisynth+.";
+		s_ErrorMsg = "Avisynth version is too old.\nUpdate to Avisynth 2.6 or Avisynth+";
 		return FALSE;
 	}
 
-
-	sTimeStamp = GetTimeStamp(sDLLPath, FALSE);
-	sTimeStampUTC = GetTimeStamp(sDLLPath, TRUE);
+	sTimeStamp = GetTimeStamp(sDLLPath);
 
 	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg);
 	if (iInterfaceVersion == 0)
@@ -327,7 +334,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	IScriptEnvironment *AVS_env = CreateEnvironment(iInterfaceVersion);
 	if (!AVS_env)
 	{
-		s_ErrorMsg = "Could not create IScriptenvironment";
+		s_ErrorMsg = "Cannot create IScriptenvironment";
 		::FreeLibrary(hDLL);
 		return FALSE;
 	}
@@ -354,7 +361,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
-			sVersionNumber = "Unknown VersionNumber";
+			sVersionNumber = "Cannot invoke \"VersionNumber\"";
 		}
 
 
@@ -364,7 +371,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
-			sVersionString = "Unknown VersionString";
+			sVersionString = "Cannot invoke \"VersionString\"";
 		}
 
 		string sInternalFunctions = "";
@@ -671,63 +678,10 @@ void CAvisynthInfo::EnumPluginDirs()
 		}
 	}
 
+	if (vPluginDirs.size() < 1)
+		vPluginErrors.push_back("No plugin directory references found in the registry.\nPlugin auto-loading disabled.");
+
 	return;
-}
-
-
-BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
-{
-	BOOL bSuccess = FALSE;
-	char pszFilename[MAX_PATH + 1];
-	HANDLE hFileMap;
-
-	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
-
-	if (hFileMap)
-	{
-		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-		if (pMem)
-		{
-			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
-			{
-				char szTemp[MAX_PATH + 1];
-				szTemp[0] = '\0';
-				if (GetLogicalDriveStrings(MAX_PATH - 1, szTemp))
-				{
-					char szName[MAX_PATH];
-					char szDrive[3] = TEXT(" :");
-					BOOL bFound = FALSE;
-					char* p = szTemp;
-
-					do
-					{
-						*szDrive = *p;
-						if (QueryDosDevice(szDrive, szName, MAX_PATH))
-						{
-							size_t uNameLen = strlen(szName);
-							if (uNameLen < MAX_PATH)
-							{
-								bFound = _strnicmp(pszFilename, szName, uNameLen) == 0 && *(pszFilename + uNameLen) == '\\';
-								if (bFound)
-								{
-									sFileName = StrFormat("%s%s", szDrive, pszFilename+uNameLen);
-								}
-							}
-						}
-
-						while (*p++);
-					} while (!bFound && *p); // end of string
-				}
-			}
-			bSuccess = TRUE;
-			UnmapViewOfFile(pMem);
-		}
-		CloseHandle(hFileMap);
-	}
-	else
-	  return FALSE;
-
-  return (bSuccess);
 }
 
 
@@ -766,60 +720,26 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 }
 
 
-string CAvisynthInfo::GetTimeStamp(string s_file, BOOL bUTC)
+string CAvisynthInfo::GetTimeStamp(string s_file)
 {
 	string sTimeStamp = "";
-	if (!bUTC)
+	WIN32_FIND_DATA fd;
+	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd); 
+
+	if (hFind == INVALID_HANDLE_VALUE)
+		return "Cannot determine timestamp";
+
+	SYSTEMTIME fTime;
+
+	if (!FileTimeToSystemTime(&fd.ftLastWriteTime, &fTime))
 	{
-		HANDLE hFile = CreateFile(s_file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (hFile == INVALID_HANDLE_VALUE)
-			return "Cannot determine timestamp";
-
-		FILETIME ftCreate, ftAccess, ftWrite, ftLocal;
-		SYSTEMTIME fTime;
-
-		if (!GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite))
-		{
-			CloseHandle(hFile);
-			return "Cannot determine timestamp";
-		}
-
-		if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal))
-		{
-			CloseHandle(hFile);
-			return "Cannot determine timestamp";
-		}
-
-		if (!FileTimeToSystemTime(&ftLocal, &fTime))
-		{
-			CloseHandle(hFile);
-			return "Cannot determine timestamp";
-		}
-
-		CloseHandle(hFile);
-
-		sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
-	}
-	else
-	{
-		WIN32_FIND_DATA fd;
-		HANDLE hFind = FindFirstFile(s_file.c_str(), &fd); 
-
-		if (hFind == INVALID_HANDLE_VALUE)
-			return "Cannot determine timestamp";
-
-		SYSTEMTIME fTime;
-
-		if (!FileTimeToSystemTime(&fd.ftLastWriteTime, &fTime))
-		{
-			FindClose(hFind);
-			return "Cannot determine timestamp";
-		}
-
 		FindClose(hFind);
-
-		sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u (UTC)", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
+		return "Cannot determine timestamp";
 	}
+
+	FindClose(hFind);
+
+	sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u (UTC)", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
 
 	return sTimeStamp;
 }
@@ -860,7 +780,6 @@ void CAvisynthInfo::StrTrim(string &s_string)
 void CAvisynthInfo::StrToLC(string &s_string)
 {
 	transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
-
 	return;
 }
 
@@ -988,7 +907,6 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitD
 		DWORD rvaNames = pExp->AddressOfNames;
 		DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
 		string sName = "";
-		size_t pos = 0;
 
 		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
@@ -996,39 +914,35 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitD
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
 			StrToLC(sName);
 
-			pos = sName.find("avisynthplugininit3");
-			if (pos != std::string::npos)
+			if (sName.find("avisynthplugininit3") != std::string::npos)
 			{
 				bIsPlugin = TRUE;
 				s_Msg = "AVS26CPP";
 				break;
 			}
 
-			pos = sName.find("avisynthplugininit2");
-			if (pos != std::string::npos)
+			if (sName.find("avisynthplugininit2") != std::string::npos)
 			{
 				bIsPlugin = TRUE;
 				s_Msg = "AVS25CPP";
 				break;
 			}
 
-			pos = sName.find("avisynthplugininit");
-			if (pos != std::string::npos)
+			if (sName.find("avisynthplugininit") != std::string::npos)
 			{
 				bIsPlugin = TRUE;
 				s_Msg = "AVS20CPP";
 				break;
 			}
 
-			pos = sName.find("avisynth_c_plugin_init@4");
-			if (pos != std::string::npos)
+			if (sName.find("avisynth_c_plugin_init@4") != std::string::npos)
 			{
 				bIsPlugin = TRUE;
 				s_Msg = "AVSC25";
 				break;
 			}
-			pos = sName.find("avisynth_c_plugin_init");
-			if (pos != std::string::npos)
+
+			if (sName.find("avisynth_c_plugin_init") != std::string::npos)
 			{
 				bIsPlugin = TRUE;
 				s_Msg = "AVSC20";
@@ -1230,7 +1144,8 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			return;
 		}
 
-		s_dependencies = "\"" + s_dll + "\":\n";
+		//s_dependencies = "\"" + s_dll + "\":\n";
+		s_dependencies = s_dll + ":\n";
 		string sDepDLL = "";
 		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
 		IMAGE_IMPORT_DESCRIPTOR null_iid;
@@ -1281,51 +1196,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 	if (hFile)
 		CloseHandle(hFile);
 
-	if ((FileSize(s_dll) < (50 * 1024 * 1024)) && (FileSize(s_dll) > 32 ))
-	{
-		size_t pos = 0;
-
-		FILE *fp = fopen(s_dll.c_str(), "rb");
-		if (fp)
-		{
-			BOOL bDone = FALSE;
-			string content;
-			fseek(fp, 0, SEEK_END);
-			content.resize(ftell(fp));
-			rewind(fp);
-			fread(&content[0], 1, content.size(), fp);
-			fclose(fp);
-
-			transform(content.begin(), content.end(), content.begin(), ::tolower);
-
-			pos = content.find("libfftw3f-3.dll");
-			if (pos != std::string::npos)
-			{
-				s_dependencies += "    libfftw3f-3.dll\n";
-
-				HINSTANCE hDLL = ::LoadLibrary("libfftw3f-3.dll");
-				if (!hDLL)
-					s_failed_dependencies += "  libfftw3f-3.dll\n";
-				else
-					::FreeLibrary(hDLL);
-
-				bDone = TRUE;
-			}
-
-			pos = content.find("fftw3.dll");
-			if ((pos != std::string::npos) && (!bDone))
-			{
-				s_dependencies += "    fftw3.dll\n";
-
-				HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
-				if (!hDLL)
-					s_failed_dependencies += "  fftw3.dll\n";
-				else
-					::FreeLibrary(hDLL);
-			}
-		}
-	}
-
 	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
 	sTemp = s_failed_dependencies;
 	StrToLC(sTemp);
@@ -1343,10 +1213,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 		s_hint += "Visual Studio 2013 Runtime doesn't seem to be installed\n";
 	if ((sTemp.find("msvcm140.dll") != std::string::npos) || (sTemp.find("msvcp140.dll") != std::string::npos) || (sTemp.find("msvcr140.dll") != std::string::npos))
 		s_hint += "Visual Studio 2015 Runtime doesn't seem to be installed\n";
-	if (sTemp.find("libfftw3f-3.dll") != std::string::npos)
-		s_hint += "libfftw3f-3.dll can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      libfftw3f-3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, i.e. System32/SysWOW64\n";
-	if (sTemp.find("fftw3.dll") != std::string::npos)
-		s_hint += "fftw3.dll (libfftw3f-3.dll) can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      fftw3.dll must be placed in a directory to which the\n      \'PATH\' environment variable points, i.e. System32/SysWOW64\n";
 
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
@@ -1453,4 +1319,5 @@ void CAvisynthInfo::StrTokenize(string s_string, vector<string> &Tokens, string 
 
 	return;
 }
+
 

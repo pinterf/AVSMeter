@@ -125,7 +125,6 @@ string CUtils::StrFormat(char const *fmt, ...)
 void CUtils::StrTrimLeft(string &s_string)
 {
 	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
-
 	return;
 }
 
@@ -133,7 +132,6 @@ void CUtils::StrTrimLeft(string &s_string)
 void CUtils::StrTrimRight(string &s_string)
 {
 	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
-
 	return;
 }
 
@@ -142,7 +140,6 @@ void CUtils::StrTrim(string &s_string)
 {
 	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
 	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
-
 	return;
 }
 
@@ -150,7 +147,6 @@ void CUtils::StrTrim(string &s_string)
 void CUtils::StrToUC(string &s_string)
 {
 	transform(s_string.begin(), s_string.end(), s_string.begin(), ::toupper);
-
 	return;
 }
 
@@ -158,7 +154,6 @@ void CUtils::StrToUC(string &s_string)
 void CUtils::StrToLC(string &s_string)
 {
 	transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
-
 	return;
 }
 

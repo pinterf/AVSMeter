@@ -110,6 +110,8 @@
 
 
 
+
+
         Display extended Avisynth info (<font color="#ff0000">1</font>)<br>
         &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
@@ -121,6 +123,8 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -269,6 +273,8 @@
 
 
 
+
+
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <big><font face="Courier New"><font face="Fixedsys">&nbsp;-simple
           [-s]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Simple mode
@@ -280,14 +286,12 @@
     info about the installed Avisynth version and the plugin sub-system.
     If a custom avisynth.dll is specified in the ini file, info about
     that file will be displayed. The "-avsinfo" switch can be combined
-    with "-log" in order to write the info to a log file ("avsinfo.log"
-    is created in the current (working) directory unless the INI option
-    "LogDirectory" points to another (valid) directory). The log file
-    contains additional info about OS/hardware. Optionally, a list of
-    internal/external Avisynth functions ("avsfunctions.log") and a list
-    of DLL dependencies for avisynth.dll and all auto-load plugins
-    ("avsdeps.log") can be generated (controlled in the ini file by
-    "CreateDependencyLog" / "CreateFunctionLog").<br>
+    with "-log" in order to write the info to a log file ("avsinfo.log")
+    which is created in the current (working) directory unless the INI
+    option "LogDirectory" points to another (valid) directory. The log
+    file contains additional info about OS/hardware, a list of DLL
+    dependencies for avisynth.dll and all auto-load plugins and a list
+    of internal/external Avisynth functions.<br>
     <br>
     (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
     Creates a log file with various details about the installed Avisynth

@@ -56,12 +56,9 @@ public:
 	BOOL      bConUseStdOut;
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
-	string    sSystemTime;
-	BOOL      bUseUTC;
+	string    sSystemDateTime;
 	BOOL      bLogFileDateTimeSuffix;
 	BOOL      bSimpleMode;
-	BOOL      bCreateDependencyLog;
-	BOOL      bCreateFunctionLog;
 };
 
 
@@ -92,14 +89,14 @@ string       CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata
 string       ParseINIFile();
 BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
-void         Pause();
+void         PreExit();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 
 
 int main(int argc, char* argv[])
 {
 	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
-	Settings.sSystemTime = "";
+	Settings.sSystemDateTime = "";
 
 	string sINIRet = ParseINIFile();
 
@@ -120,7 +117,7 @@ int main(int argc, char* argv[])
 	if (sINIRet != "")
 	{
 		PrintConsole(TRUE, COLOR_ERROR, sINIRet.c_str());
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -149,7 +146,7 @@ int main(int argc, char* argv[])
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nOne instance of AVSMeter is already running\n");
-			Pause();
+			PreExit();
 			return -1;
 		}
 	}
@@ -157,7 +154,7 @@ int main(int argc, char* argv[])
 	if (argc < 2)
 	{
 		PrintUsage();
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -224,7 +221,7 @@ int main(int argc, char* argv[])
 			if (sTemp.length() < 3)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				Pause();
+				PreExit();
 				return -1;
 			}
 
@@ -232,7 +229,7 @@ int main(int argc, char* argv[])
 			if ((spos < 1) || (spos > 27))
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				Pause();
+				PreExit();
 				return -1;
 			}
 
@@ -246,7 +243,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				Pause();
+				PreExit();
 				return -1;
 			}
 			continue;
@@ -262,14 +259,14 @@ int main(int argc, char* argv[])
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-					Pause();
+					PreExit();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-				Pause();
+				PreExit();
 				return -1;
 			}
 
@@ -286,14 +283,14 @@ int main(int argc, char* argv[])
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-					Pause();
+					PreExit();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-				Pause();
+				PreExit();
 				return -1;
 			}
 
@@ -312,7 +309,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sArg.c_str());
-						Pause();
+						PreExit();
 						return -1;
 					}
 					else
@@ -334,7 +331,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
-						Pause();
+						PreExit();
 						return -1;
 					}
 					else
@@ -344,7 +341,7 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -354,13 +351,13 @@ int main(int argc, char* argv[])
 		if (bInfoOnly)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
-			Pause();
+			PreExit();
 			return -1;
 		}
 		if (sAVSFile != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
-			Pause();
+			PreExit();
 			return -1;
 		}
 	}
@@ -385,7 +382,7 @@ int main(int argc, char* argv[])
 		if (AvisynthInfo.bLoadError)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-			Pause();
+			PreExit();
 			return -1;
 		}
 
@@ -393,14 +390,14 @@ int main(int argc, char* argv[])
 			if (!AvisynthInfo.bIs64BitAVS)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
-				Pause();
+				PreExit();
 				return -1;
 			}
 		#else
 			if (AvisynthInfo.bIs64BitAVS)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
-				Pause();
+				PreExit();
 				return -1;
 			}
 		#endif
@@ -410,7 +407,7 @@ int main(int argc, char* argv[])
 		else
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", SysErrorMessage().c_str());
 
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -428,7 +425,7 @@ int main(int argc, char* argv[])
 		if (!gpuinfo.bInitialized)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
-			Pause();
+			PreExit();
 			return -1;
 		}
 	}
@@ -439,7 +436,7 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -519,19 +516,11 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Linker/compiler version:    %s\n", AvisynthInfo.sLinkerVersion.c_str());
-		sLogBuffer += sOutBuf;
-		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
-
 		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		if (Settings.bUseUTC)
-			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStampUTC.c_str());
-		else
-			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStamp.c_str());
-
+		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -597,14 +586,14 @@ int main(int argc, char* argv[])
 		string sFunction = "";
 		if (AvisynthInfo.vInternalFunctions.size() > 0)
 		{
-			sOutBuf = "[Internal (core) functions]\n";
+			sOutBuf = "\n\n[Internal (core) functions]\n";
 			sLogBufferFunctions += sOutBuf;
 		}
 
 		for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
 		{
 			sFunction = AvisynthInfo.vInternalFunctions[IFunc];
-			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
+			sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
 			sLogBufferFunctions += sOutBuf;
 		}
 
@@ -619,7 +608,7 @@ int main(int argc, char* argv[])
 		for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
 		{
 			sFunction = AvisynthInfo.vPluginFunctions[PFunc];
-			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
+			sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
 			sLogBufferFunctions += sOutBuf;
 		}
 
@@ -627,9 +616,9 @@ int main(int argc, char* argv[])
 		if (AvisynthInfo.vPluginDependencies.size() > 0)
 		{
 			if (AvisynthInfo.bIs64BitAVS)
-				sOutBuf = "[DLL dependencies (x64)]\n\n";
+				sOutBuf = "\n\n[DLL dependencies (x64)]\n";
 			else
-				sOutBuf = "[DLL dependencies (x86)]\n\n";
+				sOutBuf = "\n\n[DLL dependencies (x86)]\n";
 
 			sLogBufferDeps += sOutBuf;
 		}
@@ -665,8 +654,8 @@ int main(int argc, char* argv[])
 
 		if (Settings.bCreateLog)
 		{
-			if (Settings.sSystemTime == "")
-				Settings.sSystemTime = sys.GetFormattedSystemTime();
+			if (Settings.sSystemDateTime == "")
+				Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
  			string sInfoFile = "";
  			string sFunctionsFile = "";
@@ -677,74 +666,38 @@ int main(int argc, char* argv[])
 				if (Settings.sLogDirectory == "")
 				{
 					if (Settings.bLogFileDateTimeSuffix)
-					{
-						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", szPath, Settings.sSystemTime.c_str());
-						sFunctionsFile = utils.StrFormat("%s\\avsfunctions [%s].log", szPath, Settings.sSystemTime.c_str());
-						sDepsFile = utils.StrFormat("%s\\avsdeps [%s].log", szPath, Settings.sSystemTime.c_str());
-					}
+						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", szPath, Settings.sSystemDateTime.c_str());
 					else
-					{
 						sInfoFile = utils.StrFormat("%s\\avsinfo.log", szPath);
-						sFunctionsFile = utils.StrFormat("%s\\avsfunctions.log", szPath);
-						sDepsFile = utils.StrFormat("%s\\avsdeps.log", szPath);
-					}
 				}
 				else
 				{
 					if (Settings.bLogFileDateTimeSuffix)
-					{
-						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemTime.c_str());
-						sFunctionsFile = utils.StrFormat("%s\\avsfunctions [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemTime.c_str());
-						sDepsFile = utils.StrFormat("%s\\avsdeps [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemTime.c_str());
-					}
+						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemDateTime.c_str());
 					else
-					{
 						sInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
-						sFunctionsFile = utils.StrFormat("%s\\avsfunctions.log", Settings.sLogDirectory.c_str());
-						sDepsFile = utils.StrFormat("%s\\avsdeps.log", Settings.sLogDirectory.c_str());
-					}
 				}
 
 				ofstream hInfoFile(sInfoFile.c_str());
 				if (hInfoFile.is_open())
 			  {
 					hInfoFile << sLogBuffer;
+					hInfoFile << sLogBufferDeps;
+					hInfoFile << sLogBufferFunctions;
 					hInfoFile.flush();
 					hInfoFile.close();
-				}
-
-				if (Settings.bCreateFunctionLog)
-				{
-					ofstream hFunctionsFile(sFunctionsFile.c_str());
-					if (hFunctionsFile.is_open())
-				  {
-						hFunctionsFile << sLogBufferFunctions;
-						hFunctionsFile.flush();
-						hFunctionsFile.close();
-					}
-				}
-
-				if (Settings.bCreateDependencyLog)
-				{
-					ofstream hDepsFile(sDepsFile.c_str());
-					if (hDepsFile.is_open())
-				  {
-						hDepsFile << sLogBufferDeps;
-						hDepsFile.flush();
-						hDepsFile.close();
-					}
 				}
 			}
 		}
 
-		Pause();
+		PreExit();
 		return 0;
 	}
 
 	if (sAVSFile == "")
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -758,7 +711,7 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
-			Pause();
+			PreExit();
 			return -1;
 		}
 
@@ -774,7 +727,7 @@ int main(int argc, char* argv[])
 	if (!hDLL)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", SysErrorMessage().c_str());
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -782,7 +735,7 @@ int main(int argc, char* argv[])
 	if (!CreateEnvironment)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -790,7 +743,7 @@ int main(int argc, char* argv[])
 	if (!AVS_env)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
-		Pause();
+		PreExit();
 		return -1;
 	}
 
@@ -923,17 +876,10 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Multi-threading support:    %s", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Linker/compiler version:    %s", AvisynthInfo.sLinkerVersion.c_str());
-		sLogBuffer += sOutBuf + "\n";
-
 		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s", AvisynthInfo.sDLLPath.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		if (Settings.bUseUTC)
-			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStampUTC.c_str());
-		else
-			sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStamp.c_str());
-
+		sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
@@ -1164,7 +1110,7 @@ int main(int argc, char* argv[])
 			AVS_linkage = 0;
 			::FreeLibrary(hDLL);
 
-			Pause();
+			PreExit();
 			return 0;
 		}
 
@@ -1671,7 +1617,7 @@ int main(int argc, char* argv[])
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
-			Pause();
+			PreExit();
 			return -1;
 		}
 	}
@@ -1682,12 +1628,12 @@ int main(int argc, char* argv[])
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
-			Pause();
+			PreExit();
 			return -1;
 		}
 	}
 
-	Pause();
+	PreExit();
 
 	return iRet;
 }
@@ -1735,11 +1681,8 @@ string ParseINIFile()
 	Settings.nProcessPriority = 2;
 	Settings.bConUseStdOut = FALSE;
 	Settings.iTimeLimit = -1;
-	Settings.bUseUTC = TRUE;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
-	Settings.bCreateDependencyLog = FALSE;
-	Settings.bCreateFunctionLog = FALSE;
 
 	if (!utils.FileExists(sINIFile)) //No ini file present, create the file with defaults
 	{
@@ -1925,26 +1868,6 @@ string ParseINIFile()
 			Settings.bConUseStdOut = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
-		if (sCurrentLine.substr(0, 19) == "createdependencylog")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bCreateDependencyLog = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 17) == "createfunctionlog")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bCreateFunctionLog = (iBoolValue == 0) ? FALSE : TRUE;
-		}
-
 		if (sCurrentLine.substr(0, 16) == "logestimatedtime")
 		{
 			if (iBoolValue == -1)
@@ -2027,16 +1950,6 @@ string ParseINIFile()
 				Settings.iStopFrame = _atoi64(sTemp.substr(spos + 1).c_str());
 			}
 		}
-
-		if (sCurrentLine.substr(0, 6) == "useutc")
-		{
-			if (iBoolValue == -1)
-			{
-				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
-				return sRet;
-			}
-			Settings.bUseUTC = (iBoolValue == 0) ? FALSE : TRUE;
-		}
 	}
 
 	hINIFile.close();
@@ -2067,21 +1980,6 @@ BOOL WriteINIFile(string &s_inifile)
 	sComment += "# Note: Command line switches override INI file settings.\n";
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment =  "# \"LogDirectory\"\n";
-	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
-	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\" (without the quotes). The default is an empty string\n";
-	sComment += "# which means that all log files are stored in the script directory or, in case the \"-avsinfo\"\n";
-	sComment += "# switch was used, the current (working) directory.\n";
-	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"AVSDLL\"\n";
-	sComment += "# The user can specify the avisynth.dll to be used. This has to be a fully qualified path, for example\n";
-	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\" (without the quotes). The default is an empty string which\n";
-	sComment += "# means that AVSMeter will attempt to load avisynth.dll through the standard Windows search hierarchy.\n";
-	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
 	sComment =  "# \"DisplayFPS\" (0 or 1)\n";
 	sComment += "# If set to \"1\", frames/second is printed to the console.\n";
 	sCurrentLine = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
@@ -2092,11 +1990,9 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment =  "# \"DisplayEfficiencyIndex\" (0 or 1):\n";
-	sComment += "# If set to \"1\", the result of (FPS / CPU usage) is printed to the console. This ratio indicates the\n";
-	sComment += "# efficiency of a script (higher = better) and is useful for comparing different versions of a script\n";
-	sComment += "# or scripts that are supposed to do the same thing.\n";
-	sCurrentLine = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
+	sComment =  "# \"PauseBeforeExit\" (0 or 1):\n";
+	sComment += "# If set to \"1\", pauses the program at the end and returns to the console prompt only after pressing \"ESC\".\n";
+	sCurrentLine = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"CreateLog\" (0 or 1):\n";
@@ -2118,14 +2014,44 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
+	sComment =  "# \"MonitorGPULoad\" (0 or 1):\n";
+	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
+	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
+	sComment += "# shared memory interface. GPU-Z must be running in order to use this feature\n";
+	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bMonitorGPULoad);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment =  "# \"TimeLimit\" (1 - 999999):\n";
+	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates.\n";
+	sComment += "# Setting this to \"-1\" disables the feature.\n";
+	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment =  "# \"LogDirectory\"\n";
+	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
+	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\" (without the quotes). The default is an empty string\n";
+	sComment += "# which means that all log files are stored in the script directory or, in case the \"-avsinfo\"\n";
+	sComment += "# switch was used, the current (working) directory.\n";
+	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment =  "# \"AVSDLL\"\n";
+	sComment += "# The user can specify the avisynth.dll to be used. This has to be a fully qualified path, for example\n";
+	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\" (without the quotes). The default is an empty string which\n";
+	sComment += "# means that AVSMeter will attempt to load avisynth.dll through the standard Windows search hierarchy.\n";
+	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
+	sComment =  "# \"DisplayEfficiencyIndex\" (0 or 1):\n";
+	sComment += "# If set to \"1\", the result of (FPS / CPU usage) is printed to the console. This ratio indicates the\n";
+	sComment += "# efficiency of a script (higher = better) and is useful for comparing different versions of a script\n";
+	sComment += "# or scripts that are supposed to do the same thing.\n";
+	sCurrentLine = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
+	hINIFile << sComment << sCurrentLine << "\n\n";
+
 	sComment =  "# \"LogFileDateTimeSuffix\" (0 or 1):\n";
 	sComment += "# If set to \"1\", adds a date/time suffix to all .log and .csv files.\n";
 	sCurrentLine = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"PauseBeforeExit\" (0 or 1):\n";
-	sComment += "# If set to \"1\", pauses the program at the end and returns to the console prompt only after pressing \"ESC\".\n";
-	sCurrentLine = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"FrameRange\" (first,last):\n";
@@ -2139,33 +2065,15 @@ BOOL WriteINIFile(string &s_inifile)
 	sCurrentLine = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
-	sComment =  "# \"MonitorGPULoad\" (0 or 1):\n";
-	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
-	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
-	sComment += "# shared memory interface. GPU-Z must be running in order to use this feature\n";
-	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bMonitorGPULoad);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
 	sComment =  "# \"ProcessPriority\" (1, 2 or 3):\n";
 	sComment += "# Specify the process priority for AVSMeter and all attached processes (1: low, 2: normal, 3: high).\n";
 	sCurrentLine = utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"TimeLimit\" (1 - 999999):\n";
-	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates.\n";
-	sComment += "# Setting this to \"-1\" disables the feature.\n";
-	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"InvokeDistributor\" (0 or 1):\n";
 	sComment += "# For users of SEt's Avisynth MT: If set to \"1\", adds the \"Distributor\" call internally if the\n";
 	sComment += "# script uses one of the MT Modes 1~4.\n";
 	sCurrentLine = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"UseUTC\" (0 or 1):\n";
-	sComment += "# If set to \"1\", file timestamps are displayed as UTC (Coordinated Universal Time)\n";
-	sCurrentLine = utils.StrFormat("UseUTC=%u\n", Settings.bUseUTC);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"ConUseSTDOUT\" (0 or 1):\n";
@@ -2177,18 +2085,6 @@ BOOL WriteINIFile(string &s_inifile)
 	sComment =  "# \"UseColor\" (0 or 1):\n";
 	sComment += "# If set to \"0\", coloring of the console output is disabled.\n";
 	sCurrentLine = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"CreateDependencyLog\" (0 or 1):\n";
-	sComment += "# If set to \"1\", the switch combination \"-avsinfo -log\" creates an additional log file with\n";
-	sComment += "# a list of DLL dependencies for avisynth.dll and all auto-load plugins (\"avsdeps.log\")\n";
-	sCurrentLine = utils.StrFormat("CreateDependencyLog=%u\n", Settings.bCreateDependencyLog);
-	hINIFile << sComment << sCurrentLine << "\n\n";
-
-	sComment =  "# \"CreateFunctionLog\" (0 or 1):\n";
-	sComment += "# If set to \"1\", the switch combination \"-avsinfo -log\" creates an additional log file with\n";
-	sComment += "# a list of internal and external Avisynth functions (\"avsfunctions.log\")\n";
-	sCurrentLine = utils.StrFormat("CreateFunctionLog=%u\n", Settings.bCreateFunctionLog);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# Individual request (http://forum.doom9.org/showpost.php?p=1639610&postcount=96)\n";
@@ -2212,8 +2108,8 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	string sAVSBuffer = "";
 	string sCurrentLine = "";
 
-	if (Settings.sSystemTime == "")
-		Settings.sSystemTime = sys.GetFormattedSystemTime();
+	if (Settings.sSystemDateTime == "")
+		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
 	ifstream hAVSFile(s_avsfile.c_str());
 	if (!hAVSFile.is_open())
@@ -2234,14 +2130,14 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	if (ilen > 4)
 	{
 		if (Settings.bLogFileDateTimeSuffix)
-			sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].log";
+			sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].log";
 		else
 			sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
 	}
 	else
 	{
 		if (Settings.bLogFileDateTimeSuffix)
-			sLogFile = s_avsfile + " [" + Settings.sSystemTime + "].log";
+			sLogFile = s_avsfile + " [" + Settings.sSystemDateTime + "].log";
 		else
 			sLogFile = s_avsfile + ".log";
 	}
@@ -2329,22 +2225,22 @@ string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL
 	string sCurrentLine = "";
 	string sCSVFile = "";
 
-	if (Settings.sSystemTime == "")
-		Settings.sSystemTime = sys.GetFormattedSystemTime();
+	if (Settings.sSystemDateTime == "")
+		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
 	size_t ilen = s_avsfile.length();
 
 	if (ilen > 4)
 	{
 		if (Settings.bLogFileDateTimeSuffix)
-			sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].csv";
+			sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].csv";
 		else
 			sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
 	}
 	else
 	{
 		if (Settings.bLogFileDateTimeSuffix)
-			sCSVFile = s_avsfile + " [" + Settings.sSystemTime + "].csv";
+			sCSVFile = s_avsfile + " [" + Settings.sSystemDateTime + "].csv";
 		else
 			sCSVFile = s_avsfile + ".csv";
 	}
@@ -2413,7 +2309,7 @@ string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL
 }
 
 
-void Pause()
+void PreExit()
 {
 	if (Settings.bPauseBeforeExit)
 	{

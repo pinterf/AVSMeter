@@ -26,9 +26,8 @@ class CSysInfo
 public:
 	CSysInfo();
 	virtual        ~CSysInfo();
-	DWORD          GetTotalPhysicalMemory(); //MB
 	string         GetOSVersion();
-	string         GetFormattedSystemTime();
+	string         GetFormattedSystemDateTime();
 
 	//CPUID
 	void           GetCPUID();
@@ -37,10 +36,10 @@ public:
 	{
 		string       CPUBrandString;
 		string       CPUCodeName;
-		BYTE         CPUCores;
-		BYTE         CPULogicalCores;
-		BYTE         NumCPUs;
-		BYTE         CPUTotalLogicalCores;
+		int32_t      CPUCores;
+		int32_t      CPULogicalCores;
+		int32_t      NumCPUs;
+		int32_t      CPUTotalLogicalCores;
 		unsigned int CPURealClock; //MHz
 		string       CPUSupportedInstructionSets;
 	} cpudata;
