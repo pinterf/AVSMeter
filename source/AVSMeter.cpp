@@ -137,6 +137,7 @@ int main(int argc, char* argv[])
 	string sErrorMsg = "";
 	BOOL bModeAVSInfo = FALSE;
 	BOOL bCustomAVSDLLFromCL = FALSE;
+
 	Settings.sSystemDateTime = "";
 
 	BOOL CLSwitches_timelimit = FALSE;
@@ -193,6 +194,7 @@ int main(int argc, char* argv[])
 			bCustomAVSDLLFromCL = TRUE;
 			continue;
 		}
+
 
 		if (sArgTest == "-c")
 		{
@@ -487,9 +489,9 @@ int main(int argc, char* argv[])
 
 	BOOL bRet = FALSE;
 	if (bModeAVSInfo)
-		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg);
+		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg, TRUE);
 	else
-		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, FALSE, sErrorMsg);
+		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, FALSE, sErrorMsg, FALSE);
 
 	sys.GetCPUID();
 
@@ -592,7 +594,6 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-
 		if (AvisynthInfo.vPluginDirs.size() > 0)
 		{
 			string sPluginDir = "";
@@ -611,6 +612,8 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		PrintConsole(TRUE, COLOR_DEFAULT, "\n");
+		sLogBuffer += "\n";
 
 		//Plugin info
 		if (AvisynthInfo.vPlugins.size() > 0)
@@ -621,9 +624,6 @@ int main(int argc, char* argv[])
 			string sOldPluginType = "";
 			string sPluginVersion = "";
 			size_t spos = 0;
-
-			PrintConsole(TRUE, COLOR_DEFAULT, "\n");
-			sLogBuffer += "\n";
 
 			for (uiPlugin = 0; uiPlugin < AvisynthInfo.vPlugins.size(); uiPlugin++)
 			{

@@ -32,7 +32,7 @@ public:
 	CAvisynthInfo();
 	virtual ~CAvisynthInfo();
 
-	BOOL    GetInfo(string s_AVSDLL, BOOL b_SpecifyCustomPluginDir, string &s_ErrorMsg);
+	BOOL    GetInfo(string s_AVSDLL, BOOL b_SpecifyCustomPluginDir, string &s_ErrorMsg, BOOL b_ExtPlugCheck);
 	int     iInterfaceVersion;
 	vector  <string> vPluginDirs;
 	vector  <string> vInternalFunctions;
@@ -107,7 +107,7 @@ string CAvisynthInfo::BrowseDirectory()
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_ErrorMsg)
+BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 {
 	sDLLPath = "";
 	bIs64BitAVSDLL = FALSE;
@@ -273,9 +273,11 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 			return FALSE;
 		}
 
-		iInterfaceVersion = 6;
+		iInterfaceVersion = 8;
 		while (!AVS_env)
 		{
+			iInterfaceVersion--;
+
 			if (iInterfaceVersion < 5)
 			{
 				s_ErrorMsg = "Cannot create IScriptenvironment";
@@ -284,7 +286,6 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 			}
 
 			AVS_env = CreateEnvironment(iInterfaceVersion);
-			iInterfaceVersion--;
 		}
 
 
@@ -380,9 +381,14 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	if (!bSuccess)
 		return FALSE;
 
+
 	EnumPluginDirs(b_CustomPluginDir);
-	EnumPluginDLLs();
-	TestLoadPlugins();
+
+	if (b_ExtPlugCheck)
+	{
+		EnumPluginDLLs();
+		TestLoadPlugins();
+	}
 
 	return bSuccess;
 }
@@ -993,7 +999,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 			(sTemp.find("vcomp140.dll") != string::npos) ||
 			(sTemp.find("vcruntime140.dll") != string::npos) ||
 			(sTemp.find("api-ms-win-crt") != string::npos))
-				s_hint += "Visual Studio 2015/2017 Runtime doesn't seem to be installed\n";
+				s_hint += "Visual Studio 2015/2017/2019 Runtime doesn't seem to be installed\n";
 
 	s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
