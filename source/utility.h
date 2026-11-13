@@ -42,6 +42,8 @@
 #define BG_GREY			BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED
 #define BG_WHITE		BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED | BACKGROUND_INTENSITY
 
+#define BUFSIZE 2048
+
 class CUtils
 {
 public:
@@ -53,7 +55,7 @@ public:
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
-
+	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	//string functions
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);
@@ -322,6 +324,62 @@ BOOL CUtils::IsNumeric(string s_string)
 	}
 
 	return TRUE;
+}
+
+
+BOOL CUtils::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
+{
+	BOOL bSuccess = FALSE;
+	char pszFilename[MAX_PATH + 1];
+	HANDLE hFileMap;
+
+	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
+
+	if (hFileMap) 
+	{
+		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
+		if (pMem) 
+		{
+			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
+			{
+				char szTemp[BUFSIZE];
+				szTemp[0] = '\0';
+				if (GetLogicalDriveStrings(BUFSIZE - 1, szTemp))
+				{
+					char szName[MAX_PATH];
+					char szDrive[3] = TEXT(" :");
+					BOOL bFound = FALSE;
+					char* p = szTemp;
+
+					do 
+					{
+						*szDrive = *p;
+						if (QueryDosDevice(szDrive, szName, MAX_PATH))
+						{
+							size_t uNameLen = strlen(szName);
+							if (uNameLen < MAX_PATH)
+							{
+								bFound = _strnicmp(pszFilename, szName, uNameLen) == 0 && *(pszFilename + uNameLen) == '\\';
+								if (bFound)
+								{
+									sFileName = StrFormat("%s%s", szDrive, pszFilename+uNameLen);
+								}
+							}
+						}
+
+						while (*p++);
+					} while (!bFound && *p); // end of string
+				}
+			}
+			bSuccess = TRUE;
+			UnmapViewOfFile(pMem);
+		} 
+		CloseHandle(hFileMap);
+	}
+	else
+	  return FALSE;
+
+  return (bSuccess);
 }
 
 

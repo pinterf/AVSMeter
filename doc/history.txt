@@ -1,3 +1,9 @@
+v2.0.0
+- Dropped support for Avisynth 2.5x. At least AVS 2.6 Alpha4 or AVS+ r1576 are required
+- Added location of the loaded avisynth.dll to the log file
+- Added detection of outdated INI file
+- Refactoring
+
 v1.9.8
 - Added monitoring of the NVIDIA Video Engine load (PureVideo SIP)
 - Added switch and INI setting for specifying the process priority

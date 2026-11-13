@@ -46,8 +46,10 @@ public:
 	string sError;
 
 private:
+	unsigned __int64 GetSTDTimer();
+	unsigned __int64 uiLastSTDTimer;
 	string OSErrorMessage();
-	DWORD dwLastTimeRun;
+	unsigned __int64 uiLastTimeRun;
 
 	#pragma pack(push, 1)
 
@@ -74,10 +76,10 @@ private:
 		GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
 	} GPUZ_SH_MEM, *LPGPUZ_SH_MEM;
 
+	#pragma pack(pop)
+
 	HANDLE hMapFile;
 	LPVOID pMapAddr;
-
-	#pragma pack(pop)
 };
 
 CGPUInfo::CGPUInfo()
@@ -87,7 +89,8 @@ CGPUInfo::CGPUInfo()
 	bGPUZIsRunning = bGPUZRunning;
 	bInitialized = FALSE;
 	sensors.GPULoad = 0;
-	dwLastTimeRun = GetTickCount();
+	uiLastSTDTimer = 0;
+	uiLastTimeRun = 0;
 	sError = "";
 	pMapAddr = NULL;
 }
@@ -146,38 +149,28 @@ void CGPUInfo::ReadData()
 	double dCUDACaps = 0.0;
 	data.NVVP = FALSE;
 
-	for (int i = 0; i <128; i++)
+	for (int i = 0; i < 128; i++)
 	{
 		char DefChar = ' ';
-
-		char szkey[260];
-		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].key, -1, szkey, 260, &DefChar, NULL);
-		string sKey(szkey);
-		sKey.erase(sKey.find_last_not_of(" \t\n\r") + 1);
-		sKey.erase(0, sKey.find_first_not_of(" \t\n\r"));
-
 		char szvalue[260];
 		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 260, &DefChar, NULL);
 		string sValue(szvalue);
 		sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
 		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
 		
-		if ((sKey == "") || (sValue == ""))
-			continue;
-
-		if (sKey == "CardName")
+		if (wcscmp(lpMem->data[i].key, L"CardName") == 0)
 			data.CardName = sValue;
-		if (sKey == "GPUName")
+		if (wcscmp(lpMem->data[i].key, L"GPUName") == 0)
 			data.GPUName = sValue;
-		if (sKey == "MemSize")
+		if (wcscmp(lpMem->data[i].key, L"MemSize") == 0)
 			data.MemSize = sValue;
-		if (sKey == "DriverVersion")
+		if (wcscmp(lpMem->data[i].key, L"DriverVersion") == 0)
 			data.DriverVersion = sValue;
-		if (sKey == "OpenCL_Version")
+		if (wcscmp(lpMem->data[i].key, L"OpenCL_Version") == 0)
 			data.OpenCLVersion = sValue;
-		if (sKey == "CUDA")
+		if (wcscmp(lpMem->data[i].key, L"CUDA") == 0)
 			nCUDA = (BYTE)atol(sValue.c_str());		
-		if (sKey == "CUDA_Capability")
+		if (wcscmp(lpMem->data[i].key, L"CUDA_Capability") == 0)
 			dCUDACaps = atof(sValue.c_str());		
 	}
 	
@@ -190,8 +183,8 @@ void CGPUInfo::ReadData()
 
 void CGPUInfo::ReadSensors()
 {
-	//Min. update interval 500ms
-	if ((::GetTickCount() - dwLastTimeRun) < 500)
+	//Min. update interval 100ms
+	if ((GetSTDTimer() - uiLastTimeRun) < 100)
 		return;
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
@@ -219,7 +212,7 @@ void CGPUInfo::ReadSensors()
 			break;
 	}
 
-	dwLastTimeRun = GetTickCount();
+	uiLastTimeRun = GetSTDTimer();
 
 	return;
 }
@@ -254,6 +247,16 @@ static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
 		bGPUZRunning = TRUE;
 
 	return TRUE;
+}
+
+
+unsigned __int64 CGPUInfo::GetSTDTimer()
+{
+	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
+	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
+	uiLastSTDTimer = uiSTDTimer;
+
+	return (uiSTDTimer + uiTimerWrapComp);
 }
 
 

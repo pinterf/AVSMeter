@@ -19,9 +19,7 @@ public:
 	string       FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 	string       StrFormat(const char *fmt, ...);
 private:
-	unsigned __int64  uiSTDTimer;
 	unsigned __int64  uiLastSTDTimer;
-	unsigned __int64  uiTimerWrapCompensation;
 };
 
 CTimer::CTimer()
@@ -73,12 +71,11 @@ double CTimer::GetTimer()
 
 double CTimer::GetSTDTimer()
 {
-	uiSTDTimer = (unsigned __int64)GetTickCount();
-	uiTimerWrapCompensation = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
+	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
+	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
 	uiLastSTDTimer = uiSTDTimer;
-	uiSTDTimer += uiTimerWrapCompensation;
 
-	return (double)uiSTDTimer / 1000.0;
+	return (double)(uiSTDTimer + uiTimerWrapComp) / 1000.0;
 }
 
 

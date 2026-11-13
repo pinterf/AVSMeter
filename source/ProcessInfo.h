@@ -28,7 +28,9 @@ private:
 	inline unsigned __int64 SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
 	BYTE btCPUUsage;
 	BOOL bFirstRun;
-	
+	unsigned __int64 GetSTDTimer();
+	unsigned __int64 uiLastSTDTimer;
+
 	FILETIME ftSysIdle, ftSysKernel, ftSysUser;
 	FILETIME ftProcCreation, ftProcExit, ftProcKernel, ftProcUser;
 
@@ -47,8 +49,8 @@ private:
 	unsigned __int64 uiTotalSys;
 	unsigned __int64 uiTotalProc;
 
-	DWORD dwLastTimeRun;
-	DWORD dwLastTimeRunThreadCount;
+	unsigned __int64 uiLastTimeRun;
+	unsigned __int64 uiLastTimeRunThreadCount;
 	HANDLE hProcess;
 	PROCESS_MEMORY_COUNTERS pmc;
 };
@@ -70,8 +72,9 @@ CProcessInfo::CProcessInfo()
 	wThreadCount = GetCurrentThreadCount();
 	bFirstRun = TRUE;
 
-	dwLastTimeRun = 0;
-	dwLastTimeRunThreadCount = 0;
+	uiLastTimeRun = 0;
+	uiLastTimeRunThreadCount = 0;
+	uiLastSTDTimer = 0;
 }
 
 CProcessInfo::~CProcessInfo()
@@ -91,7 +94,7 @@ void CProcessInfo::CloseProcess()
 void CProcessInfo::Update()
 {
 	//Min. update interval 100ms
-	if ((::GetTickCount() - dwLastTimeRun) < 100)
+	if ((GetSTDTimer() - uiLastTimeRun) < 100)
 		return;
 
 	GetCPUUsage();
@@ -102,17 +105,17 @@ void CProcessInfo::Update()
 	else
 		wCPUUsage = (WORD)btCPUUsage;
 
-	if ((::GetTickCount() - dwLastTimeRunThreadCount) > 5000)
+	if ((GetSTDTimer() - uiLastTimeRunThreadCount) > 2000)
 	{
 		wThreadCount = GetCurrentThreadCount();
-		dwLastTimeRunThreadCount = GetTickCount();
+		uiLastTimeRunThreadCount = GetSTDTimer();
 	}
 
 	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
 	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
 	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
 
-	dwLastTimeRun = GetTickCount();
+	uiLastTimeRun = GetSTDTimer();
 
 	return;
 }
@@ -187,6 +190,16 @@ WORD CProcessInfo::GetCurrentThreadCount()
 	::CloseHandle(hThreadSnapshot);
 
 	return wThreads;
+}
+
+
+unsigned __int64 CProcessInfo::GetSTDTimer()
+{
+	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
+	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
+	uiLastSTDTimer = uiSTDTimer;
+
+	return (uiSTDTimer + uiTimerWrapComp);
 }
 
 

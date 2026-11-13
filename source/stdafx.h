@@ -2,6 +2,8 @@
 #pragma once
 #endif
 
+//#pragma warning (disable : 4101)
+
 #include <windows.h>
 #include <process.h>
 #include <string>

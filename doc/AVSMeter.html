@@ -51,7 +51,11 @@
 
 
 
+
+
           Use fixed frame interval for measurements </code></b></nobr><nobr><b><code><b><code>(See
+
+
 
 
 
@@ -68,7 +72,9 @@
 
 
 
-          Monitor GPU usage</code></b></nobr><nobr><b><code><br>
+
+
+          Monitor GPU/VPU usage</code></b></nobr><nobr><b><code><br>
         </code></b></nobr><nobr><b><code>
           &nbsp;-range=first,last&nbsp;&nbsp;&nbsp; Specify frame range
           (See also "FrameRange" INI setting)</code></b></nobr><nobr><b><code><br>
@@ -84,8 +90,12 @@
 
 
 
+
+
           Specify timeout (seconds) (See also "ReadTimeout" INI setting)</code></b></nobr><nobr><b><code><br>
-          &nbsp;-priority&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
           Specify process priority (1:low, 2:normal, 3:high)<br>
         </code></b></nobr><nobr><b><code> &nbsp;-help
           [-h]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -144,13 +154,13 @@
     <br>
     <b>"</b><b>MonitorGPULoad" (</b><b><b><b><font color="Red">0</font>
           or 1</b></b>):</b><br>
-    When set to "1", enables display of the GPU usage which of course is
-    only useful if a filter that uses the GPU is in the chain. AVSMeter
-    uses <b><a
+    When set to "1", enables display of the GPU/VPU usage which of
+    course is only useful if a filter that uses the GPU is in the chain.
+    AVSMeter uses <b><a
         href="http://www.techpowerup.com/downloads/SysInfo/GPU-Z/">GPU-Z</a></b>
-    to access the GPU sensors through a shared memory space. GPU-Z has
-    to be running (the window can be minimized to the system tray)
-    before running AVSMeter.<br>
+    to access the graphics card sensors through a shared memory space.
+    GPU-Z has to be running (the window can be minimized to the system
+    tray) before running AVSMeter.<br>
     <b><i>Note:</i></b> The command line switch "-gpu" overrides the INI
     setting.<br>
     <br>
