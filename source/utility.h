@@ -7,6 +7,7 @@
 #define _UTILS_H
 
 #include "stdafx.h"
+#include "VerInfo.h"
 
 #define FG_BLACK    0
 #define FG_RED			FOREGROUND_RED
@@ -51,12 +52,32 @@ public:
 	CUtils();
 	virtual      ~CUtils();
 	BOOL         FileExists(string s_file);
-	string       ErrorMessage();
+	string       OSErrorMessage();
 	void         CursorUp(int iLines);
 	unsigned int GetConsoleWidth();
-	void SetRGB(WORD wForeGround, WORD wBackGround, BOOL bSet);
+	void SetRGB(WORD wAttributes, BOOL bSet);
+	void ResetRGB(BOOL bSet);
 	BOOL GetProductVersion(string &s_version);
-	HANDLE       hConsole;
+	BOOL GetResourceInfo(string s_file);
+
+	struct ResourceInfo
+	{
+		string sLanguage;
+		string sFixedFileVersion;
+		string sFixedProductVersion;
+		string sComments;         // VI_STR_COMMENTS
+		string sCompanyName;      // VI_STR_COMPANYNAME
+		string sFileDescription;  // VI_STR_FILEDESCRIPTION
+		string sFileVersion;      // VI_STR_FILEVERSION
+		string sInternalName;     // VI_STR_INTERNALNAME
+		string sLegalCopyright;   // VI_STR_LEGALCOPYRIGHT
+		string sLegalTrademarks;  // VI_STR_LEGALTRADEMARKS
+		string sOriginalFilename; // VI_STR_ORIGINALFILENAME
+		string sPrivateBuild;     // VI_STR_PRIVATEBUILD
+		string sProductName;      // VI_STR_PRODUCTNAME
+		string sProductVersion;   // VI_STR_PRODUCTVERSION
+		string sSpecialBuild;     // VI_STR_SPECIALBUILD
+	} resinfo;
 
 	//string functions
 	void   StrTrimLeft(string &s_string);
@@ -67,9 +88,11 @@ public:
 	string StrFormat(const char *fmt, ...);
 	string StrPad(string s_line, unsigned int ui_consolewidth);
 	string StrFormatFPS(double d_fps);
+	BOOL   IsNumeric(string s_string);
 
 private:
-	WORD wSaveAttributes;
+	HANDLE hConsole;
+	WORD   wSaveAttributes;
 };
 
 CUtils::CUtils()
@@ -111,10 +134,19 @@ unsigned int CUtils::GetConsoleWidth()
 }
 
 
-void CUtils::SetRGB(WORD wForeGround, WORD wBackGround, BOOL bSet)
+void CUtils::SetRGB(WORD wAttributes, BOOL bSet)
 {
 	if (bSet)
-		SetConsoleTextAttribute(hConsole, wForeGround | wBackGround);
+		SetConsoleTextAttribute(hConsole, wAttributes);
+
+	return;
+}
+
+
+void CUtils::ResetRGB(BOOL bSet)
+{
+	if (bSet)
+		SetConsoleTextAttribute(hConsole, wSaveAttributes);
 
 	return;
 }
@@ -132,6 +164,7 @@ BOOL CUtils::FileExists(string s_file)
 
 	return TRUE;
 }
+
 
 void CUtils::StrTrimLeft(string &s_string)
 {
@@ -278,12 +311,116 @@ BOOL CUtils::GetProductVersion(string &s_version)
 }
 
 
-string CUtils::ErrorMessage()
+BOOL CUtils::GetResourceInfo(string s_file)
+{
+	resinfo.sLanguage = "";
+	resinfo.sFixedFileVersion = "";
+	resinfo.sFixedProductVersion = "";
+	resinfo.sComments = "";
+	resinfo.sCompanyName = "";
+	resinfo.sFileDescription = "";
+	resinfo.sFileVersion = "";
+	resinfo.sInternalName = "";
+	resinfo.sLegalCopyright = "";
+	resinfo.sLegalTrademarks = "";
+	resinfo.sOriginalFilename = "";
+	resinfo.sPrivateBuild = "";
+	resinfo.sProductName = "";
+	resinfo.sProductVersion = "";
+	resinfo.sSpecialBuild = "";
+
+	CFileVersionInfo fvi;
+
+	if (fvi.Open(s_file.c_str()))
+	{
+		if (fvi.GetTransCount() > 0)
+		{
+			char szLID[56] = {0};
+			//LPCTSTR lpszTmp = NULL;
+			fvi.GetLIDName(fvi.GetLIDByIndex(0), szLID, 56);
+			//fvi.GetCPName(fvi.GetCPByIndex(0), &lpszTmp);
+			resinfo.sLanguage = StrFormat("%s", szLID);
+		}
+		else
+		{
+			fvi.Close();
+			return FALSE;
+		}
+
+		char szVer[1024] = {0};
+		resinfo.sFixedFileVersion = StrFormat("%d.%d.%d.%d", fvi.GetFileVersionMajor(), fvi.GetFileVersionMinor(), fvi.GetFileVersionBuild(), fvi.GetFileVersionQFE());
+		resinfo.sFixedProductVersion = StrFormat("%d.%d.%d.%d", fvi.GetProductVersionMajor(), fvi.GetProductVersionMinor(), fvi.GetProductVersionBuild(), fvi.GetProductVersionQFE());
+
+		if (fvi.QueryStringValue(VI_STR_COMMENTS, szVer, 1024))
+			resinfo.sComments = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_COMPANYNAME, szVer, 1024))
+			resinfo.sCompanyName = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_FILEDESCRIPTION, szVer, 1024))
+			resinfo.sFileDescription = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_FILEVERSION, szVer, 1024))
+			resinfo.sFileVersion = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_INTERNALNAME, szVer, 1024))
+			resinfo.sInternalName = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_LEGALCOPYRIGHT, szVer, 1024))
+			resinfo.sLegalCopyright = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_LEGALTRADEMARKS, szVer, 1024))
+			resinfo.sLegalTrademarks = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_ORIGINALFILENAME, szVer, 1024))
+			resinfo.sOriginalFilename = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_PRIVATEBUILD, szVer, 1024))
+			resinfo.sPrivateBuild = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_PRODUCTNAME, szVer, 1024))
+			resinfo.sProductName = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_PRODUCTVERSION, szVer, 1024))
+			resinfo.sProductVersion = StrFormat("%s", szVer);
+		if (fvi.QueryStringValue(VI_STR_SPECIALBUILD, szVer, 1024))
+			resinfo.sSpecialBuild = StrFormat("%s", szVer);
+
+		fvi.Close();
+
+		return TRUE;
+	}
+
+	return FALSE; //no version resource
+}
+
+
+string CUtils::OSErrorMessage()
 {
 	LPVOID lpf;
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR)&lpf, 0,	NULL);
 	
 	return (LPCTSTR)lpf;
+}
+
+
+BOOL CUtils::IsNumeric(string s_string)
+{
+	if (s_string == "")
+		return FALSE;
+
+	for (unsigned int ipos = 0; ipos < s_string.length(); ipos++)
+	{
+		switch (s_string[ipos])
+		{
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case '-':
+				continue;
+			default:
+				return FALSE;
+		}
+	}
+
+	return TRUE;
 }
 
 

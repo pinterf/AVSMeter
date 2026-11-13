@@ -18,7 +18,7 @@ public:
 	double       GetTimer();
 	double       GetMMTimer();
 	BOOL         TestTimer();
-	string       FormatTimeString(unsigned int ui_milliseconds);
+	string       FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 	string       StrFormat(const char *fmt, ...);
 };
 
@@ -78,14 +78,23 @@ double CTimer::GetMMTimer()
 }
 
 
-string CTimer::FormatTimeString(unsigned int ui_milliseconds)
+string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 {
-	unsigned int hours = ui_milliseconds / 3600000;
-	unsigned int minutes = (ui_milliseconds / 60000) % 60;
-	unsigned int seconds = (ui_milliseconds / 1000) % 60;
-	unsigned int milliseconds = ui_milliseconds % 1000;
+	string sTime = "";
+	unsigned int hours = (unsigned int)(i_milliseconds / 3600000);
+	unsigned int minutes = (unsigned int)(i_milliseconds / 60000) % 60;
+	unsigned int seconds = (unsigned int)(i_milliseconds / 1000) % 60;
+	unsigned int milliseconds = (unsigned int)i_milliseconds % 1000;
 
-	return StrFormat("%03d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+	if (hours < 100)
+		sTime = StrFormat("   %02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+	else
+		sTime = StrFormat("%5d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+
+	if (!b_rightaligned)
+		sTime.erase(0, sTime.find_first_not_of(" "));
+
+	return sTime;
 }
 
 

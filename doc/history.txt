@@ -1,5 +1,13 @@
+v1.8.3
+- Internal memory usage tweaks
+- Better error handling of wrong INI file settings
+- Version info from the VERSION_INFO resource is now displayed in addition to the
+  version string returned by Avisynth.
+- Changed "UseColour" INI setting to "UseColor"
+- Many other fixes/refactoring
+
 v1.8.2
-- Simplified and improved code for releasing the pointer to "IScriptEnvironent"
+- Simplified and improved code for releasing the pointer to "IScriptEnvironment"
 - Added text colouring to the console output. This can be disabled by setting
   "UseColour=0" in the INI file.
 
