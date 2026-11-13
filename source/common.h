@@ -14,9 +14,13 @@
 	You should have received a copy of the GNU General Public License
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 
 #pragma once
+
+#define BUFSIZE 2048
 
 #include <windows.h>
 #include <process.h>
@@ -36,127 +40,227 @@
 
 using namespace std;
 
-#include "avisynth.h"
-const AVS_Linkage *AVS_linkage = 0;
+HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName);
+BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 
-class SE_Exception
-{
-private:
-	unsigned int nSE;
-public:
-	SE_Exception() {}
-	SE_Exception(unsigned int n) : nSE(n) {}
-	~SE_Exception() {}
-	unsigned int GetCode() {return nSE;}
+struct StrCaseInsensitiveCompare
+{ 
+	bool operator() (const string& a, const string& b) const
+	{
+		return _stricmp(a.c_str(), b.c_str()) < 0;
+	}
 };
 
-void SE_Translator(unsigned int u, _EXCEPTION_POINTERS* pExp) {throw SE_Exception(u);}
+#include "avs_headers\avisynth.h"
+const AVS_Linkage *AVS_linkage = 0;
 
 //test STATUS_FLOAT_DIVIDE_BY_ZERO:
 //		int a = 0;
 //		int b = 100;
 //		volatile float c = b/a;
 
-string SE_ErrorMessage(unsigned int code)
+static void SE_Translator(unsigned int u, EXCEPTION_POINTERS* pExcept)
 {
-	string sRet = "Unknown system exception";
+  char msg[1024];
+	char module[1024];
+	string sExceptionName = "Unknown system exception";
+	string sTempModulePath = "";
+	string sExceptionModule = "Unknown module";
 
-	switch (code)
+	if (GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress, module))
+		sTempModulePath = module;
+
+	HANDLE hFile = CreateFile(sTempModulePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+	if (hFile != INVALID_HANDLE_VALUE)
+	{
+		if (!GetFileNameFromHandle(hFile, sExceptionModule))
+			sExceptionModule = sTempModulePath;
+	}
+	CloseHandle(hFile);
+
+	switch (pExcept->ExceptionRecord->ExceptionCode)
 	{
 		case STATUS_GUARD_PAGE_VIOLATION:
-			sRet = "STATUS_GUARD_PAGE_VIOLATION";
+			sExceptionName = "STATUS_GUARD_PAGE_VIOLATION";
 			break;
 		case STATUS_DATATYPE_MISALIGNMENT:
-			sRet = "STATUS_DATATYPE_MISALIGNMENT";
+			sExceptionName = "STATUS_DATATYPE_MISALIGNMENT";
 			break;
 		case STATUS_BREAKPOINT:
-			sRet = "STATUS_BREAKPOINT";
+			sExceptionName = "STATUS_BREAKPOINT";
 			break;
 		case STATUS_SINGLE_STEP:
-			sRet = "STATUS_SINGLE_STEP";
+			sExceptionName = "STATUS_SINGLE_STEP";
 			break;
 		case STATUS_ACCESS_VIOLATION:
-			sRet = "STATUS_ACCESS_VIOLATION";
+			sExceptionName = "STATUS_ACCESS_VIOLATION";
 			break;
 		case STATUS_IN_PAGE_ERROR:
-			sRet = "STATUS_IN_PAGE_ERROR";
+			sExceptionName = "STATUS_IN_PAGE_ERROR";
 			break;
 		case STATUS_INVALID_HANDLE:
-			sRet = "STATUS_INVALID_HANDLE";
+			sExceptionName = "STATUS_INVALID_HANDLE";
 			break;
 		case STATUS_NO_MEMORY:
-			sRet = "STATUS_NO_MEMORY";
+			sExceptionName = "STATUS_NO_MEMORY";
 			break;
 		case STATUS_ILLEGAL_INSTRUCTION:
-			sRet = "STATUS_ILLEGAL_INSTRUCTION";
+			sExceptionName = "STATUS_ILLEGAL_INSTRUCTION";
 			break;
 		case STATUS_NONCONTINUABLE_EXCEPTION:
-			sRet = "STATUS_NONCONTINUABLE_EXCEPTION";
+			sExceptionName = "STATUS_NONCONTINUABLE_EXCEPTION";
 			break;
 		case STATUS_INVALID_DISPOSITION:
-			sRet = "STATUS_INVALID_DISPOSITION";
+			sExceptionName = "STATUS_INVALID_DISPOSITION";
 			break;
 		case STATUS_ARRAY_BOUNDS_EXCEEDED:
-			sRet = "STATUS_ARRAY_BOUNDS_EXCEEDED";
+			sExceptionName = "STATUS_ARRAY_BOUNDS_EXCEEDED";
 			break;
 		case STATUS_FLOAT_DENORMAL_OPERAND:
-			sRet = "STATUS_FLOAT_DENORMAL_OPERAND";
+			sExceptionName = "STATUS_FLOAT_DENORMAL_OPERAND";
 			break;
 		case STATUS_FLOAT_DIVIDE_BY_ZERO:
-			sRet = "STATUS_FLOAT_DIVIDE_BY_ZERO";
+			sExceptionName = "STATUS_FLOAT_DIVIDE_BY_ZERO";
 			break;
 		case STATUS_FLOAT_INEXACT_RESULT:
-			sRet = "STATUS_FLOAT_INEXACT_RESULT";
+			sExceptionName = "STATUS_FLOAT_INEXACT_RESULT";
 			break;
 		case STATUS_FLOAT_INVALID_OPERATION:
-			sRet = "STATUS_FLOAT_INVALID_OPERATION";
+			sExceptionName = "STATUS_FLOAT_INVALID_OPERATION";
 			break;
 		case STATUS_FLOAT_OVERFLOW:
-			sRet = "STATUS_FLOAT_OVERFLOW";
+			sExceptionName = "STATUS_FLOAT_OVERFLOW";
 			break;
 		case STATUS_FLOAT_STACK_CHECK:
-			sRet = "STATUS_FLOAT_STACK_CHECK";
+			sExceptionName = "STATUS_FLOAT_STACK_CHECK";
 			break;
 		case STATUS_FLOAT_UNDERFLOW:
-			sRet = "STATUS_FLOAT_UNDERFLOW";
+			sExceptionName = "STATUS_FLOAT_UNDERFLOW";
 			break;
 		case STATUS_INTEGER_DIVIDE_BY_ZERO:
-			sRet = "STATUS_INTEGER_DIVIDE_BY_ZERO";
+			sExceptionName = "STATUS_INTEGER_DIVIDE_BY_ZERO";
 			break;
 		case STATUS_INTEGER_OVERFLOW:
-			sRet = "STATUS_INTEGER_OVERFLOW";
+			sExceptionName = "STATUS_INTEGER_OVERFLOW";
 			break;
 		case STATUS_PRIVILEGED_INSTRUCTION:
-			sRet = "STATUS_PRIVILEGED_INSTRUCTION";
+			sExceptionName = "STATUS_PRIVILEGED_INSTRUCTION";
 			break;
 		case STATUS_STACK_OVERFLOW:
-			sRet = "STATUS_STACK_OVERFLOW";
+			sExceptionName = "STATUS_STACK_OVERFLOW";
 			break;
 		case 0xC0000135:
-			sRet = "STATUS_DLL_NOT_FOUND";
+			sExceptionName = "STATUS_DLL_NOT_FOUND";
 			break;
 		case 0xC0000142:
-			sRet = "STATUS_DLL_INIT_FAILED";
+			sExceptionName = "STATUS_DLL_INIT_FAILED";
 			break;
 		case 0XC06D007E:
-			sRet = "Delay-load module not found";
+			sExceptionName = "Delay-load module not found";
 			break;
 		case 0xC06d007F:
-			sRet = "Delay-load procedure not found";
+			sExceptionName = "Delay-load procedure not found";
 			break;
 		default:
-			sRet = "Unknown system exception";
+			sExceptionName = "Unknown system exception";
   }
 
-	char buff[512];
-  _snprintf(buff, sizeof(buff), "Exception 0x%08X\n%s", code, sRet.c_str());
-  sRet = buff;
-
-	return sRet;
+	_snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p", pExcept->ExceptionRecord->ExceptionCode, sExceptionName.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
+  throw exception(msg);
 }
 
 
-string SysErrorMessage()
+HMODULE GetExceptionModule(LPVOID address, LPSTR moduleName)  
+{  
+	HMODULE moduleList[1024];  
+	DWORD sizeNeeded = 0;  
+	if(FALSE == EnumProcessModules(GetCurrentProcess(), moduleList, 1024, &sizeNeeded) || sizeNeeded < sizeof(HMODULE))  
+		return NULL;  
+  
+	int curModule = -1;  
+	for (unsigned int i = 0; i < (sizeNeeded / sizeof(HMODULE)); ++i)  
+	{  
+		if ((DWORD)moduleList[i] < (DWORD)address)  
+		{  
+			if (curModule == -1)  
+				curModule = i;  
+			else  
+			{  
+				if ((DWORD)moduleList[curModule] < (DWORD)moduleList[i])  
+					curModule = i;  
+			}  
+		}  
+	}
+  
+	if (curModule == -1)
+		return NULL;  
+  
+	if (!GetModuleFileName(moduleList[curModule], moduleName, MAX_PATH))
+		return NULL;  
+  
+ return moduleList[curModule];  
+}  
+
+
+BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
+{
+	BOOL bSuccess = FALSE;
+	char msg[1024];
+	char pszFilename[MAX_PATH + 1];
+	HANDLE hFileMap;
+
+	hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);
+
+	if (hFileMap) 
+	{
+		void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
+		if (pMem) 
+		{
+			if (GetMappedFileName (GetCurrentProcess(), pMem, pszFilename, MAX_PATH))
+			{
+				char szTemp[BUFSIZE];
+				szTemp[0] = '\0';
+				if (GetLogicalDriveStrings(BUFSIZE - 1, szTemp))
+				{
+					char szName[MAX_PATH];
+					char szDrive[3] = TEXT(" :");
+					BOOL bFound = FALSE;
+					char* p = szTemp;
+
+					do 
+					{
+						*szDrive = *p;
+						if (QueryDosDevice(szDrive, szName, MAX_PATH))
+						{
+							size_t uNameLen = strlen(szName);
+							if (uNameLen < MAX_PATH)
+							{
+								bFound = _strnicmp(pszFilename, szName, uNameLen) == 0 && *(pszFilename + uNameLen) == '\\';
+								if (bFound)
+								{
+									_snprintf(msg, sizeof(msg), "%s%s", szDrive, pszFilename+uNameLen);
+									sFileName = msg;
+								}
+							}
+						}
+
+						while (*p++);
+					} while (!bFound && *p); // end of string
+				}
+			}
+			bSuccess = TRUE;
+			UnmapViewOfFile(pMem);
+		} 
+		CloseHandle(hFileMap);
+	}
+	else
+	  return FALSE;
+
+  return (bSuccess);
+}
+
+
+static string SysErrorMessage()
 {
 	DWORD dwLastError = GetLastError();
 	char *szMsg;

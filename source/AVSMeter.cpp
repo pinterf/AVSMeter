@@ -1526,7 +1526,7 @@ int main(int argc, char* argv[])
 		else
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
 	}
-	catch (SE_Exception ep)
+	catch (std::exception& ex)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		Settings.bCreateLog = TRUE;
@@ -1539,11 +1539,11 @@ int main(int argc, char* argv[])
 			utils.CursorUp(2);
 		}
 
-		string sError = SE_ErrorMessage(ep.GetCode());
-		if (sError == "")
+		sAVSError = ex.what();
+		if (sAVSError == "")
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nUnknown exception\n");
 		else
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sError.c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
 
 	}
 	catch (...)
@@ -1559,11 +1559,11 @@ int main(int argc, char* argv[])
 			utils.CursorUp(2);
 		}
 
-		string sError = SysErrorMessage();
-		if (sError == "")
+		sAVSError = SysErrorMessage();
+		if (sAVSError == "")
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nUnknown exception\n");
 		else
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sError.c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
 	}
 
 	AVS_linkage = 0;

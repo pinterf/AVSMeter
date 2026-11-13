@@ -1,3 +1,6 @@
+v2.2.8
+- Improved Exception handling. Module names in which exceptions occur and address are reported
+
 v2.2.7
 - Fixed a couple of bugs
 - Improved memory usage

@@ -22,15 +22,6 @@
 #define BUFSIZE 2048
 #define NUM_PLUG_DIR_REFS 8
 
-struct StrCaseInsensitiveCompare
-{ 
-	bool operator() (const string& a, const string& b) const
-	{
-		return _stricmp(a.c_str(), b.c_str()) < 0;
-	}
-};
-
-
 class CAvisynthInfo
 {
 public:
@@ -124,6 +115,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 	try
 	{
 		_set_se_translator(SE_Translator);
+
 		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
@@ -161,10 +153,10 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		iInterfaceVersion = 0;
 		s_ErrorMsg = StrFormat("%s", (PCSTR)err.msg);
 	}
-	catch (SE_Exception ep)
+	catch (std::exception& ex)
 	{
 		iInterfaceVersion = 0;
-		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+		s_ErrorMsg = ex.what();
 	}
 	catch (...)
 	{
@@ -272,10 +264,10 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			}
 		}
 	}
-	catch (SE_Exception ep)
+	catch (std::exception& ex)
 	{
 		bRet = FALSE;
-		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+		s_ErrorMsg = ex.what();
 	}
 	catch (...)
 	{
@@ -315,10 +307,10 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 		CloseHandle(hFile);
 	}
-	catch (SE_Exception ep)
+	catch (std::exception& ex)
 	{
 		bRet = FALSE;
-		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+		s_ErrorMsg = ex.what();
 	}
 	catch (...)
 	{
@@ -421,10 +413,10 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		bRet = FALSE;
 		s_ErrorMsg = StrFormat("%s", (PCSTR)err.msg);
 	}
-	catch (SE_Exception ep)
+	catch (std::exception& ex)
 	{
 		bRet = FALSE;
-		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+		s_ErrorMsg = ex.what();
 	}
 	catch (...)
 	{
@@ -1046,10 +1038,10 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 			return FALSE;
 		}
 	}
-	catch (SE_Exception ep)
+	catch (std::exception& ex)
 	{
 		bRet = FALSE;
-		s_Msg = StrFormat("\"%s\"\n%s", s_dll.c_str(), SE_ErrorMessage(ep.GetCode()).c_str());
+		s_Msg = StrFormat("\"%s\"\n", s_dll.c_str()) + ex.what();
 	}
 	catch (...)
 	{
