@@ -55,6 +55,7 @@ public:
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
 	string    sSystemTime;
+	BOOL      bLogFileDateTimeSuffix;
 };
 
 
@@ -498,16 +499,36 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		//C plugs
-		if (AvisynthInfo.mPluginDLLsC.size() > 0)
+		//C25 plugs
+		if (AvisynthInfo.mPluginDLLsC25.size() > 0)
 		{
-			sOutBuf = "\nAvisynth C plugins:\n";
+			sOutBuf = "\nAvisynth C 2.5 plugins:\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (map<string, BYTE>::iterator c = AvisynthInfo.mPluginDLLsC.begin(); c != AvisynthInfo.mPluginDLLsC.end(); ++c)
+			for (map<string, BYTE>::iterator c25 = AvisynthInfo.mPluginDLLsC25.begin(); c25 != AvisynthInfo.mPluginDLLsC25.end(); ++c25)
 			{
-				sPluginDLL = c->first;
+				sPluginDLL = c25->first;
+
+				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
+				sLogBuffer += sOutBuf;
+				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+				sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
+				sLogBuffer += sOutBuf;
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+			}
+		}
+
+		//C20 plugs
+		if (AvisynthInfo.mPluginDLLsC20.size() > 0)
+		{
+			sOutBuf = "\nAvisynth C 2.0 plugins:\n";
+			sLogBuffer += sOutBuf;
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+
+			for (map<string, BYTE>::iterator c20 = AvisynthInfo.mPluginDLLsC20.begin(); c20 != AvisynthInfo.mPluginDLLsC20.end(); ++c20)
+			{
+				sPluginDLL = c20->first;
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
@@ -546,9 +567,19 @@ int main(int argc, char* argv[])
 			if (::GetCurrentDirectory(sizeof(szPath), szPath) > 0)
 			{
 				if (Settings.sLogDirectory == "")
-					sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", szPath, Settings.sSystemTime.c_str());
+				{
+					if (Settings.bLogFileDateTimeSuffix)
+						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", szPath, Settings.sSystemTime.c_str());
+					else
+						sInfoFile = utils.StrFormat("%s\\avsinfo.log", szPath);
+				}
 				else
-					sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemTime.c_str());
+				{
+					if (Settings.bLogFileDateTimeSuffix)
+						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemTime.c_str());
+					else
+						sInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
+				}
 
 				ofstream hInfoFile(sInfoFile.c_str());
 				if (hInfoFile.is_open())
@@ -1521,6 +1552,7 @@ string ParseINIFile()
 	Settings.bDisplayEfficiencyIndex = FALSE;
 	Settings.bCreateLog = FALSE;
 	Settings.bCreateCSV = FALSE;
+	Settings.bLogFileDateTimeSuffix = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
 	Settings.iStartFrame = 0;
 	Settings.iStopFrame = -1;
@@ -1552,6 +1584,7 @@ string ParseINIFile()
 		hINIFile << "DisplayEfficiencyIndex=0\n";
 		hINIFile << "CreateLog=0\n";
 		hINIFile << "CreateCSV=0\n";
+		hINIFile << "LogFileDateTimeSuffix=0\n";
 		hINIFile << "PauseBeforeExit=0\n";
 		hINIFile << "FrameRange=0,-1\n";
 		hINIFile << "InvokeDistributor=1\n";
@@ -1592,7 +1625,7 @@ string ParseINIFile()
 		if (sCurrentLine.substr(0, 12) == "logdirectory")
 		{
 			Settings.sLogDirectory = sOrgLine.substr(13);
-			Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of("\\") + 1);
+			Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of("\\") + 1); //remove trailing bs if present
 			utils.StrTrim(Settings.sLogDirectory);
 			if ((!utils.DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
 			{
@@ -1650,6 +1683,14 @@ string ParseINIFile()
 				Settings.bCreateCSV = FALSE;
 			else
 				Settings.bCreateCSV = TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 21) == "logfiledatetimesuffix")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
+				Settings.bLogFileDateTimeSuffix = FALSE;
+			else
+				Settings.bLogFileDateTimeSuffix = TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 15) == "pausebeforeexit")
@@ -1796,6 +1837,9 @@ string ParseINIFile()
 	sCurrentLine = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	hNewINIFile << sCurrentLine;
 
+	sCurrentLine = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
+	hNewINIFile << sCurrentLine;
+
 	sCurrentLine = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
 	hNewINIFile << sCurrentLine;
 
@@ -1864,9 +1908,19 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	size_t ilen = s_avsfile.length();
 
 	if (ilen > 4)
-		sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].log";
+	{
+		if (Settings.bLogFileDateTimeSuffix)
+			sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].log";
+		else
+			sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
+	}
 	else
-		sLogFile = s_avsfile + " [" + Settings.sSystemTime + "].log";
+	{
+		if (Settings.bLogFileDateTimeSuffix)
+			sLogFile = s_avsfile + " [" + Settings.sSystemTime + "].log";
+		else
+			sLogFile = s_avsfile + ".log";
+	}
 
 	if (Settings.sLogDirectory != "")
 	{
@@ -1960,9 +2014,20 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs
 	size_t ilen = s_avsfile.length();
 
 	if (ilen > 4)
-		sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].csv";
+	{
+		if (Settings.bLogFileDateTimeSuffix)
+			sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].csv";
+		else
+			sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
+	}
 	else
-		sCSVFile = s_avsfile + " [" + Settings.sSystemTime + "].csv";
+	{
+		if (Settings.bLogFileDateTimeSuffix)
+			sCSVFile = s_avsfile + " [" + Settings.sSystemTime + "].csv";
+		else
+			sCSVFile = s_avsfile + ".csv";
+	}
+
 
 	if (Settings.sLogDirectory != "")
 	{

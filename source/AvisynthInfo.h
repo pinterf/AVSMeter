@@ -34,7 +34,8 @@ public:
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	map     <string, BYTE> mPluginDirs;
-	map     <string, BYTE> mPluginDLLsC;
+	map     <string, BYTE> mPluginDLLsC25;
+	map     <string, BYTE> mPluginDLLsC20;
 	map     <string, BYTE> mPluginDLLsCPP26;
 	map     <string, BYTE> mPluginDLLsCPP25;
 	map     <string, BYTE> mPluginDLLsCPP20;
@@ -881,8 +882,10 @@ void CAvisynthInfo::EnumPluginDLLs()
 				}
 				else
 				{
-					if (sMessage == "AVSC")
-						mPluginDLLsC[sCurrentFile] = 1;
+					if (sMessage == "AVSC25")
+						mPluginDLLsC25[sCurrentFile] = 1;
+					if (sMessage == "AVSC20")
+						mPluginDLLsC20[sCurrentFile] = 1;
 					if (sMessage == "AVS26CPP")
 						mPluginDLLsCPP26[sCurrentFile] = 1;
 					if (sMessage == "AVS25CPP")
@@ -985,11 +988,18 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 				break;
 			}
 
+			pos = sName.find("avisynth_c_plugin_init@4");
+			if (pos != std::string::npos)
+			{
+				bIsPlugin = TRUE;
+				s_Msg = "AVSC25";
+				break;
+			}
 			pos = sName.find("avisynth_c_plugin_init");
 			if (pos != std::string::npos)
 			{
 				bIsPlugin = TRUE;
-				s_Msg = "AVSC";
+				s_Msg = "AVSC20";
 				break;
 			}
 		}
@@ -1099,20 +1109,36 @@ void CAvisynthInfo::AVSCheckPluginDLLs()
 		}
 	}
 
-	for (map<string, BYTE>::iterator itC = mPluginDLLsC.begin(); itC != mPluginDLLsC.end(); ++itC)
+	for (map<string, BYTE>::iterator itC25 = mPluginDLLsC25.begin(); itC25 != mPluginDLLsC25.end(); ++itC25)
 	{
-		sPlugin = itC->first;
+		sPlugin = itC25->first;
 		try
 		{
 			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
 		}
 		catch (AvisynthError err)
 		{
-			string s_Msg = StrFormat("%s", (PCSTR)err.msg);
+			string s_Msg = StrFormat("%s\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"", (PCSTR)err.msg);
 			if (s_Msg != "")
 				mPluginErrors[s_Msg] = 1;
 		}
 	}
+
+	for (map<string, BYTE>::iterator itC20 = mPluginDLLsC20.begin(); itC20 != mPluginDLLsC20.end(); ++itC20)
+	{
+		sPlugin = itC20->first;
+		try
+		{
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			string s_Msg = StrFormat("%s\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need \"avisynth_c.dll\" support DLL", (PCSTR)err.msg);
+			if (s_Msg != "")
+				mPluginErrors[s_Msg] = 1;
+		}
+	}
+
 
 	AVS_main = 0;
 	Sleep(100);

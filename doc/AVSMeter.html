@@ -69,6 +69,8 @@
 
 
 
+
+
         Display extended Avisynth info (<font color="#ff0000">1</font>)<br>
         &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
@@ -80,6 +82,8 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -168,6 +172,8 @@
 
 
 
+
+
           Set process priority (1:low, 2:normal, 3:high)<br>
         </font></font></big><b><big><font face="Courier New"><br>
         </font></big></b><br>
@@ -177,15 +183,15 @@
     that file will be displayed. The "-avsinfo" switch can be combined
     with "-log" in order to write the info to a file ("avsinfo.log" is
     created in the current (working) directory unless the INI option
-    "LogDirectory" points to a valid directory).<br>
+    "LogDirectory" points to another (valid) directory).<br>
     <br>
     (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
     Creates a log file with various details about the installed Avisynth
     version, clip info, runtime results, a copy of the script and a
     performance data table with the measured details about each
     frame/frame interval. The log file is created in the same directory
-    as the script unless the INI option "LogDirectory" points to a valid
-    directory.<b><nobr></nobr><br>
+    as the script unless the INI option "LogDirectory" points to another
+    (valid) directory.<b><nobr></nobr><br>
     </b><b><i>Note:</i></b> The numbering of the frames in the
     performance data section is not zero-based, i.e. the first frame is
     1, not 0.<br>
@@ -195,7 +201,7 @@
     comma-separated values for direct import in Excel or a similar
     spread sheet program (OpenOffice, LibreOffice). The CSV file is
     created in the same directory as the script unless the INI option
-    "LogDirectory" points to a valid directory.<nobr><b></b></nobr><br>
+    "LogDirectory" points to another (valid) directory.<nobr></nobr><br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -276,7 +282,10 @@
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
-    <b> </b><b>"PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
+    <b>"LogFileDateTimeSuffix" (<font color="Red">0</font> or 1):</b><br>
+    If set to "1", adds a date/time suffix to all .log and .csv files.<br>
+    <br>
+    <b></b><b>"PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
     If set to "1", pauses the program at the end and returns to the
     console prompt only after pressing "ESC".<br>
     <b><br>

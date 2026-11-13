@@ -1,3 +1,8 @@
+v2.2.2
+- Added ini option "LogFileDateTimeSuffix" which makes adding the date/time suffix for .log/.csv files
+  optional.
+- More detailed error messages when using "-avsinfo" and plugin loading fails
+
 v2.2.1
 - New ini option "LogDirectory". If specified, all .log and .csv files will be created in that directory.
 - All .log and .csv files now have a suffix containing date and time of creation.
