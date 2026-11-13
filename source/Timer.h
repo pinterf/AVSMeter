@@ -24,12 +24,13 @@ class CTimer
 {
 public:
 	CTimer();
-	virtual       ~CTimer();
+	virtual          ~CTimer();
 
-	double        GetTimer();
-	double        GetSTDTimer();
-	BOOL          TestTimer();
-	string        FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
+	double           GetTimer();
+	double           GetSTDTimer();
+	unsigned __int64 GetSTDTimerMS();
+	BOOL             TestTimer();
+	string           FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
 
 private:
 };
@@ -74,12 +75,18 @@ double CTimer::GetTimer()
 
 double CTimer::GetSTDTimer()
 {
+	return ((double)GetSTDTimerMS() / 1000.0);
+}
+
+
+unsigned __int64 CTimer::GetSTDTimerMS()
+{
 	static unsigned __int64 uiLastSTDTimer;
 	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
 	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
 	uiLastSTDTimer = uiSTDTimer;
 
-	return (double)(uiSTDTimer + uiTimerWrapComp) / 1000.0;
+	return (uiSTDTimer + uiTimerWrapComp);
 }
 
 

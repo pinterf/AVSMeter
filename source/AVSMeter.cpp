@@ -391,7 +391,6 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	sys.GetCPUInfo();
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 
 	if (bPrintAVSInfo)
@@ -403,7 +402,7 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (sys.bCPUIDSuccess)
+		if (sys.GetCPUInfo())
 		{
 			sOutBuf = utils.StrFormat("CPU brand string:           %s\n", sys.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
@@ -653,7 +652,6 @@ int main(int argc, char* argv[])
 	if (!bInfoOnly)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
-		Sleep(100);
 		uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
 		if (sErrorMsg != "")
 		{
@@ -710,7 +708,6 @@ int main(int argc, char* argv[])
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
 		AVS_main = AVS_env->Invoke("Import", sAVSFile.c_str());
-		Sleep(100);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 
 		if (!AVS_main.IsClip())
@@ -761,7 +758,7 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (sys.bCPUIDSuccess)
+		if (sys.GetCPUInfo())
 		{
 			sOutBuf = utils.StrFormat("CPU brand string:           %s\n", sys.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
@@ -1121,10 +1118,22 @@ int main(int argc, char* argv[])
 		double dLastDisplayTime = dStartTime;
 		double dLastIntervalTime = dStartTime;
 
+
 		if (_kbhit())
 		{
 			if (_getch() == 0x1B) //ESC
-				AVS_env->ThrowError("\'ESC\' pressed, cancelled.\n");
+			{
+				AVS_clip = 0;
+				AVS_main = 0;
+				AVS_temp = 0;
+				AVS_env->DeleteScriptEnvironment();
+				AVS_env = 0;
+				AVS_linkage = 0;
+
+				PrintConsole(TRUE, COLOR_ERROR, "\'ESC\' pressed, cancelled.\n");
+				WaitForKBHit();
+				return -1;
+			}
 		}
 
 		unsigned int uiCursorOffset = 0;
@@ -1472,8 +1481,8 @@ int main(int argc, char* argv[])
 	catch (AvisynthError err)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-		Settings.bCreateLog = TRUE;
 		sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
+		Settings.bCreateLog = TRUE;
 		iRet = -1;
 
 		if (bEarlyExit == FALSE)
@@ -2192,13 +2201,18 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		if (!AVS_vidinfo.HasVideo())
 			AVS_env->ThrowError("Script did not return a video clip:\n%s", s_avsfile.c_str());
 
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Analysing script...").c_str());
-
 		unsigned int uiFrame = 0;
 		double TDelta = 0.0;
 		double T0 = timer.GetSTDTimer();
+		unsigned __int64 D0 = 0;
 		while ((TDelta < 5.0) && (uiFrame < uiTotalFrames))
 		{
+			if ((timer.GetSTDTimerMS() - D0) >= 200)
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rPre-scanning script (F%u / T%.2lf)\r", uiFrame, TDelta);
+				D0 = timer.GetSTDTimerMS();
+			}
+
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
 			++uiFrame;
 			TDelta = timer.GetSTDTimer() - T0;

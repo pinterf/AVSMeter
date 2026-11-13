@@ -608,33 +608,22 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 				break;
 			}
 
+			if (sName.find("avisynthplugininit") != string::npos)
+			{
+				s_Msg = "AVSCPP20";
+				break;
+			}
+
 			if (sName.find("avisynth_c_plugin_init@4") != string::npos)
 			{
 				s_Msg = "AVSC25";
 				break;
 			}
-		}
 
-		if (s_Msg == "UNCATEGORIZED")
-		{
-			for (dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
+			if (sName.find("avisynth_c_plugin_init") != string::npos)
 			{
-				sName = "";
-				DWORD rvaName = prvaNames[dwName];
-				sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-				utils.StrToLC(sName);
-
-				if (sName.find("avisynthplugininit") != string::npos)
-				{
-					s_Msg = "AVSCPP20";
-					break;
-				}
-
-				if (sName.find("avisynth_c_plugin_init") != string::npos)
-				{
-					s_Msg = "AVSC20";
-					break;
-				}
+				s_Msg = "AVSC20";
+				break;
 			}
 		}
 	}

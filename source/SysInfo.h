@@ -32,11 +32,10 @@ public:
 	string            GetOSVersion();
 	string            GetFormattedSystemDateTime();
 	BOOL              Is64BitOS();
-	void              GetCPUInfo();
+	BOOL              GetCPUInfo();
 	string            CPUBrandString;
 	string            CPUVendorString;
 	string            CPUFeatures;
-	BOOL              bCPUIDSuccess;
 
 private:
 	CUtils            utils;
@@ -144,9 +143,8 @@ string CSysInfo::GetFormattedSystemDateTime()
 }
 
 
-void CSysInfo::GetCPUInfo()
+BOOL CSysInfo::GetCPUInfo()
 {
-	bCPUIDSuccess = FALSE;
 	CPUBrandString = "";
 	char szCPUBrandString[128];
 	unsigned nIDs, i;
@@ -156,7 +154,7 @@ void CSysInfo::GetCPUInfo()
 	nIDs = CPURegs[0];
 
 	if (nIDs < 0x80000004)
-		return;
+		return FALSE;
 
 	memset(szCPUBrandString, 0, sizeof(szCPUBrandString));
 
@@ -175,9 +173,8 @@ void CSysInfo::GetCPUInfo()
 	CPUBrandString = RemoveMultipleWhiteSpaces(CPUBrandString);
 
 	GetCPUFeatures();
-	bCPUIDSuccess = TRUE;
 
-	return;
+	return TRUE;
 }
 
 

@@ -1,3 +1,6 @@
+v2.6.7
+- Minor fixes, refactoring and cosmetics
+ 
 v2.6.6
 - Detailed external function enumeration and duplicate report are still not working properly, removed for now
 
