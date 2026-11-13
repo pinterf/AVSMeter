@@ -1,3 +1,9 @@
+v2.9.6
+- Updated libcpuid
+- If the script runtime is too short, the number of frames processed and runtime are displayed in addition to the warning.
+- Refactoring
+- Cosmetics
+
 v2.9.5
 - Updated libcpuid (AMD Zen 2 support)
 

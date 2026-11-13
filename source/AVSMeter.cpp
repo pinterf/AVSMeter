@@ -350,7 +350,7 @@ int main(int argc, char* argv[])
 					sAVSFile = utils.StrFormat("%s", szOut);
 					if (!utils.FileExists(sAVSFile))
 					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sArg.c_str());
+						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sAVSFile.c_str());
 						PollKeys();
 						return -1;
 					}
@@ -580,7 +580,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
+			sOutBuf = utils.StrFormat("Video memory size:          %s MiB", gpuinfo.data.MemSize.c_str());
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
 			sLogBuffer += sOutBuf + "\n";
@@ -609,7 +609,7 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
-		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s\n", utils.StrAnsiToOEM(AvisynthInfo.sDLLPath).c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll location:      %s\n", AvisynthInfo.sDLLPath.c_str());
 		sLogBuffer += sOutBuf;
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -630,7 +630,7 @@ int main(int argc, char* argv[])
 
 					sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
 					sLogBuffer += sOutBuf;
-					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+					PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 				}
 			}
 		}
@@ -665,9 +665,18 @@ int main(int argc, char* argv[])
 					else
 						HColor = COLOR_AVSM_VERSION;
 
-					sOutBuf = utils.StrFormat("\n[%s]\n", sPluginType.c_str());
+					sOutBuf = utils.StrFormat("\n[%s]", sPluginType.c_str());
 					sLogBuffer += sOutBuf;
 					PrintConsole(TRUE, HColor, sOutBuf.c_str());
+
+					if ((sPluginType.find("32 Bit") != std::string::npos) || (sPluginType.find("64 Bit") != std::string::npos))
+						sOutBuf = "  [Version, Time stamp]\n";
+					else
+						sOutBuf = "  [Time stamp]\n";
+
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, sOutBuf.c_str());
+
 					sOldPluginType = sPluginType;
 				}
 
@@ -675,19 +684,16 @@ int main(int argc, char* argv[])
 
 				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
 				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+				PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
 				sPluginVersion = utils.GetFileVersion(sPluginDLL);
-				if (sPluginVersion != "n/a")
-				{
-					sOutBuf = utils.StrFormat("  [%s]\n", sPluginVersion.c_str());
-					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
-				}
+
+				if ((sPluginType.find("32 Bit") != std::string::npos) || (sPluginType.find("64 Bit") != std::string::npos))
+					sOutBuf = utils.StrFormat("  [%s, %s]\n", sPluginVersion.c_str(), utils.GetFileDateStamp(sPluginDLL).c_str());
 				else
-				{
 					sOutBuf = utils.StrFormat("  [%s]\n", utils.GetFileDateStamp(sPluginDLL).c_str());
-					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
-				}
+
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, sOutBuf.c_str());
 
 				sLogBuffer += sOutBuf;
 			}
@@ -745,7 +751,7 @@ int main(int argc, char* argv[])
 					sOutBuf = utils.StrFormat("\n%s\n", sPluginError.c_str());
 					sOutBuf += sLineSep + "\n";
 					sLogBuffer += sOutBuf;
-					PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
+					PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 				}
 			}
 		}
@@ -1016,7 +1022,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
+			sOutBuf = utils.StrFormat("Video memory size:          %s MiB", gpuinfo.data.MemSize.c_str());
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
 			sLogBuffer += sOutBuf + "\n";
@@ -1680,9 +1686,31 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			sOutBuf = "Script runtime is too short for meaningful measurements";
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s\n", Pad(sOutBuf).c_str());
+			sOutBuf = "Script runtime is too short for meaningful measurements\n\n";
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s", Pad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf;
+
+			if (uiFirstFrame == uiLastFrame)
+			{
+				if (uiFirstFrame == 0)
+					sOutBuf = utils.StrFormat("Frames processed:               %u", uiFramesRead);
+				else
+					sOutBuf = utils.StrFormat("Frames processed:               %u (%u)", uiFramesRead, uiFirstFrame);
+			}
+			else
+				sOutBuf = utils.StrFormat("Frames processed:               %u (%u - %u)", uiFramesRead, uiFirstFrame, uiLastFrame);
+
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+			sLogBuffer += sOutBuf + "\n";
+
+			if ((Settings.bLogEstimatedTime) && (uiFramesRead < uiFramesToProcess))
+				sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str(), timer.FormatTimeString(iEstimatedMS, FALSE).c_str());
+			else
+				sOutBuf = utils.StrFormat("Time (elapsed):                 %s", timer.FormatTimeString(iElapsedMS, FALSE).c_str());
+
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+			sLogBuffer += sOutBuf + "\n";
+
 			bRuntimeTooShort = TRUE;
 		}
 
@@ -1794,7 +1822,7 @@ string ParseINIFile()
 		size_t i = 0;
 		for (i = (sProgramPath.length() - 1); i > 0; i--)
 		{
-			if (sProgramPath[i] == '\\')
+			if (sProgramPath[i] == '\\') 
 				break;
 		}
 		sProgramPath = sProgramPath.substr(0, i);
@@ -2292,30 +2320,39 @@ void PollKeys()
 
 void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 {
-	if (!fmt)
-		return;
+	const unsigned int bufsize = 8192;
+	char buffer[bufsize];
 
 	va_list args;
 	va_start(args, fmt);
+
+	if (_vsnprintf(buffer, bufsize, fmt, args) < 0)
+	{
+		va_end(args);
+		fprintf(stderr, "\rBuffer overflow...\r");
+		return;
+	}
+
+	va_end(args);
+
+	CharToOem(buffer, buffer);
 
 	if (wAttributes && Settings.bUseColor)
 		utils.SetConsoleColors(wAttributes);
 
 	if (bUseStdOut)
 	{
-		vfprintf(stdout, fmt, args);
+		fputs(buffer, stdout);
 		fflush(stdout);
 	}
 	else
 	{
-		vfprintf(stderr, fmt, args);
+		fputs(buffer, stderr);
 		fflush(stderr);
 	}
 
 	if (wAttributes && Settings.bUseColor)
 		utils.ResetConsoleColors();
-
-	va_end(args);
 
 	return;
 }
@@ -2431,8 +2468,6 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		double dAverageFrameTime = 0.0;
 		if (TDelta >= ((double)MIN_RUNTIME / 1000.0))
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //convert to milliseconds
-		else
-			AVS_env->ThrowError("Script runtime is too short for meaningful measurements");
 
 		uiFrameInterval = 1000;
 		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL /  500.0)) uiFrameInterval =  500;

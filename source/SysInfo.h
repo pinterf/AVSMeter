@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "cpuid\libcpuid.h"
+#include "utility.h"
 
 class CSysInfo
 {
@@ -46,8 +47,8 @@ public:
 	} cpudata;
 
 private:
+	CUtils         utils;
 	string         RemoveMultipleWhiteSpaces(string s);
-	string         StrFormat(char const *fmt, ...);
 };
 
 
@@ -87,9 +88,9 @@ string CSysInfo::GetOSVersion()
 	if (osvi.dwMajorVersion == 5)
 	{
 		if (osvi.wProductType == VER_NT_WORKSTATION)
-			sOSVersion = StrFormat("Windows XP %s", sArchitecture.c_str());
+			sOSVersion = utils.StrFormat("Windows XP %s", sArchitecture.c_str());
 		else
-			sOSVersion = StrFormat("Windows Server 2003 %s", sArchitecture.c_str());
+			sOSVersion = utils.StrFormat("Windows Server 2003 %s", sArchitecture.c_str());
 	}
 
 	if (osvi.dwMajorVersion == 6)
@@ -97,43 +98,43 @@ string CSysInfo::GetOSVersion()
 		if (osvi.dwMinorVersion == 0)
 		{
 			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows Vista %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows Vista %s", sArchitecture.c_str());
 			else
-				sOSVersion = StrFormat("Windows Server 2008 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows Server 2008 %s", sArchitecture.c_str());
 		}
 		if (osvi.dwMinorVersion == 1)
 		{
 			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows 7 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows 7 %s", sArchitecture.c_str());
 			else
-				sOSVersion = StrFormat("Windows Server 2008 R2 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows Server 2008 R2 %s", sArchitecture.c_str());
 		}
 		if (osvi.dwMinorVersion == 2)
 		{
 			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows 8 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows 8 %s", sArchitecture.c_str());
 			else
-				sOSVersion = StrFormat("Windows Server 2012 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows Server 2012 %s", sArchitecture.c_str());
 		}
 		if (osvi.dwMinorVersion == 3)
 		{
 			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows 8.1 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows 8.1 %s", sArchitecture.c_str());
 			else
-				sOSVersion = StrFormat("Windows Server 2012 R2 %s", sArchitecture.c_str());
+				sOSVersion = utils.StrFormat("Windows Server 2012 R2 %s", sArchitecture.c_str());
 		}
 	}
 
 	if (osvi.dwMajorVersion == 10)
 	{
 		if (osvi.dwMinorVersion == 0)
-			sOSVersion = StrFormat("Windows 10 %s", sArchitecture.c_str());
+			sOSVersion = utils.StrFormat("Windows 10 %s", sArchitecture.c_str());
 	}
 
 	if ((osvi.wServicePackMajor > 0) || (osvi.wServicePackMinor > 0))
-		sOSAddendum = StrFormat(" Service Pack %u.%u (Build %u)", osvi.wServicePackMajor, osvi.wServicePackMinor, osvi.dwBuildNumber);
+		sOSAddendum = utils.StrFormat(" Service Pack %u.%u (Build %u)", osvi.wServicePackMajor, osvi.wServicePackMinor, osvi.dwBuildNumber);
 	else
-		sOSAddendum = StrFormat(" (Build %u)", osvi.dwBuildNumber);
+		sOSAddendum = utils.StrFormat(" (Build %u)", osvi.dwBuildNumber);
 
 	return sOSVersion + sOSAddendum;
 }
@@ -144,7 +145,7 @@ string CSysInfo::GetFormattedSystemDateTime()
 	SYSTEMTIME st;
 	GetLocalTime(&st);
 
-	return StrFormat("%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	return utils.StrFormat("%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 }
 
 
@@ -201,39 +202,40 @@ void CSysInfo::GetCPUID()
 
 	cpudata.CPUCores = data.num_cores * cpudata.NumCPUs;
 	cpudata.CPULogicalCores = data.num_logical_cpus * cpudata.NumCPUs;
-	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
+	cpudata.CPUCodeName = utils.StrFormat("%s", data.cpu_codename);
 	cpudata.CPUCodeName = RemoveMultipleWhiteSpaces(cpudata.CPUCodeName);
-	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
+	cpudata.CPUBrandString = utils.StrFormat("%s", data.brand_str);
 	cpudata.CPUBrandString = RemoveMultipleWhiteSpaces(cpudata.CPUBrandString);
 
 	cpudata.CPUSupportedInstructionSets = "";
-	if (data.flags[CPU_FEATURE_3DNOW])     cpudata.CPUSupportedInstructionSets += "3DNOW, ";
-	if (data.flags[CPU_FEATURE_3DNOWEXT])  cpudata.CPUSupportedInstructionSets += "3DNOWEXT, ";
-	if (data.flags[CPU_FEATURE_MMX])       cpudata.CPUSupportedInstructionSets += "MMX, ";
-	if (data.flags[CPU_FEATURE_MMXEXT])    cpudata.CPUSupportedInstructionSets += "MMXEXT, ";
-	if (data.flags[CPU_FEATURE_SSE])       cpudata.CPUSupportedInstructionSets += "SSE, ";
-	if (data.flags[CPU_FEATURE_SSE2])      cpudata.CPUSupportedInstructionSets += "SSE2, ";
-	if (data.flags[CPU_FEATURE_PNI])       cpudata.CPUSupportedInstructionSets += "SSE3, ";
-	if (data.flags[CPU_FEATURE_SSSE3])     cpudata.CPUSupportedInstructionSets += "SSSE3, ";
-	if (data.flags[CPU_FEATURE_SSE4_1])    cpudata.CPUSupportedInstructionSets += "SSE4.1, ";
-	if (data.flags[CPU_FEATURE_SSE4_2])    cpudata.CPUSupportedInstructionSets += "SSE4.2, ";
-	if (data.flags[CPU_FEATURE_SSE4A])     cpudata.CPUSupportedInstructionSets += "SSE4A, ";
-	if (data.flags[CPU_FEATURE_FMA3])      cpudata.CPUSupportedInstructionSets += "FMA3, ";
-	if (data.flags[CPU_FEATURE_FMA4])      cpudata.CPUSupportedInstructionSets += "FMA4, ";
-	if (data.flags[CPU_FEATURE_AVX])       cpudata.CPUSupportedInstructionSets += "AVX, ";
-	if (data.flags[CPU_FEATURE_AVX2])      cpudata.CPUSupportedInstructionSets += "AVX2, ";
-	if (data.flags[CPU_FEATURE_F16C])      cpudata.CPUSupportedInstructionSets += "F16C, ";
-	if (data.flags[CPU_FEATURE_SHA_NI])    cpudata.CPUSupportedInstructionSets += "SHA1/SHA256, ";
-	if (data.flags[CPU_FEATURE_AVX512F])   cpudata.CPUSupportedInstructionSets += "AVX512F, ";
-	if (data.flags[CPU_FEATURE_AVX512DQ])  cpudata.CPUSupportedInstructionSets += "AVX512DQ, ";
-	if (data.flags[CPU_FEATURE_AVX512PF])  cpudata.CPUSupportedInstructionSets += "AVX512PF, ";
-	if (data.flags[CPU_FEATURE_AVX512ER])  cpudata.CPUSupportedInstructionSets += "AVX512ER, ";
-	if (data.flags[CPU_FEATURE_AVX512CD])  cpudata.CPUSupportedInstructionSets += "AVX512CD, ";
-	if (data.flags[CPU_FEATURE_AVX512BW])  cpudata.CPUSupportedInstructionSets += "AVX512BW, ";
-	if (data.flags[CPU_FEATURE_AVX512VL])  cpudata.CPUSupportedInstructionSets += "AVX512VL, ";
-	if (data.flags[CPU_FEATURE_ABM])       cpudata.CPUSupportedInstructionSets += "LZCNT, ";
-	if (data.flags[CPU_FEATURE_BMI1])      cpudata.CPUSupportedInstructionSets += "BMI1, ";
-	if (data.flags[CPU_FEATURE_BMI2])      cpudata.CPUSupportedInstructionSets += "BMI2, ";
+	if (data.flags[CPU_FEATURE_3DNOW])       cpudata.CPUSupportedInstructionSets += "3DNOW, ";
+	if (data.flags[CPU_FEATURE_3DNOWEXT])    cpudata.CPUSupportedInstructionSets += "3DNOWEXT, ";
+	if (data.flags[CPU_FEATURE_MMX])         cpudata.CPUSupportedInstructionSets += "MMX, ";
+	if (data.flags[CPU_FEATURE_MMXEXT])      cpudata.CPUSupportedInstructionSets += "MMXEXT, ";
+	if (data.flags[CPU_FEATURE_SSE])         cpudata.CPUSupportedInstructionSets += "SSE, ";
+	if (data.flags[CPU_FEATURE_SSE2])        cpudata.CPUSupportedInstructionSets += "SSE2, ";
+	if (data.flags[CPU_FEATURE_PNI])         cpudata.CPUSupportedInstructionSets += "SSE3, ";
+	if (data.flags[CPU_FEATURE_SSSE3])       cpudata.CPUSupportedInstructionSets += "SSSE3, ";
+	if (data.flags[CPU_FEATURE_SSE4_1])      cpudata.CPUSupportedInstructionSets += "SSE4.1, ";
+	if (data.flags[CPU_FEATURE_SSE4_2])      cpudata.CPUSupportedInstructionSets += "SSE4.2, ";
+	if (data.flags[CPU_FEATURE_SSE4A])       cpudata.CPUSupportedInstructionSets += "SSE4A, ";
+	if (data.flags[CPU_FEATURE_FMA3])        cpudata.CPUSupportedInstructionSets += "FMA3, ";
+	if (data.flags[CPU_FEATURE_FMA4])        cpudata.CPUSupportedInstructionSets += "FMA4, ";
+	if (data.flags[CPU_FEATURE_AVX])         cpudata.CPUSupportedInstructionSets += "AVX, ";
+	if (data.flags[CPU_FEATURE_AVX2])        cpudata.CPUSupportedInstructionSets += "AVX2, ";
+	if (data.flags[CPU_FEATURE_F16C])        cpudata.CPUSupportedInstructionSets += "F16C, ";
+	if (data.flags[CPU_FEATURE_SHA_NI])      cpudata.CPUSupportedInstructionSets += "SHA1/SHA256, ";
+	if (data.flags[CPU_FEATURE_AVX512F])     cpudata.CPUSupportedInstructionSets += "AVX512F, ";
+	if (data.flags[CPU_FEATURE_AVX512DQ])    cpudata.CPUSupportedInstructionSets += "AVX512DQ, ";
+	if (data.flags[CPU_FEATURE_AVX512PF])    cpudata.CPUSupportedInstructionSets += "AVX512PF, ";
+	if (data.flags[CPU_FEATURE_AVX512ER])    cpudata.CPUSupportedInstructionSets += "AVX512ER, ";
+	if (data.flags[CPU_FEATURE_AVX512CD])    cpudata.CPUSupportedInstructionSets += "AVX512CD, ";
+	if (data.flags[CPU_FEATURE_AVX512BW])    cpudata.CPUSupportedInstructionSets += "AVX512BW, ";
+	if (data.flags[CPU_FEATURE_AVX512VL])    cpudata.CPUSupportedInstructionSets += "AVX512VL, ";
+	if (data.flags[CPU_FEATURE_AVX512VNNI])  cpudata.CPUSupportedInstructionSets += "AVX512VNNI, ";
+	if (data.flags[CPU_FEATURE_ABM])         cpudata.CPUSupportedInstructionSets += "LZCNT, ";
+	if (data.flags[CPU_FEATURE_BMI1])        cpudata.CPUSupportedInstructionSets += "BMI1, ";
+	if (data.flags[CPU_FEATURE_BMI2])        cpudata.CPUSupportedInstructionSets += "BMI2, ";
 
 	cpudata.CPUSupportedInstructionSets.erase(cpudata.CPUSupportedInstructionSets.find_last_not_of(", ") + 1);
 
@@ -242,37 +244,6 @@ void CSysInfo::GetCPUID()
 	return;
 }
 
-
-string CSysInfo::StrFormat(char const *fmt, ...)
-{
-	#define MIN_BUF_SIZE   256
-	#define MAX_BUF_SIZE 16384
-	va_list args;
-	va_start(args, fmt);
-	vector<char> buffer(MIN_BUF_SIZE);
-	int iRet = -1;
-
-	for (;;)
-	{
-		iRet = _vsnprintf(&buffer[0], buffer.size() - 1, fmt, args);
-		if (iRet == -1)
-			buffer.resize(buffer.size() * 2);
-		else
-			break;
-
-		if (buffer.size() > MAX_BUF_SIZE)
-		{
-			va_end(args);
-			return "buffer overflow";
-		}
-	}
-
-	buffer[buffer.size() - 1] = '\0';
-	string sRet = &buffer[0];
-	va_end(args);
-
-	return sRet;
-}
 
 
 #endif //_SYSINFO_H

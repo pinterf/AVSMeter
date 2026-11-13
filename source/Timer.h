@@ -84,7 +84,7 @@ unsigned __int64 CTimer::GetSTDTimerMS()
 
 string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 {
-	vector<char> buffer(128);
+	char buffer[128];
 	unsigned int hours = (unsigned int)(i_milliseconds / 3600000);
 	unsigned int minutes = (unsigned int)(i_milliseconds / 60000) % 60;
 	unsigned int seconds = (unsigned int)(i_milliseconds / 1000) % 60;
@@ -92,9 +92,9 @@ string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 
 	int iRet = -1;
 	if (hours < 100)
-		iRet = _snprintf(&buffer[0], buffer.size() - 1, "   %02u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
+		iRet = sprintf(buffer, "   %02u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
 	else
-		iRet = _snprintf(&buffer[0], buffer.size() - 1, "%5u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
+		iRet = sprintf(buffer, "%5u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
 
 	if (iRet < 0)
 		return "buffer overflow";

@@ -88,7 +88,6 @@ public:
 	void           StrToLC(string &s_string);
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatTPF(double d_frametime);
-	string         StrAnsiToOEM(string s_string);
 	void           StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, BOOL b_removedups);
 	BOOL           IsNumeric(string s_string);
 
@@ -308,38 +307,6 @@ string CUtils::GetFileDateStamp(string s_file)
 }
 
 
-string CUtils::StrFormat(char const *fmt, ...)
-{
-	#define MIN_BUF_SIZE   256
-	#define MAX_BUF_SIZE 16384
-	va_list args;
-	va_start(args, fmt);
-	vector<char> buffer(MIN_BUF_SIZE);
-	int iRet = -1;
-
-	for (;;)
-	{
-		iRet = _vsnprintf(&buffer[0], buffer.size() - 1, fmt, args);
-		if (iRet == -1)
-			buffer.resize(buffer.size() * 2);
-		else
-			break;
-
-		if (buffer.size() > MAX_BUF_SIZE)
-		{
-			va_end(args);
-			return "buffer overflow";
-		}
-	}
-
-	buffer[buffer.size() - 1] = '\0';
-	string sRet = &buffer[0];
-	va_end(args);
-
-	return sRet;
-}
-
-
 void CUtils::StrTrimLeft(string &s_string)
 {
 	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
@@ -406,17 +373,17 @@ string CUtils::StrFormatTPF(double d_frametime)
 
 string CUtils::GetFileVersion(string s_file)
 {
-	string sFileVersion = "n/a";
-	vector<char> szFileName(MAX_PATH + 1);
+	string sFileVersion = "x.x.x.x";
+	char szFileName[MAX_PATH + 1];
 
 	if (s_file == "")
 	{
-		if (GetModuleFileName(NULL, &szFileName[0], (DWORD)szFileName.size() - 1) == 0)
+		if (GetModuleFileName(NULL, szFileName, MAX_PATH) == 0)
 			return sFileVersion;
 	}
 	else
 	{
-		if (_snprintf(&szFileName[0], szFileName.size() - 1, "%s", s_file.c_str()) < 0)
+		if (sprintf(szFileName, "%s", s_file.c_str()) < 0)
 			return sFileVersion;
 	}
 
@@ -426,7 +393,7 @@ string CUtils::GetFileVersion(string s_file)
 		return sFileVersion;
 
 	BYTE* VersionInfoBuffer = new BYTE[dwSize];
-	if (!GetFileVersionInfo(&szFileName[0], 0, dwSize, (VOID*)VersionInfoBuffer))
+	if (!GetFileVersionInfo(szFileName, 0, dwSize, (VOID*)VersionInfoBuffer))
 	{
 		delete [] VersionInfoBuffer;
 		return sFileVersion;
@@ -449,17 +416,17 @@ string CUtils::GetFileVersion(string s_file)
 
 string CUtils::GetProductVersion(string s_file)
 {
-	string sProductVersion = "n/a";
-	vector<char> szFileName(MAX_PATH + 1);
+	string sProductVersion = "x.x.x.x";
+	char szFileName[MAX_PATH + 1];
 
 	if (s_file == "")
 	{
-		if (GetModuleFileName(NULL, &szFileName[0], (DWORD)szFileName.size() - 1) == 0)
+		if (GetModuleFileName(NULL, szFileName, MAX_PATH) == 0)
 			return sProductVersion;
 	}
 	else
 	{
-		if (_snprintf(&szFileName[0], szFileName.size() - 1, "%s", s_file.c_str()) < 0)
+		if (sprintf(szFileName, "%s", s_file.c_str()) < 0)
 			return sProductVersion;
 	}
 
@@ -469,7 +436,7 @@ string CUtils::GetProductVersion(string s_file)
 		return sProductVersion;
 
 	BYTE* VersionInfoBuffer = new BYTE[dwSize];
-	if (!GetFileVersionInfo(&szFileName[0], 0, dwSize, (VOID*)VersionInfoBuffer))
+	if (!GetFileVersionInfo(szFileName, 0, dwSize, (VOID*)VersionInfoBuffer))
 	{
 		delete [] VersionInfoBuffer;
 		return sProductVersion;
@@ -510,7 +477,6 @@ BOOL CUtils::IsNumeric(string s_string)
 			case '8':
 			case '9':
 			case '-':
-			//case '.':
 				continue;
 			default:
 				return FALSE;
@@ -551,13 +517,34 @@ void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delim
 }
 
 
-string CUtils::StrAnsiToOEM(string s_string)
+string CUtils::StrFormat(char const *fmt, ...)
 {
-	vector<char> buffer(s_string.length() + 1);
-	CharToOem(s_string.c_str(), &buffer[0]);
-	string sOEM(&buffer[0]);
-	return sOEM;
+	const unsigned int maxbufsize = 16384;
+	const unsigned int minbufsize =   256;
+
+	vector<char> buffer(minbufsize);
+	string ret = "Buffer overflow";
+
+	va_list args;
+	va_start(args, fmt);
+
+	while (buffer.size() <= maxbufsize)
+	{
+		if(_vsnprintf(&buffer[0], buffer.size(), fmt, args) > 0)
+		{
+			ret = &buffer[0];
+			break;
+		}
+		else
+			buffer.resize(buffer.size() * 2);
+	}
+
+	va_end(args);
+
+	return ret;
 }
 
 
+
 #endif //_UTILITY_H
+
