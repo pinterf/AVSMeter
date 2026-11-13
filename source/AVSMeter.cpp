@@ -2371,7 +2371,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
 			++uiFrame;
 			TDelta = timer.GetSTDTimer() - T0;
-			if ((TDelta >= 4.0) || (uiFrame == uiTotalFrames))
+			if ((TDelta >= 5.0) || (uiFrame == uiTotalFrames))
 				break;
 		}
 
@@ -2381,28 +2381,26 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		else
 			AVS_env->ThrowError("Script runtime is too short for meaningful measurements");
 
-		uiFrameInterval = 20000;
-		if (dAverageFrameTime >   0.001)
-			uiFrameInterval = 10000;
-		if (dAverageFrameTime >   0.002)
-			uiFrameInterval = 5000;
-		if (dAverageFrameTime >   0.005)
-			uiFrameInterval = 2000;
+		uiFrameInterval = 10000;
 		if (dAverageFrameTime >   0.010)
-			uiFrameInterval = 1000;
-		if (dAverageFrameTime >   0.020)
-			uiFrameInterval = 500;
+			uiFrameInterval = 5000;
+		if (dAverageFrameTime >   0.025)
+			uiFrameInterval = 2000;
 		if (dAverageFrameTime >   0.050)
-			uiFrameInterval = 200;
+			uiFrameInterval = 1000;
 		if (dAverageFrameTime >   0.100)
-			uiFrameInterval = 100;
-		if (dAverageFrameTime >   0.200)
-			uiFrameInterval = 50;
+			uiFrameInterval = 500;
+		if (dAverageFrameTime >   0.250)
+			uiFrameInterval = 200;
 		if (dAverageFrameTime >   0.500)
-			uiFrameInterval = 20;
+			uiFrameInterval = 100;
 		if (dAverageFrameTime >   1.000)
+			uiFrameInterval = 50;
+		if (dAverageFrameTime >   2.500)
+			uiFrameInterval = 20;
+		if (dAverageFrameTime >   5.000)
 			uiFrameInterval = 10;
-		if (dAverageFrameTime >  10.000)
+		if (dAverageFrameTime >  50.000)
 			uiFrameInterval = 1;
 
 		AVS_clip = 0;

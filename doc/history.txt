@@ -1,3 +1,6 @@
+v2.3.4
+- Fixed a silly bug that prevented correct detection of GPU capabiltities
+
 v2.3.3
 - Added real (measured) CPU clock to the CPU info
 - Reduced overhead of the process info functions

@@ -206,7 +206,7 @@ void CGPUInfo::ReadData()
 			data.OpenCLVersion = sValue;
 		if (sKey == "CUDA")
 			nCUDA = (BYTE)atol(sValue.c_str());		
-		if (sKey == "CUDA_Capability")
+		if (sKey == "CUDA_CAPABILITY")
 			dCUDACaps = atof(sValue.c_str());		
 	}
 	
