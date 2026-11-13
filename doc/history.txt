@@ -1,3 +1,8 @@
+v2.8.7
+- Error handling improvements
+- Cosmetics
+- Changed some error messages
+
 v2.8.6
 - Minor fixes/cosmetics
 - Documentation updates/corrections

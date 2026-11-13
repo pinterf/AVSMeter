@@ -677,7 +677,7 @@ int main(int argc, char* argv[])
 				if (sPluginVersion != "n/a")
 				{
 					sOutBuf = utils.StrFormat("  [%s]\n", sPluginVersion.c_str());
-					PrintConsole(TRUE, FG_HYELLOW | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
 				}
 				else
 				{
@@ -885,11 +885,8 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-
 	if (!bInfoOnly)
 	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
-
 		if (!bOmitPreScan)
 		{
 			uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
@@ -1267,7 +1264,6 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
-			Sleep(DSE_DELAY);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -1362,7 +1358,6 @@ int main(int argc, char* argv[])
 		double dLastIntervalTime = dStartTime;
 
 		unsigned int uiCursorOffset = 0;
-		
 		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
@@ -1695,7 +1690,6 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(DSE_DELAY);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
@@ -2484,6 +2478,8 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 			return uiFrameInterval;
 		}
 
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
+
 		AVS_linkage = AVS_env->GetAVSLinkage();
 		AVSValue AVS_main;
 		AVSValue AVS_temp;
@@ -2528,7 +2524,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 					AVS_env->ThrowError("\'ESC\' pressed, cancelled.");
 			}
 
-			if ((timer.GetSTDTimerMS() - D0) >= 200)
+			if ((timer.GetSTDTimerMS() - D0) >= 150)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rPre-scanning script (F%u / T%.2lf)\r", uiFrame, TDelta);
 				D0 = timer.GetSTDTimerMS();
@@ -2561,25 +2557,31 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
+
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 	}
 	catch (AvisynthError err)
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		s_error = utils.StrFormat("%s", (PCSTR)err.msg);
 		uiFrameInterval = 10;
 	}
 	catch (exception& ex)
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		s_error = ex.what();
 		uiFrameInterval = 10;
 	}
 	catch (...)
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		s_error = utils.SysErrorMessage();
 		uiFrameInterval = 10;
 	}
 
 	if (!::FreeLibrary(hDLL))
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		s_error = "Cannot unload avisynth.dll";
 		uiFrameInterval = 10;
 	}
