@@ -619,45 +619,47 @@ int main(int argc, char* argv[])
 
 		if (Settings.bCreateLog)
 		{
-			if (Settings.sSystemDateTime == "")
-				Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
+			char szAVSInfoFile[MAX_PATH + 1] = "";
 
- 			string sAVSInfoFile = "";
-			char szPath[MAX_PATH + 1];
-			if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
+			if (PROCESS_64)
+				sprintf(szAVSInfoFile, "avsinfo_x64.log");
+			else
+				sprintf(szAVSInfoFile, "avsinfo_x86.log");
+
+			OPENFILENAME OpenFileName;
+			OpenFileName.lStructSize       = sizeof(OPENFILENAME);
+			OpenFileName.hwndOwner         = GetForegroundWindow();
+			OpenFileName.hInstance         = NULL;
+			OpenFileName.lpstrFilter       = "*.log";
+			OpenFileName.lpstrCustomFilter = NULL;
+			OpenFileName.nMaxCustFilter    = 0;
+			OpenFileName.nFilterIndex      = 1;
+			OpenFileName.lpstrFile         = szAVSInfoFile;
+			OpenFileName.nMaxFile          = MAX_PATH;
+			OpenFileName.lpstrFileTitle    = NULL;
+			OpenFileName.nMaxFileTitle     = NULL;
+			OpenFileName.lpstrInitialDir   = NULL;
+			OpenFileName.lpstrTitle        = "Save log file as...";
+			OpenFileName.nFileOffset       = 0;
+			OpenFileName.nFileExtension    = 0;
+			OpenFileName.lpstrDefExt       = NULL;
+			OpenFileName.lCustData         = 0;
+			OpenFileName.lpfnHook          = NULL;
+			OpenFileName.lpTemplateName    = NULL;
+			OpenFileName.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+			
+			if (!GetSaveFileName(&OpenFileName))
 			{
-				if (Settings.sLogDirectory == "")
-				{
-					if (Settings.bLogFileDateTimeSuffix)
-					{
-						if (PROCESS_64)
-							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", szPath, Settings.sSystemDateTime.c_str());
-						else
-							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", szPath, Settings.sSystemDateTime.c_str());
-					}
-					else
-					{
-						if (PROCESS_64)
-							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", szPath);
-						else
-							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", szPath);
-					}
-				}
-				else
-				{
-					if (Settings.bLogFileDateTimeSuffix)
-						sAVSInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemDateTime.c_str());
-					else
-						sAVSInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
-				}
+				PollKeyHit();
+				return 0;
+			}
 
-				ofstream hAVSInfoFile(sAVSInfoFile.c_str());
-				if (hAVSInfoFile.is_open())
-			  {
-					hAVSInfoFile << sLogBuffer;
-					hAVSInfoFile.flush();
-					hAVSInfoFile.close();
-				}
+			ofstream hAVSInfoFile(szAVSInfoFile);
+			if (hAVSInfoFile.is_open())
+		  {
+				hAVSInfoFile << sLogBuffer;
+				hAVSInfoFile.flush();
+				hAVSInfoFile.close();
 			}
 		}
 
@@ -702,7 +704,7 @@ int main(int argc, char* argv[])
 	}
 
 
-	IScriptEnvironment *AVS_env = NULL;
+	IScriptEnvironment *AVS_env = 0;
 
 	try
 	{
@@ -1594,7 +1596,7 @@ string ParseINIFile()
 
 	string sCurrentLine = "";
 
-	//establish defaults
+	//defaults
 	Settings.sLogDirectory = "";
 	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
@@ -1809,7 +1811,7 @@ string ParseINIFile()
 
 BOOL WriteINIFile(string &s_inifile)
 {
-	string sSetting = "";
+	string sSettings = "";
 	string sComment = "";
 
 	ofstream hINIFile(s_inifile.c_str());
@@ -1822,44 +1824,26 @@ BOOL WriteINIFile(string &s_inifile)
 	sComment += "# Note: If applicable, command line switches override INI file settings.\n\n";
 	hINIFile << sComment;
 
-	sSetting = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
-	hINIFile << sSetting;
-	sSetting = utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
-	hINIFile << sSetting;
+	sSettings = utils.StrFormat("DisplayFPS=%u\n", Settings.bDisplayFPS);
+	sSettings += utils.StrFormat("DisplayTPF=%u\n", Settings.bDisplayTPF);
+	sSettings += utils.StrFormat("PauseBeforeExit=%u\n", Settings.bPauseBeforeExit);
+	sSettings += utils.StrFormat("CreateLog=%u\n", Settings.bCreateLog);
+	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
+	sSettings += utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
+	sSettings += utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
+	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
+	sSettings += utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
+	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
+	sSettings += utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
+	sSettings += utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
+	sSettings += utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
+	sSettings += utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
+	sSettings += utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
+	sSettings += utils.StrFormat("UseColor=%u\n", Settings.bUseColor);
+	sSettings += utils.StrFormat("DisplayEfficiencyIndex=%u\n", Settings.bDisplayEfficiencyIndex);
+	sSettings += utils.StrFormat("LogEstimatedTime=%u\n", Settings.bLogEstimatedTime);
+	sSettings += utils.StrFormat("AutoCompleteExtension=%u\n", Settings.bAutoCompleteExtension);
+	hINIFile << sSettings;
 
 	hINIFile.flush();
 	hINIFile.close();
@@ -2154,7 +2138,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		return uiFrameInterval;
 	}
 
-	IScriptEnvironment *AVS_env = NULL;
+	IScriptEnvironment *AVS_env = 0;
 
 	try
 	{

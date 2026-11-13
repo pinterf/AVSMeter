@@ -52,12 +52,14 @@
     <b> <img alt="" src="avsmeter.png" width="780" height="607"><br>
       <br>
       <br>
-      <img src="avsinfo.png" alt="" width="780" height="607"><br>
+      <img src="avsinfo.png" alt="" width="780" height="767"><br>
     </b><br>
     <font face="Fixedsys"><big><br>
         Usage:&nbsp; AVSMeter script.avs [switches]<br>
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -131,6 +133,8 @@
           &nbsp;-csv&nbsp; &nbsp; &nbsp; &nbsp;
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -296,6 +300,8 @@
 
 
 
+
+
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <b><big><font face="Courier New"><br>
         </font></big></b><b><br>
@@ -304,9 +310,8 @@
     the plugin sub-system. If a custom avisynth.dll is specified in the
     ini file, info about that file will be displayed. The "-avsinfo"
     switch can be combined with "-log" in order to write the info to a
-    log file ("avsinfo.log") which is created in the current (working)
-    directory unless the INI option "LogDirectory" points to another
-    (valid) directory. The log file contains additional info about
+    log file (a "Save as..." dialog will open enabling the user to save
+    the log file). The log file contains additional info about
     OS/hardware, a list of DLL dependencies for avisynth.dll and all
     auto-load plugins and a list of internal/external Avisynth
     functions.<br>

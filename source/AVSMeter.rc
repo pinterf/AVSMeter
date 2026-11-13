@@ -15,8 +15,8 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define VERSION_NUM  2,7,0,0
-#define VERSION_STR  "2.7.0\0"
+#define VERSION_NUM  2,7,1,0
+#define VERSION_STR  "2.7.1\0"
 
 #include <winres.h>
 #define IDI_MAINFRAME 101

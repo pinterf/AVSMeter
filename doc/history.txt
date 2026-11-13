@@ -1,3 +1,8 @@
+v2.7.1
+- When using the switch "-avsinfo" in combination with "-log", a "Save as..." dialog will open enabling the user to save the log file
+- Minor fixes and refactoring
+- Cosmetics
+
 v2.7.0
 - Warnings and errors are reported in separate sections
 - Updated list of exception messages
