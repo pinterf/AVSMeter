@@ -1,3 +1,6 @@
+v1.9.7
+- Fix for potential problems with the latest AVS+ versions
+
 v1.9.6
 - Better detection of attempts to load 64 Bit avisynth.dll with 32 Bit AVSMeter and vice versa
 - Added "UseFixedFrameInterval" ini setting ("-f" command line switch)

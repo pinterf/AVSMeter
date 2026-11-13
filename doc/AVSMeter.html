@@ -48,10 +48,13 @@
           Create log file</code></b></nobr><nobr><b><code></code></b></nobr><nobr><b><code><br>
           &nbsp;-f&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
+
           Use fixed frame interval for measurements </code></b></nobr><nobr><b><code><b><code>(See
+
 
               also "UseFixedFrameInterval" INI setting)<br>
             </code></b>&nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
 
 
@@ -65,6 +68,7 @@
           (See also "FrameRange" INI setting)</code></b></nobr><nobr><b><code><br>
         </code></b></nobr><nobr><b><code>
           &nbsp;-timeout=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
 
 
@@ -95,7 +99,8 @@
     accuracy of the results in a number of scenarios. If
     "UseFixedFrameInterval" is set to "1", the initial speed test of the
     script is omitted. This can be useful if, for example, AVSMeter is
-    used with a script that produces files like logs, audio files, etc.<br>
+    used with a script that produces files like logs, audio files, etc
+    and accurate measurements are not needed.<br>
     <b><i>Note:</i></b> The command line switch "-f" overrides the INI
     setting.<br>
     <b> <br>
@@ -112,13 +117,13 @@
     INI setting.<br>
     <b><br>
       "InvokeDistributor" (0 or <font color="Red">1</font>):</b><br>
-    For Avisynth MT users: If set to "1", adds the "Distributor" call
-    internally if the script uses MT Mode 1~4 (via "SetMTMode"). Note:
-    Setting this value to "1" <b>and</b> adding the Distributor call in
-    the script will unnecessarily increase the number of threads which
-    leads to increased memory usage and suboptimal performance. The
-    "InvokeDistributor" setting is ignored when using non-MT versions of
-    Avisynth.<br>
+    For users of SEt's Avisynth MT: If set to "1", adds the
+    "Distributor" call internally if the script uses MT Mode 1~4 (via
+    "SetMTMode"). Note: Setting this value to "1" <b>and</b> adding the
+    Distributor call in the script will unnecessarily increase the
+    number of threads which leads to increased memory usage and
+    suboptimal performance. The "InvokeDistributor" setting is ignored
+    when using non-MT versions of Avisynth.<br>
     <br>
     <b>"AllowOnlyOneInstance" (</b><b><b>0 or <font color="Red">1</font></b>):</b><br>
     When set to "1", only one instance of AVSMeter can run at the same

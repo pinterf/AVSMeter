@@ -69,21 +69,21 @@ typedef struct stPerformanceData
 	WORD num_threads;
 } perfdata;
 
-typedef struct stThreadParameters
+typedef struct
 {
+	HINSTANCE hAVSDLL;
 	string sAVSFile;
 	unsigned int uiFrameInterval;
 	string sAVSError;
 	unsigned int uiCurFrame;
 	string sStatus;
-	BOOL bFinished;
 } ThreadParams;
 
 
 CUtils utils;
 CTimer timer;
 
-void CalculateFrameInterval(PVOID pParam);
+unsigned __stdcall CalculateFrameInterval(void* pParam);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, perfdata * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval);
 string ParseINIFile();
 BOOL GetAvisynthInfo();
@@ -357,51 +357,61 @@ int main(int argc, char* argv[])
 		if (!Settings.bUseFixedFrameInterval)
 		{
 			ThreadParams* p = new ThreadParams;
-			p->bFinished = FALSE;
 			p->sAVSError = sAVSError;
 			p->sAVSFile = sAVSFile;
 			p->sStatus = "";
+
+			p->hAVSDLL = ::LoadLibrary("avisynth");
+			if (!p->hAVSDLL)
+			{
+				PrintFmt(STD_ERR, COLOR_ERROR, "\nCannot load avisynth.dll\n%s\n", utils.OSErrorMessage().c_str());
+				Pause();
+				return -1;
+			}
+
 			double dT0 = timer.GetSTDTimer();
 			double dT1 = dT0;
 
-			_beginthread(CalculateFrameInterval, 0, p);
+			unsigned threadID;
+			HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, &CalculateFrameInterval, p, 0, &threadID);
 
-			while (!p->bFinished)
+			while (WaitForSingleObject(hThread, 250))
 			{
-				for (unsigned int n = 0; n < 4; n++)
-				{
-					dT1 = timer.GetSTDTimer();
+				dT1 = timer.GetSTDTimer();
 
-					if ((dT1 - dT0) > (double)Settings.wReadTimeout)
+				if ((dT1 - dT0) > (double)Settings.wReadTimeout)
+				{
+					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+					PrintFmt(STD_ERR, COLOR_ERROR, "\nProcess aborted while reading frame #%u after specified timeout (%u sec).\n", p->uiCurFrame, Settings.wReadTimeout);
+					::FreeLibrary(p->hAVSDLL);
+					delete p;
+					CloseHandle(hThread);
+					Pause();
+					return -1;
+				}
+
+				if (_kbhit())
+				{
+					if (_getch() == 0x1B) //ESC
 					{
-						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						PrintFmt(STD_ERR, COLOR_ERROR, "\nProcess aborted while reading frame #%u after specified timeout (%u sec).\n", p->uiCurFrame, Settings.wReadTimeout);
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("Cancelled.").c_str());
+						PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
+						::FreeLibrary(p->hAVSDLL);
+						delete p;
+						CloseHandle(hThread);
 						Pause();
 						return -1;
 					}
-
-					if (_kbhit())
-					{
-						if (_getch() == 0x1B) //ESC
-						{
-							PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("Cancelled.").c_str());
-							PrintFmt(STD_ERR, COLOR_DEFAULT, "\n");
-							Pause();
-							return -1;
-						}
-					}
-
-					PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad(p->sStatus).c_str());
-
-					if (p->bFinished)
-						break;
-
-					Sleep(250);
 				}
+
+				PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad(p->sStatus).c_str());
 			}
 
+			::FreeLibrary(p->hAVSDLL);
 			sAVSError = p->sAVSError;
 			uiFrameInterval = p->uiFrameInterval;
+			delete p;
+			CloseHandle(hThread);
 
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
@@ -1373,39 +1383,26 @@ void Pause()
 }
 
 
-void CalculateFrameInterval(PVOID pParam)
+unsigned __stdcall CalculateFrameInterval(void* pParam)
 {
 	ThreadParams* p = (ThreadParams*) pParam;
 	p->uiFrameInterval = 0;
 	p->sAVSError = "";
 
-	HINSTANCE hDLL = ::LoadLibrary("avisynth");
-	if (!hDLL)
-	{
-		p->sAVSError = "Failed to load avisynth.dll";
-		p->bFinished = TRUE;
-		_endthread();
-	}
-
 	try
 	{
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(p->hAVSDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			p->sAVSError = "Failed to load CreateScriptEnvironment()";
-			p->bFinished = TRUE;
-			_endthread();
-			::FreeLibrary(hDLL);
-			_endthread();
+			_endthreadex(0);
 		}
 
 		IScriptEnvironment *AVS_env = CreateEnvironment(AVISYNTH_INTERFACE_VERSION);
 		if (!AVS_env)
 		{
 			p->sAVSError = "Could not create IScriptenvironment";
-			p->bFinished = TRUE;
-			::FreeLibrary(hDLL);
-			_endthread();
+			_endthreadex(0);
 		}
 
 		#ifdef AVS64
@@ -1521,11 +1518,8 @@ void CalculateFrameInterval(PVOID pParam)
 		AVS_linkage = 0;
 	#endif
 
-	::FreeLibrary(hDLL);
-
-	p->bFinished = TRUE;
-
-	_endthread();
+	_endthreadex(0);
+	return 0;
 }
 
 

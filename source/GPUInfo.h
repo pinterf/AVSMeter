@@ -147,10 +147,17 @@ void CGPUInfo::ReadData()
 		char szkey[260];
 		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].key, -1, szkey, 260, &DefChar, NULL);
 		string sKey(szkey);
+		sKey.erase(sKey.find_last_not_of(" \t\n\r") + 1);
+		sKey.erase(0, sKey.find_first_not_of(" \t\n\r"));
 
 		char szvalue[260];
 		WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 260, &DefChar, NULL);
 		string sValue(szvalue);
+		sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
+		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
+		
+		if ((sKey == "") || (sValue == ""))
+			continue;
 
 		if (sKey == "CardName")
 			data.CardName = sValue;
@@ -176,20 +183,20 @@ void CGPUInfo::ReadSensors()
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
-	BYTE bDone = 0;
+	BYTE bDone = 0x00;
 	for (int i = 0; i <128; i++)
 	{
 		if (wcscmp(lpMem->sensors[i].name, L"GPU Load") == 0)
 		{
 			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
-			++bDone;
+			bDone |= 0x0F;
 		}
 		if (wcscmp(lpMem->sensors[i].name, L"Memory Used") == 0)
 		{
 			sensors.MemoryUsed = (DWORD)(lpMem->sensors[i].value + 0.5);	
-			++bDone;
+			bDone |= 0xF0;
 		}
-		if (bDone >= 2)
+		if (bDone == 0xFF)
 			break;
 	}
 
