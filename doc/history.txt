@@ -1,3 +1,8 @@
+v2.9.8
+- Updated libcpuid to support AMD Threadripper (Castle Peak)
+- Updated AVS+ headers
+- Cosmetics
+
 v2.9.7
 - Timing optimisations
 - Minor fixes

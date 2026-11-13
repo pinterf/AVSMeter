@@ -1,5 +1,5 @@
 /*
-	This file is part of AVSMeter by Groucho2004.
+	This file is part of AVSMeter, (c) Groucho2004.
 
 	AVSMeter is free software. You can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -373,7 +373,7 @@ string CUtils::StrFormatTPF(double d_frametime)
 
 string CUtils::GetFileVersion(string s_file)
 {
-	string sFileVersion = "x.x.x.x";
+	string sFileVersion = "n/a";
 	char szFileName[MAX_PATH + 1];
 
 	if (s_file == "")
@@ -416,7 +416,7 @@ string CUtils::GetFileVersion(string s_file)
 
 string CUtils::GetProductVersion(string s_file)
 {
-	string sProductVersion = "x.x.x.x";
+	string sProductVersion = "n/a";
 	char szFileName[MAX_PATH + 1];
 
 	if (s_file == "")

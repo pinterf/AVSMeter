@@ -1,5 +1,5 @@
 /*
-	This file is part of AVSMeter by Groucho2004.
+	This file is part of AVSMeter, (c) Groucho2004.
 
 	AVSMeter is free software. You can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -2541,7 +2541,7 @@ void PrintUsage()
 {
 	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 1:  AVSMeter script.avs [switches]\n\n");
 
-	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
+	PrintConsole(TRUE, BG_BLACK | FG_HGREEN, "Switches:\n");
 	
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Display clip info\n");
@@ -2556,7 +2556,7 @@ void PrintUsage()
 
 	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 2:  AVSMeter avsinfo [switches]\n\n");
 
-	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
+	PrintConsole(TRUE, BG_BLACK | FG_HGREEN, "Switches:\n");
 
  	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");

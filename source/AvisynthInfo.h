@@ -1,5 +1,5 @@
 /*
-	This file is part of AVSMeter by Groucho2004.
+	This file is part of AVSMeter, (c) Groucho2004.
 
 	AVSMeter is free software. You can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -572,11 +572,11 @@ void CAvisynthInfo::EnumPluginDLLs()
 								if (sMessage == "AVSC20")
 									vPlugins.push_back("C 2.0 Plugins (64 Bit)|" + sCurrentFile);
 								if (sMessage == "AVSCPP26")
-									vPlugins.push_back("CPP 2.6 Plugins (64 Bit)|" + sCurrentFile);
+									vPlugins.push_back("C++ 2.6 Plugins (64 Bit)|" + sCurrentFile);
 								if (sMessage == "AVSCPP25")
-									vPlugins.push_back("CPP 2.5 Plugins (64 Bit)|" + sCurrentFile);
+									vPlugins.push_back("C++ 2.5 Plugins (64 Bit)|" + sCurrentFile);
 								if (sMessage == "AVSCPP20")
-									vPlugins.push_back("CPP 2.0 Plugins (64 Bit)|" + sCurrentFile);
+									vPlugins.push_back("C++ 2.0 Plugins (64 Bit)|" + sCurrentFile);
 								if (sMessage == "UNCATEGORIZED")
 									vPlugins.push_back("Uncategorized DLLs (64 Bit)|" + sCurrentFile);
 							}
@@ -587,11 +587,11 @@ void CAvisynthInfo::EnumPluginDLLs()
 								if (sMessage == "AVSC20")
 									vPlugins.push_back("C 2.0 Plugins (32 Bit)|" + sCurrentFile);
 								if (sMessage == "AVSCPP26")
-									vPlugins.push_back("CPP 2.6 Plugins (32 Bit)|" + sCurrentFile);
+									vPlugins.push_back("C++ 2.6 Plugins (32 Bit)|" + sCurrentFile);
 								if (sMessage == "AVSCPP25")
-									vPlugins.push_back("CPP 2.5 Plugins (32 Bit)|" + sCurrentFile);
+									vPlugins.push_back("C++ 2.5 Plugins (32 Bit)|" + sCurrentFile);
 								if (sMessage == "AVSCPP20")
-									vPlugins.push_back("CPP 2.0 Plugins (32 Bit)|" + sCurrentFile);
+									vPlugins.push_back("C++ 2.0 Plugins (32 Bit)|" + sCurrentFile);
 								if (sMessage == "UNCATEGORIZED")
 									vPlugins.push_back("Uncategorized DLLs (32 Bit)|" + sCurrentFile);
 							}

@@ -1,5 +1,5 @@
 /*
-	This file is part of AVSMeter by Groucho2004.
+	This file is part of AVSMeter, (c) Groucho2004.
 
 	AVSMeter is free software. You can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -20,9 +20,9 @@
 #define _RES_H
 
 #define PRODUCTNAME_STR "AVSMeter"
-#define VERSION_NUM      2,9,7,0
-#define VERSION_STR     "2.9.7"
-#define COPYLEFT_STR    "2012-2019, Groucho2004"
+#define VERSION_NUM      2,9,8,0
+#define VERSION_STR     "2.9.8"
+#define COPYLEFT_STR    "2012-2020, (c) Groucho2004"
 #define COMMENTS_STR    "AVSMeter - Avisynth Script Testing"
 
 #define IDI_MAINFRAME 101
