@@ -32,6 +32,7 @@ struct sINISettings
 	BOOL bInvokeDistributor;
 	BOOL bAllowOnlyOneInstance;
 	BOOL bLogEstimatedTime;
+	BOOL bUseColour;
 } settings;
 
 typedef struct sPerformanceData
@@ -74,7 +75,17 @@ int main(int argc, char* argv[])
 		sAVSMVersion += " (x86)";
 	#endif
 
+	string sRet = ParseINIFile();
+	if (sRet != "")
+	{
+		printf(sRet.c_str());
+		Pause();
+		return -1;
+	}
+
+	utils.SetRGB(FG_HRED, BG_BLACK, settings.bUseColour);
 	printf("\nAVSMeter %s by Groucho2004\n", sAVSMVersion.c_str());
+	utils.SetRGB(FG_GREY, BG_BLACK, settings.bUseColour);
 
 	string sConsoleOut = "";
 	unsigned int uiConsoleWidth = utils.GetConsoleWidth();
@@ -88,14 +99,6 @@ int main(int argc, char* argv[])
 	BOOL bInfoOnly = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 0;
-
-	string sRet = ParseINIFile();
-	if (sRet != "")
-	{
-		printf(sRet.c_str());
-		Pause();
-		return -1;
-	}
 
 	BYTE bRet = CheckAvisynth(bAVSLinkage);
 
@@ -139,7 +142,9 @@ int main(int argc, char* argv[])
 	if (bIsMTVersion)
 		sAvisynthVersion += " (MT)";
 
+	utils.SetRGB(FG_HGREEN, BG_BLACK, settings.bUseColour);
 	printf("\r%s\n", sAvisynthVersion.c_str());
+	utils.SetRGB(FG_GREY, BG_BLACK, settings.bUseColour);
 
 	if (settings.bAllowOnlyOneInstance)
 	{
@@ -405,11 +410,12 @@ int main(int argc, char* argv[])
 
 		if (bInfoOnly)
 		{
+			int IVersion = AVS_clip->GetVersion();
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
 
-			if (AVS_env->FunctionExists("DeleteScriptEnvironment"))
+			if (IVersion >= 5)
 				AVS_env->DeleteScriptEnvironment();
 			else
 				AVS_env->~IScriptEnvironment();
@@ -423,6 +429,12 @@ int main(int argc, char* argv[])
 
 				delete[] PerformanceData;
 			}
+
+			#ifdef AVS64
+				AVS_linkage = 0;
+			#endif
+	
+			::FreeLibrary(hDLL);
 
 			Pause();
 			return 0;
@@ -560,6 +572,7 @@ int main(int argc, char* argv[])
 						utils.CursorUp(10);
 
 					bFirstScr = FALSE;
+					utils.SetRGB(FG_WHITE, BG_BLACK, settings.bUseColour);
 					sConsoleOut = utils.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame, uiLastFrame);
 					printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 					sConsoleOut = utils.StrFormat("FPS (cur | min | max | avg):    %s | %s | %s | %s", utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(dFPSMin).c_str(), utils.StrFormatFPS(dFPSMax).c_str(), utils.StrFormatFPS(dFPSAverage).c_str());
@@ -574,6 +587,7 @@ int main(int argc, char* argv[])
 					printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 					sConsoleOut = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(uiElapsedMS).c_str(), timer.FormatTimeString(uiEstimatedMS).c_str());
 					printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
+					utils.SetRGB(FG_GREY, BG_BLACK, settings.bUseColour);
 
 					printf("\nPress \'Esc\' to cancel the process...\n\n");
 
@@ -591,11 +605,12 @@ int main(int argc, char* argv[])
 
 		process_info.CloseProcess();
 
+		int IVersion = AVS_clip->GetVersion();
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
 
-		if (bAVSLinkage)
+		if (IVersion >= 5)
 			AVS_env->DeleteScriptEnvironment();
 		else
 			AVS_env->~IScriptEnvironment();
@@ -617,6 +632,7 @@ int main(int argc, char* argv[])
 			else
 				sConsoleOut = utils.StrFormat("Frames processed:               %u (%u - %u)", n, uiFirstFrame, uiLastFrame);
 
+			utils.SetRGB(FG_WHITE, BG_BLACK, settings.bUseColour);
 			printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 			sLogBuffer += sConsoleOut + "\n";
 
@@ -648,6 +664,8 @@ int main(int argc, char* argv[])
 			printf("\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
 			sLogBuffer += sConsoleOut + "\n";
 
+			utils.SetRGB(FG_GREY, BG_BLACK, settings.bUseColour);
+
 			printf("\r%s\n", utils.StrPad("", uiConsoleWidth).c_str());
 			printf("\r%s\n", utils.StrPad("", uiConsoleWidth).c_str());
 			utils.CursorUp(2);
@@ -674,6 +692,7 @@ int main(int argc, char* argv[])
 		sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
 		iRet = -1;
 
+		
 		if (bEarlyExit == FALSE)
 		{
 			utils.CursorUp(2);
@@ -762,6 +781,7 @@ string ParseINIFile()
 		hINIFile << "InvokeDistributor=1\n";
 		hINIFile << "AllowOnlyOneInstance=1\n";
 		hINIFile << "LogEstimatedTime=0\n";
+		hINIFile << "UseColour=1\n";
 		hINIFile.flush();
 		hINIFile.close();
 	}
@@ -780,6 +800,7 @@ string ParseINIFile()
 	settings.bInvokeDistributor = TRUE;
 	settings.bAllowOnlyOneInstance = TRUE;
 	settings.bLogEstimatedTime = FALSE;
+	settings.bUseColour = TRUE;
 
 	string sCurrentLine = "";
 	size_t iPos = 0;
@@ -800,6 +821,8 @@ string ParseINIFile()
 			settings.bAllowOnlyOneInstance = FALSE;
 		if ((sCurrentLine.substr(0, 16) == "logestimatedtime") && (sCurrentLine.substr(sCurrentLine.length() - 1) == "1"))
 			settings.bLogEstimatedTime = TRUE;
+		if ((sCurrentLine.substr(0, 9) == "usecolour") && (sCurrentLine.substr(sCurrentLine.length() - 1) == "0"))
+			settings.bUseColour = FALSE;
 		if (sCurrentLine.substr(0, 10) == "framerange")
 		{
 			iPos = sCurrentLine.find("=");
@@ -1040,11 +1063,12 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		if (dAverageFrameTime > 20.00)
 			uiFrameInterval = 1;
 
+		int IVersion = AVS_clip->GetVersion();
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
 
-		if (bAVSLinkage)
+		if (IVersion >= 5)
 			AVS_env->DeleteScriptEnvironment();
 		else
 			AVS_env->~IScriptEnvironment();
@@ -1063,6 +1087,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 	#ifdef AVS64
 		AVS_linkage = 0;
 	#endif
+
 	::FreeLibrary(hDLL);
 
 	return uiFrameInterval;
@@ -1141,7 +1166,11 @@ BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 			AVS_linkage = AVS_env->GetAVSLinkage();
 		#endif
 
+		AVSValue AVS_main;
+		AVS_main = AVS_env->Invoke("Version", AVSValue(&AVS_main, 0));
+
 		AVSValue AVS_temp;
+		PClip AVS_clip;
 		try
 		{
 			AVS_temp = AVS_env->Invoke("VersionString", AVSValue(&AVS_temp, 0));
@@ -1155,9 +1184,16 @@ BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 		if ((AVS_env->FunctionExists("GetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
 
+		if (!AVS_main.IsClip()) //not a clip
+			AVS_env->ThrowError("Script did not return a video clip");
+
+		AVS_clip = AVS_main.AsClip();
+		int IVersion = AVS_clip->GetVersion();
+		AVS_clip = 0;
+		AVS_main = 0;
 		AVS_temp = 0;
 
-		if (bAVSLinkage)
+		if (IVersion >= 5)
 			AVS_env->DeleteScriptEnvironment();
 		else
 			AVS_env->~IScriptEnvironment();
@@ -1174,6 +1210,7 @@ BOOL GetAvisynthVersion(string &sMsg, BOOL &bIsMTVersion)
 	#ifdef AVS64
 		AVS_linkage = 0;
 	#endif
+
 	::FreeLibrary(hDLL);
 
 	return TRUE;

@@ -1,3 +1,8 @@
+v1.8.2
+- Simplified and improved code for releasing the pointer to "IScriptEnvironent"
+- Added text colouring to the console output. This can be disabled by setting
+  "UseColour=0" in the INI file.
+
 v1.8.1
 - Merged the 32 Bit versions into one binary. This binary should be compatible with all
   32 Bit Avisynth versions out there.

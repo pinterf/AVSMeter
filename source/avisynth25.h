@@ -39,6 +39,8 @@
 #ifndef __AVISYNTH_H__
 #define __AVISYNTH_H__
 
+#pragma warning(disable : 279)
+
 enum {AVISYNTH_INTERFACE_VERSION = 3};
 
 

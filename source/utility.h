@@ -8,6 +8,41 @@
 
 #include "stdafx.h"
 
+#define FG_BLACK    0
+#define FG_RED			FOREGROUND_RED
+#define FG_GREEN		FOREGROUND_GREEN
+#define FG_BLUE			FOREGROUND_BLUE
+#define FG_YELLOW		FOREGROUND_RED | FOREGROUND_GREEN
+#define FG_MAGENTA	FOREGROUND_RED | FOREGROUND_BLUE
+#define FG_CYAN			FOREGROUND_GREEN | FOREGROUND_BLUE
+#define FG_HRED			FOREGROUND_RED | FOREGROUND_INTENSITY
+#define FG_HGREEN		FOREGROUND_GREEN | FOREGROUND_INTENSITY
+#define FG_HBLUE		FOREGROUND_BLUE | FOREGROUND_INTENSITY
+#define FG_HYELLOW	FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY
+#define FG_HMAGENTA	FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY
+#define FG_HCYAN		FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY
+#define FG_DARKGREY	FOREGROUND_INTENSITY
+#define FG_GREY			FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED
+#define FG_WHITE		FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY
+
+#define BG_BLACK    0
+#define BG_RED			BACKGROUND_RED
+#define BG_GREEN		BACKGROUND_GREEN
+#define BG_BLUE			BACKGROUND_BLUE
+#define BG_YELLOW		BACKGROUND_RED | BACKGROUND_GREEN
+#define BG_MAGENTA	BACKGROUND_RED | BACKGROUND_BLUE
+#define BG_CYAN			BACKGROUND_GREEN | BACKGROUND_BLUE
+#define BG_HRED			BACKGROUND_RED | BACKGROUND_INTENSITY
+#define BG_HGREEN		BACKGROUND_GREEN | BACKGROUND_INTENSITY
+#define BG_HBLUE		BACKGROUND_BLUE | BACKGROUND_INTENSITY
+#define BG_HYELLOW	BACKGROUND_GREEN | BACKGROUND_RED | BACKGROUND_INTENSITY
+#define BG_HMAGENTA	BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_INTENSITY
+#define BG_HCYAN		BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_INTENSITY
+#define BG_DARKGREY	BACKGROUND_INTENSITY
+#define BG_GREY			BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED
+#define BG_WHITE		BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED | BACKGROUND_INTENSITY
+
+
 using namespace std;
 
 class CUtils
@@ -19,6 +54,7 @@ public:
 	string       ErrorMessage();
 	void         CursorUp(int iLines);
 	unsigned int GetConsoleWidth();
+	void SetRGB(WORD wForeGround, WORD wBackGround, BOOL bSet);
 	BOOL GetProductVersion(string &s_version);
 	HANDLE       hConsole;
 
@@ -31,15 +67,25 @@ public:
 	string StrFormat(const char *fmt, ...);
 	string StrPad(string s_line, unsigned int ui_consolewidth);
 	string StrFormatFPS(double d_fps);
+
+private:
+	WORD wSaveAttributes;
 };
 
 CUtils::CUtils()
 {
 	hConsole = ::GetStdHandle(STD_OUTPUT_HANDLE);
+
+	//save attributes
+	CONSOLE_SCREEN_BUFFER_INFO csbi; 
+	GetConsoleScreenBufferInfo(hConsole, &csbi); 
+	wSaveAttributes = csbi.wAttributes;
 }
 
 CUtils::~CUtils()
 {
+	//retrieve saved attributes
+	SetConsoleTextAttribute(hConsole, wSaveAttributes);
 }
 
 
@@ -62,6 +108,15 @@ unsigned int CUtils::GetConsoleWidth()
 	::GetConsoleScreenBufferInfo(hConsole, &csbi); 
 
 	return (unsigned int)csbi.dwSize.X;
+}
+
+
+void CUtils::SetRGB(WORD wForeGround, WORD wBackGround, BOOL bSet)
+{
+	if (bSet)
+		SetConsoleTextAttribute(hConsole, wForeGround | wBackGround);
+
+	return;
 }
 
 
