@@ -1,335 +1,1054 @@
 #include <windows.h>
-#include <string>
 #include <conio.h>
-#include "avisynth.h"
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include "utility.h"
+#include "BasicString.h"
+#include "ProcessInfo.h"
 
-#define version "1.21"
+using namespace std;
 
-double GetTimer();
-BOOL TestTimer();
-std::string pad(std::string s_line);
-std::string format(const char *fmt, ...);
-std::string FormatHMS(unsigned int &ui_milliseconds);
-BOOL FileExists(std::string sFile);
-static unsigned int uiConsoleWidth = 0;
+#if defined(AVS26_32) || defined(AVS26_64)
+	#include "avisynth26.h"
+	const AVS_Linkage *AVS_linkage = 0;
+#else
+	#include "avisynth25.h"
+#endif
 
-int main(int argc, char* argv[], char* envp[])
+struct sINISettings
 {
-	printf("\nAVSMeter v%s by Groucho2004\n", version);
+	BOOL bCreateLog;
+	BOOL bPauseBeforeExit;
+	int  iStartFrame;
+	int  iStopFrame;
+	BOOL bInvokeDistributor;
+	BOOL bLogEstimatedTime;
+} settings;
 
+typedef struct sPerformanceData
+{
+	unsigned int frame_low;
+	unsigned int frame_high;
+	double frame_interval_time;
+	WORD  cpu_usage;
+	DWORD phys_mem;
+	DWORD virt_mem;
+	WORD num_threads;
+} perfdata;
 
-	CONSOLE_SCREEN_BUFFER_INFO csbi; 
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE); 
-	GetConsoleScreenBufferInfo(hConsole, &csbi); 
-	uiConsoleWidth = (unsigned int)csbi.dwSize.X;
-	std::string sConsoleOut = "";
+CBasicString bstr;
+CUtils utils;
 
-	HINSTANCE hDLL;
-	hDLL = LoadLibrary("avisynth");
-	if (!hDLL)
+unsigned int CalculateFrameInterval(string &avs_file, string &cs_avserror);
+string CreateLogFile(string &cs_avsfile, string &cs_logbuffer, perfdata * cs_pdata, unsigned int ui_index, string &cs_avserror, unsigned int ui_frameinterval);
+string ParseINIFile();
+void PrintUsage();
+void SleepUntilEsc();
+string FormatFPS(double d_FPSCurrent, double d_FPSMin, double d_FPSMax, double d_FPSAverage);
+
+int main(int argc, char* argv[])
+{
+	string sAVSMVersion = "";
+	if (!utils.GetProductVersion(sAVSMVersion))
 	{
-		printf("\nCannot load avisynth.dll\n");
+		printf("\nCannot retrieve product version\n");
+		SleepUntilEsc();
 		return -1;
 	}
 
-	try 
+	#ifdef AVS26_32
+		sAVSMVersion += " (AVS 2.6, x86)";
+	#elif AVS26_64
+		sAVSMVersion += " (AVS 2.6, x64)";
+	#else
+		sAVSMVersion += " (AVS 2.5, x86)";
+	#endif
+
+	printf("\nAVSMeter %s by Groucho2004\n", sAVSMVersion.c_str());
+
+	CreateMutex(NULL, TRUE, "__avsmeter__single__instance__lock__");
+	if (GetLastError() == ERROR_ALREADY_EXISTS)
 	{
-		IScriptEnvironment* (__stdcall *CreateEnv)(int);
-		IScriptEnvironment *env;
+		printf("\nOne instance of AVSMeter is already running\n");
+		SleepUntilEsc();
+		return -1;
+	}
 
-		CreateEnv = (IScriptEnvironment *(__stdcall *)(int))GetProcAddress(hDLL, "CreateScriptEnvironment");
-		if (!CreateEnv)
+	string csConsoleOut = "";
+	unsigned int uiConsoleWidth = utils.GetConsoleWidth();
+	string csArg = "";
+	string csArgTest = "";
+	string csAVSFile = "";
+	string csLogBuffer = "";
+	perfdata * PerformanceData;
+	unsigned int uiPDIndex = 0;
+	BOOL bPerfDataInit = FALSE;
+	BOOL bEarlyExit = TRUE;
+	BOOL bInfoOnly = FALSE;
+	string csAVSError = "";
+	unsigned int uiFrameInterval = 0;
+
+	string csRet = ParseINIFile();
+	if (csRet != "")
+	{
+		printf(csRet.c_str());
+		SleepUntilEsc();
+		return -1;
+	}
+
+	if (argc < 2)
+	{
+		PrintUsage();
+		SleepUntilEsc();
+		return -1;
+	}
+
+	for (int iArg = 1; iArg < argc; iArg++)
+	{
+		csArg = argv[iArg];
+		csArgTest = csArg;
+		bstr.StrToLC(csArgTest);
+		bstr.StrTrim(csArgTest);
+
+		if (csArgTest.length() > 4)
 		{
-			printf("\n%s\n", pad("Failed to load CreateScriptEnvironment()").c_str());
+			if (csArgTest.substr(csArgTest.length() - 4) == ".avs")
+			{
+				LPTSTR lpPart;
+				char szOut[2050];
+				if (::GetFullPathName(argv[iArg], 2048, szOut, &lpPart))
+				{
+					csAVSFile = szOut;
+					if (!utils.FileExists(csAVSFile))
+					{
+						csConsoleOut = bstr.StrFormat("\nFile not found: \"%s\"\n", csArg.c_str());
+						printf("%s", csConsoleOut.c_str());
+						SleepUntilEsc();
+						return -1;
+					}
+				}
+			}
+			continue;
+		}
+
+		else if (csArgTest.length() == 2)
+		{
+			if (csArgTest == "-l")
+			{
+				settings.bCreateLog = TRUE;
+				continue;
+			}
+			else if (csArgTest == "-i")
+			{
+				bInfoOnly = TRUE;
+				continue;
+			}
+			else
+			{
+				csConsoleOut = bstr.StrFormat("\nInvalid argument: \"%s\"\n", csArg.c_str());
+				printf("%s", csConsoleOut.c_str());
+				SleepUntilEsc();
+				return -1;
+			}
+		}
+
+		else
+		{
+			csConsoleOut = bstr.StrFormat("\nInvalid argument: \"%s\"\n", csArg.c_str());
+			printf("%s", csConsoleOut.c_str());
+			SleepUntilEsc();
 			return -1;
 		}
-	
-		env = CreateEnv(AVISYNTH_INTERFACE_VERSION);
-		if (!env)
+	}
+
+	if (csAVSFile == "")
+	{
+		printf("\nNo script file specified\n");
+		SleepUntilEsc();
+		return -1;
+	}
+
+
+	if (!utils.TestTimer())
+	{
+		printf("\nQueryPerformanceCounter() is not supported\n");
+		SleepUntilEsc();
+		return -1;
+	}
+
+	BYTE bRet = utils.CheckAvisynth();
+
+	if (bRet == CANNOT_LOAD_AVSDLL)
+	{
+		printf("\nCannot load avisynth.dll.\n");
+		SleepUntilEsc();
+		return -1;
+	}
+
+	if (bRet == AVSDLL_INCOMPATIBLE)
+	{
+		#ifdef AVS26_64
+			printf("\nCannot load avisynth.dll.\nMake sure you're using a 64 Bit version.\n");
+		#else
+			printf("\nCannot load avisynth.dll.\nMake sure you're using a 32 Bit version.\n");
+		#endif
+
+		SleepUntilEsc();
+		return -1;
+	}
+
+	if (bRet == NO_AVS_LINKAGE)
+	{
+		#if defined(AVS26_32) || defined(AVS26_64)
+			printf("\nAvisynth 2.6 (Alpha 4 and above) is required.\n");
+			SleepUntilEsc();
+			return -1;
+		#endif
+	}
+
+
+	if (!bInfoOnly)
+	{
+		csAVSError = "";
+		printf("\r%s\r", bstr.StrPad("Analysing script, please wait...", uiConsoleWidth).c_str());
+		uiFrameInterval = CalculateFrameInterval(csAVSFile, csAVSError);
+		printf("\r%s", bstr.StrPad("", uiConsoleWidth).c_str());
+		if (uiFrameInterval == 0)
 		{
-			printf("\n%s\n", pad("Could not create IScriptenvironment").c_str());
+			printf("\n%s\n", csAVSError.c_str());
+			SleepUntilEsc();
+			return -1;
+		}
+	}
+
+	HINSTANCE hDLL = ::LoadLibrary("avisynth");
+	if (!hDLL)
+	{
+		printf("\nCannot load avisynth.dll\n");
+		SleepUntilEsc();
+		return -1;
+	}
+
+	try
+	{
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			printf("\nFailed to load CreateScriptEnvironment()\n");
+			SleepUntilEsc();
 			return -1;
 		}
 
-		AVSValue val;
-		PClip clip;
-		PVideoFrame frame;
-		VideoInfo	vidinfo;
-
-		std::string sAvisynthVersion = "";
-		try
+		IScriptEnvironment *AVS_env = CreateEnvironment(AVISYNTH_INTERFACE_VERSION);
+		if (!AVS_env)
 		{
-			AVSValue as_version;
-			as_version = env->Invoke("VersionString", AVSValue(&as_version, 0));
-			sAvisynthVersion = as_version.AsString();
-		}
-		catch (IScriptEnvironment::NotFound)
-		{
-		}
+			printf("\nCould not create IScriptenvironment\n");
 
-		printf("\r%s\n", pad(sAvisynthVersion).c_str());
-
-		if (argc != 2)
-		{
-			frame = 0;
-			clip = 0;
-			val = 0;
-
-			printf("\nUsage :  AVSMeter <script>\n");
+			SleepUntilEsc();
 			return -1;
 		}
 
-		if (!FileExists(argv[1]))
+		#if defined(AVS26_32) || defined(AVS26_64)
+			AVS_linkage = AVS_env->GetAVSLinkage();
+		#endif
+
+		AVSValue AVS_main;
+		AVSValue AVS_temp;
+		PClip AVS_clip;
+		VideoInfo	AVS_vidinfo;
+
+		AVS_main = AVS_env->Invoke("Import", csAVSFile.c_str());
+
+		if (!AVS_main.IsClip())
 		{
-			frame = 0;
-			clip = 0;
-			val = 0;
-
-			printf("File not found:\n%s\n", argv[1]);
-			return -1;
+			csConsoleOut = bstr.StrFormat("\"%s\":\nScript did not return a video clip", csAVSFile.c_str());
+			AVS_env->ThrowError(csConsoleOut.c_str());
 		}
-
-		val = env->Invoke("Import", argv[1]);
-		printf("\rChecking timer...");
-		if ((GetTimer() < 0.0) || (!TestTimer()))
-		{
-			sConsoleOut = "";
-			printf("\r%s", pad(sConsoleOut).c_str());
-
-			printf("\nHigh resolution timer not supported\n");
-			return -1;
-		}
-
-		sConsoleOut = "";
-		printf("\r%s", pad(sConsoleOut).c_str());
 
 		BOOL bIsMTVersion = TRUE;
-		unsigned int uiMTMode = 0;
+		int iMTMode = 0;
 		try
 		{
-			AVSValue mt_test;
-			mt_test = env->Invoke("GetMTMode", false);
-			const int mt_mode = mt_test.IsInt() ? mt_test.AsInt() : 0;
-			uiMTMode = mt_mode;
-			if (mt_mode > 0 && mt_mode < 5)
-				val = env->Invoke("Distributor", val);
+			AVS_temp = AVS_env->Invoke("GetMTMode", false);
+			iMTMode = AVS_temp.IsInt() ? AVS_temp.AsInt() : 0;
+			if ((iMTMode > 0) && (iMTMode < 5) && settings.bInvokeDistributor)
+				AVS_main = AVS_env->Invoke("Distributor", AVS_main);
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
 			bIsMTVersion = FALSE;
 		}
 
-		clip = val.AsClip();
-		vidinfo = clip->GetVideoInfo();
-		unsigned int uiFrames = (unsigned int)vidinfo.num_frames;
+		AVS_clip = AVS_main.AsClip();
+		AVS_vidinfo = AVS_clip->GetVideoInfo();
+		unsigned int uiFrames = (unsigned int)AVS_vidinfo.num_frames;
+		unsigned int uiMilliSeconds = (unsigned int)((((double)uiFrames * (double)AVS_vidinfo.fps_denominator * 1000.0) / (double)AVS_vidinfo.fps_numerator) + 0.5);
 
-		unsigned int uiMilliSeconds = (unsigned int)((((double)uiFrames * (double)vidinfo.fps_denominator * 1000.0) / (double)vidinfo.fps_numerator) + 0.5);
-
-		if (bIsMTVersion)
-			printf("Active MT Mode: %u\n", uiMTMode);
-
-		printf("\nNumber of frames:     %11u", vidinfo.num_frames);
-		printf("\nLength (h:m:s.ms):       %s", FormatHMS(uiMilliSeconds).c_str());
-		printf("\nFrame width:          %11u", vidinfo.width);
-		printf("\nFrame height:         %11u", vidinfo.height);
-		printf("\nFramerate:                %11.3f (%u/%u)", (double)vidinfo.fps_numerator / (double)vidinfo.fps_denominator, vidinfo.fps_numerator, vidinfo.fps_denominator);
-
-		if (!vidinfo.IsFieldBased())
-			printf("\nProgressive:                  Yes");
-		else
+		string csAvisynthVersion = "";
+		try
 		{
-			printf("\nProgressive:                   No");
-			if (vidinfo.IsBFF())
-				printf(" (BFF)");
-			if (vidinfo.IsTFF())
-				printf(" (TFF)");
+			AVS_temp = AVS_env->Invoke("VersionString", AVSValue(&AVS_temp, 0));
+			csAvisynthVersion = bstr.StrFormat("%s", AVS_temp.AsString());
+		}
+		catch (IScriptEnvironment::NotFound)
+		{
 		}
 
-		printf("\nColorspace:                 ");
+		csConsoleOut = bstr.StrPad(csAvisynthVersion, uiConsoleWidth).c_str();
+		printf("\r%s\n", csConsoleOut.c_str());
+		csLogBuffer += "[General info]\n";
+		csConsoleOut = bstr.StrFormat("Log file created with:   AVSMeter %s", sAVSMVersion.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+		csConsoleOut = bstr.StrFormat("Avisynth version:        %s", csAvisynthVersion.c_str());
+		csLogBuffer += csConsoleOut + "\n";
 
-		if (vidinfo.IsYV12())
-			printf(" YV12\n");
-		else if (vidinfo.IsYUY2())
-			printf(" YUY2\n");
-		else if (vidinfo.IsRGB24())
-			printf("RGB24\n");
-		else if (vidinfo.IsRGB32())
-			printf("RGB32\n");
+		printf("\r%s", bstr.StrPad("", uiConsoleWidth).c_str());
+
+		if (bIsMTVersion)
+		{
+			csConsoleOut = bstr.StrFormat("Active MT Mode: %d", iMTMode);
+			printf("\r%s\n", csConsoleOut.c_str());
+			csLogBuffer += "                         " + csConsoleOut + "\n";
+		}
+
+		csLogBuffer += "\n\n[Clip info]\n";
+
+		csConsoleOut = bstr.StrFormat("Number of frames:          %11u", AVS_vidinfo.num_frames);
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		csConsoleOut = bstr.StrFormat("Length (hhh:mm:ss.ms):   %s", bstr.FormatTimeString(uiMilliSeconds).c_str());
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		csConsoleOut = bstr.StrFormat("Frame width:               %11u", AVS_vidinfo.width);
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		csConsoleOut = bstr.StrFormat("Frame height:              %11u", AVS_vidinfo.height);
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		csConsoleOut = bstr.StrFormat("Framerate:                 %11.3f (%u/%u)", (double)AVS_vidinfo.fps_numerator / (double)AVS_vidinfo.fps_denominator, AVS_vidinfo.fps_numerator, AVS_vidinfo.fps_denominator);
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		if (!AVS_vidinfo.IsFieldBased())
+			csConsoleOut = "Interlaced:                         No";
 		else
-			printf("  n/a\n");
+		{
+			if (AVS_vidinfo.IsTFF())
+				csConsoleOut = "Interlaced:                        Yes (TFF)";
+			else
+				csConsoleOut = "Interlaced:                        Yes (BFF)";
+		}
 
-		printf("\nHit ESC to exit...\n");
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		csConsoleOut = "Colorspace:                      ";
+		printf("\n%s", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut;
+
+		if (AVS_vidinfo.IsYV411())
+			csConsoleOut = "YV411";
+		else if (AVS_vidinfo.IsYV24())
+			csConsoleOut = " YV24";
+		else if (AVS_vidinfo.IsYV16())
+			csConsoleOut = " YV16";
+		else if (AVS_vidinfo.IsY8())
+			csConsoleOut = "   Y8";
+		else if (AVS_vidinfo.IsYV12())
+			csConsoleOut = " YV12";
+		else if (AVS_vidinfo.IsYUY2())
+			csConsoleOut = " YUY2";
+		else if (AVS_vidinfo.IsRGB24())
+			csConsoleOut = "RGB24";
+		else if (AVS_vidinfo.IsRGB32())
+			csConsoleOut = "RGB32";
+		else
+			csConsoleOut = "  n/a";
+
+		printf("%s\n", csConsoleOut.c_str());
+		csLogBuffer += csConsoleOut + "\n";
+
+		if (bInfoOnly)
+		{
+			AVS_clip = 0;
+			AVS_main = 0;
+			AVS_temp = 0;
+			#if defined(AVS26_32) || defined(AVS26_64)
+				AVS_env->DeleteScriptEnvironment();
+			#else
+				AVS_env->~IScriptEnvironment();
+			#endif
+
+			if (settings.bCreateLog)
+			{
+				PerformanceData = new perfdata[1];
+				string csLogRet = CreateLogFile(csAVSFile, csLogBuffer, PerformanceData, uiPDIndex, csAVSError, uiFrameInterval);
+				if (csLogRet != "")
+					printf(csLogRet.c_str());
+			}
+
+			SleepUntilEsc();
+			return 0;
+		}
+
+		printf("\n");
+
+		unsigned int uiFramesToProcess = 0;
+		unsigned int uiFirstFrame = 0;
+		unsigned int uiLastFrame = uiFrames - 1;
+
+		if (settings.iStopFrame == -1)
+			settings.iStopFrame = (int)uiFrames - 1;
+
+		if ((settings.iStartFrame >= 0) && (settings.iStartFrame < settings.iStopFrame) && (settings.iStopFrame < (int)uiFrames))
+		{
+			uiFirstFrame = (unsigned int)settings.iStartFrame;
+			uiLastFrame = (unsigned int)settings.iStopFrame;
+			uiFramesToProcess = uiLastFrame - uiFirstFrame + 1;
+			printf("\r%s\r", bstr.StrPad("Please wait...", uiConsoleWidth).c_str());
+		}
+		else
+		{
+			printf("\r%s", bstr.StrPad("", uiConsoleWidth).c_str());
+			csConsoleOut = bstr.StrFormat("Invalid frame range specified (%d,%d), using default", settings.iStartFrame, settings.iStopFrame);
+			printf("\r%s\r", csConsoleOut.c_str());
+			Sleep(2000);
+			uiFirstFrame = 0;
+			uiLastFrame = uiFrames - 1;
+			uiFramesToProcess = uiFrames;
+		}
+
+		while ((uiFramesToProcess / uiFrameInterval) > 500000)
+			uiFrameInterval *= 10;
+
+		unsigned int uiArraySize = (uiFramesToProcess / uiFrameInterval) + 2;
+
+		PerformanceData = new perfdata[uiArraySize];
+		for (unsigned int x = 0; x < uiArraySize; x++)
+		{
+			PerformanceData[x].frame_low = 0;
+			PerformanceData[x].frame_high = 0;
+			PerformanceData[x].frame_interval_time = 0.0;
+			PerformanceData[x].cpu_usage = 0;
+			PerformanceData[x].phys_mem = 0;
+			PerformanceData[x].virt_mem = 0;
+			PerformanceData[x].num_threads = 0;
+		}
+		bPerfDataInit = TRUE;
+
+
+		bEarlyExit = FALSE;
+		unsigned int n = 0;
+		BOOL bFirstScr = TRUE;
+		unsigned int uiElapsedMS = 0;
+		unsigned int uiEstimatedMS = 0;
+
+		CProcessInfo process_info;
+		DWORD dwPhysicalMemPeakMB = 0;
+		DWORD dwVirtualMemPeakMB = 0;
+		DWORD dwPhysicalMemCurrentMB = 0;
+		DWORD dwVirtualMemCurrentMB = 0;
+		unsigned int uiCPUUsageAcc = 0;
+		unsigned int uiCPUUsageAvg = 0;
+		unsigned int uiCounter = 0;
 
 		unsigned int uiCurrentFrame = 0;
 		double dFPSAverage = 0.0;
 		double dFPSCurrent = 0.0;
+		double dFPSMin = 1.0e+20;
 		double dFPSMax = 0.0;
-		double dFPSMin = 1.0E100;
-		unsigned int uiFrameWindow = 20;
 
-		//This seems to remedy some odd caching behaviour with MT versions when "Loop()" is used in the script.
-		if (uiFrames > (2 * uiFrameWindow))
+		double dStartTime = utils.GetTimer();
+		double dCurrentTime = dStartTime;
+		double dLastDisplayTime = dStartTime;
+		double dLastIntervalTime = dStartTime;
+
+		process_info.Update();
+
+		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
 		{
-			frame = clip->GetFrame(0, env);
-			frame = clip->GetFrame((2 * uiFrameWindow), env);
-			frame = clip->GetFrame(0, env);
+			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
+			++n;
+
+			if (((n % uiFrameInterval) == 0) || (n == uiFramesToProcess))
+			{
+				dCurrentTime = utils.GetTimer();
+				process_info.Update();
+				++uiCounter;
+
+				uiElapsedMS = (unsigned int)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
+				uiEstimatedMS = (unsigned int)((double)uiFramesToProcess * (double)uiElapsedMS / (double)n);
+
+				uiCPUUsageAcc += (unsigned int)process_info.wCPUUsage;
+				uiCPUUsageAvg = (unsigned int)(((double)uiCPUUsageAcc / (double)uiCounter) + 0.5);
+
+				dwPhysicalMemCurrentMB = process_info.dwPhysicalMemMB;
+				dwVirtualMemCurrentMB = process_info.dwVirtualMemMB;
+
+				if (dwPhysicalMemCurrentMB > dwPhysicalMemPeakMB)
+					dwPhysicalMemPeakMB = dwPhysicalMemCurrentMB;
+				if (dwVirtualMemCurrentMB > dwVirtualMemPeakMB)
+					dwVirtualMemPeakMB = dwVirtualMemCurrentMB;
+
+				dFPSAverage = (double)n / (dCurrentTime - dStartTime);
+
+				if ((n % uiFrameInterval) == 0)
+				{
+					if ((dCurrentTime - dLastIntervalTime) > 0.0)
+						dFPSCurrent = (double)uiFrameInterval / (dCurrentTime - dLastIntervalTime);
+					if (dFPSCurrent > dFPSMax)
+						dFPSMax = dFPSCurrent;
+					if (dFPSCurrent < dFPSMin)
+						dFPSMin = dFPSCurrent;
+
+					PerformanceData[uiPDIndex].frame_low = (uiCurrentFrame + 1) - uiFrameInterval;
+					PerformanceData[uiPDIndex].frame_high = uiCurrentFrame;
+					PerformanceData[uiPDIndex].frame_interval_time = (dCurrentTime - dLastIntervalTime) / (double)uiFrameInterval;
+					PerformanceData[uiPDIndex].cpu_usage = process_info.wCPUUsage;
+					PerformanceData[uiPDIndex].num_threads = process_info.wThreadCount;
+					PerformanceData[uiPDIndex].phys_mem = dwPhysicalMemCurrentMB;
+					PerformanceData[uiPDIndex].virt_mem = dwVirtualMemCurrentMB;
+					++uiPDIndex;
+
+					dLastIntervalTime = dCurrentTime;
+				}
+
+				if ((dCurrentTime - dLastDisplayTime) > 0.2)
+				{
+					uiConsoleWidth = utils.GetConsoleWidth();
+					dLastDisplayTime = dCurrentTime;
+
+					if (!bFirstScr)
+						utils.CursorUp(10);
+
+					bFirstScr = FALSE;
+					csConsoleOut = bstr.StrFormat("Frame (current | last):         %u | %u", uiCurrentFrame, uiLastFrame);
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+					csConsoleOut = "FPS (cur | min | max | avg):    " + FormatFPS(dFPSCurrent, dFPSMin, dFPSMax, dFPSAverage);
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+					csConsoleOut = bstr.StrFormat("CPU usage (current | average):  %u%% | %u%%", process_info.wCPUUsage, uiCPUUsageAvg);
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+					csConsoleOut = bstr.StrFormat("Thread count:                   %u", process_info.wThreadCount);
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+					csConsoleOut = bstr.StrFormat("Physical Memory usage:          %u MB", dwPhysicalMemCurrentMB);
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+					csConsoleOut = bstr.StrFormat("Virtual Memory usage:           %u MB", dwVirtualMemCurrentMB);
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+					csConsoleOut = bstr.StrFormat("Time (elapsed | estimated):     %s | %s", bstr.FormatTimeString(uiElapsedMS).c_str(), bstr.FormatTimeString(uiEstimatedMS).c_str());
+					printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+
+					printf("\nPress ESC to stop...\n\n");
+
+					if (_kbhit())
+					{
+						if (_getch() == 0x1B) //ESC
+						{
+							uiLastFrame = uiCurrentFrame;
+							break;
+						}
+					}
+				}
+			}
 		}
 
-		double dstarttime = GetTimer();
-		double dcurrenttime = GetTimer();
-		double dprevioustime = GetTimer();
-		double dlastwindowtime = GetTimer();
-		unsigned int n = 0;
+		process_info.CloseProcess();
 
-		for (uiCurrentFrame = 0; uiCurrentFrame < uiFrames; uiCurrentFrame++)
+		AVS_clip = 0;
+		AVS_main = 0;
+		AVS_temp = 0;
+
+		#if defined(AVS26_32) || defined(AVS26_64)
+			AVS_env->DeleteScriptEnvironment();
+		#else
+			AVS_env->~IScriptEnvironment();
+		#endif
+
+		csLogBuffer += "\n\n[Runtime info]\n";
+
+		if (n >= uiFrameInterval)
 		{
-			frame = clip->GetFrame(uiCurrentFrame, env);
-	
-			n = uiCurrentFrame + 1;
-			dcurrenttime = GetTimer();
+			if (!bFirstScr)
+				utils.CursorUp(10);
 
-			if ((n % uiFrameWindow) == 0)
-			{
-				dFPSCurrent = (double)uiFrameWindow / (dcurrenttime - dlastwindowtime);
+			csConsoleOut = bstr.StrFormat("Frames processed:               %u (%u - %u)", n, uiFirstFrame, uiLastFrame);
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
 
-				if (dFPSCurrent > dFPSMax)
-					dFPSMax = dFPSCurrent;
-				if (dFPSCurrent < dFPSMin)
-					dFPSMin = dFPSCurrent;			
+			csConsoleOut = "FPS (min | max | average):      " + FormatFPS(-1.0, dFPSMin, dFPSMax, dFPSAverage);
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
 
-				dlastwindowtime = dcurrenttime;
-			}
+			csConsoleOut = bstr.StrFormat("CPU usage (average):            %u%%", uiCPUUsageAvg);
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
 
-			if (((dcurrenttime - dprevioustime) >= 0.25) || (n == uiFrames))
-			{
-				dprevioustime = dcurrenttime;
-				dFPSAverage = (double)n / (dcurrenttime - dstarttime);
+			csConsoleOut = bstr.StrFormat("Thread count:                   %u", process_info.wThreadCount);
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
 
-				if (n >= (2 * uiFrameWindow))
-				{
-					sConsoleOut = format("Frame %u/%u, fps (min/max/avg): %.2f | %.2f | %.2f", n, uiFrames, dFPSMin, dFPSMax, dFPSAverage);
-					printf("\r%s", pad(sConsoleOut).c_str());
-				}
-				else
-				{
-					sConsoleOut = format("Frame %u/%u, fps (min/max/avg): ... | ... | ...", n, uiFrames);
-					printf("\r%s", pad(sConsoleOut).c_str());
-				}
+			csConsoleOut = bstr.StrFormat("Physical Memory usage (peak):   %u MB", dwPhysicalMemPeakMB);
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
 
-				if (_kbhit())
-				{
-					if (_getch() == 0x1B) //ESC
-						break;
-				}
-			}
+			csConsoleOut = bstr.StrFormat("Virtual Memory usage (peak):    %u MB", dwVirtualMemPeakMB);
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
+
+			if ((settings.bLogEstimatedTime) && (n < uiFramesToProcess))
+				csConsoleOut = bstr.StrFormat("Time (elapsed | estimated):     %s | %s", bstr.FormatTimeString(uiElapsedMS).c_str(), bstr.FormatTimeString(uiEstimatedMS).c_str());
+			else
+				csConsoleOut = bstr.StrFormat("Time (elapsed):                 %s", bstr.FormatTimeString(uiElapsedMS).c_str());
+
+			printf("\r%s\n", bstr.StrPad(csConsoleOut, uiConsoleWidth).c_str());
+			csLogBuffer += csConsoleOut + "\n";
+
+			printf("\r%s\n", bstr.StrPad("", uiConsoleWidth).c_str());
+			printf("\r%s\n", bstr.StrPad("", uiConsoleWidth).c_str());
+			utils.CursorUp(2);
 		}
+		else
+		{
+			if (!bFirstScr)
+			{
+				for (int i = 0; i <= 9; i++)
+				{
+					printf("\r%s", bstr.StrPad("", uiConsoleWidth).c_str());
+					utils.CursorUp(1);
+				}
+			}
+			else
+				printf("\r%s", bstr.StrPad("", uiConsoleWidth).c_str());
 
-		frame = 0;
-		clip = 0;
-		val = 0;
-
-		unsigned int uiTotalMS = (unsigned int)(((dcurrenttime - dstarttime) * 1000.0) + 0.5);
-		sConsoleOut = format("Running time (h:m:s.ms):  %s", FormatHMS(uiTotalMS).c_str());
-		printf("\n%s\n", sConsoleOut.c_str());
+			csLogBuffer += "Insufficient data\n";
+		}
 	}
-	catch(AvisynthError err) 
+	catch(AvisynthError err)
 	{
-		printf("\r%s\n", err.msg);
-		return FALSE;
+		csAVSError = bstr.StrFormat("%s", (PCSTR)err.msg);
+
+		if (bEarlyExit == FALSE)
+		{
+			utils.CursorUp(2);
+			printf("\r%s\n", bstr.StrPad("", uiConsoleWidth).c_str());
+			printf("\r%s\n", bstr.StrPad("", uiConsoleWidth).c_str());
+			utils.CursorUp(2);
+			printf("\r%s\n", csAVSError.c_str());
+		}
+		else
+			printf("\n%s\n", csAVSError.c_str());
 	}
 
-	FreeLibrary(hDLL);
+	#if defined(AVS26_32) || defined(AVS26_64)
+		AVS_linkage = 0;
+	#endif
+
+	::FreeLibrary(hDLL);
+
+	if (settings.bCreateLog)
+	{
+		string csRet = CreateLogFile(csAVSFile, csLogBuffer, PerformanceData, uiPDIndex, csAVSError, uiFrameInterval);
+		if (csRet != "")
+		{
+			printf(csRet.c_str());
+			SleepUntilEsc();
+			return -1;
+		}
+	}
+
+	if (bPerfDataInit)
+		delete[] PerformanceData;
+
+	SleepUntilEsc();
 
 	return 0;
 }
 
 
-BOOL FileExists(std::string sFile)
+string ParseINIFile()
 {
-	DWORD dwAttrib;
-	dwAttrib = GetFileAttributes(sFile.c_str());
-	if (dwAttrib == 0xFFFFFFFF)
-		return FALSE;
+	string csRet = "";
+	string csProgramPath = "";
+	string csINIFile = "";
+	string csTemp = "";
 
-	if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
-		return FALSE;	
-
-	return TRUE;
-}
-
-
-std::string format(const char *fmt, ...)
-{
-	if (!fmt)	return "";
-
-	va_list args;
-	va_start(args, fmt);
-	unsigned int length = 512;
-	char *buffer = NULL;
-	int result = -1;
-
-	while (result == -1)
+	char szPath[2050];
+	if (::GetModuleFileName(NULL, szPath, 2048) > 0)
 	{
-		if (buffer) delete [] buffer;
-		buffer = new char [length + 1];
-		memset(buffer, ' ', length + 1);
-		result = _vsnprintf(buffer, length, fmt, args);
-		length *= 2;
+		csProgramPath = bstr.StrFormat("%s", szPath);
+		size_t i = 0;
+		for (i = (csProgramPath.length() - 1); i > 0; i--)
+		{
+		 if (csProgramPath[i] == '\\')
+			break;
+		}
+		csProgramPath = csProgramPath.substr(0, i);
+		csINIFile = csProgramPath + "\\AVSMeter.ini";
 	}
 
-	std::string s(buffer);
-	delete [] buffer;
 
-	va_end(args);
+	if (!utils.FileExists(csINIFile)) //write defaults
+	{
+		ofstream hINIFile(csINIFile.c_str());
+		if (!hINIFile.is_open())
+	  {
+			csRet = bstr.StrFormat("\nCannot create \"%s\"\n", csINIFile.c_str());
+			return csRet;
+		}
+		hINIFile << "CreateLog=0\n";
+		hINIFile << "PauseBeforeExit=0\n";
+		hINIFile << "FrameRange=0,-1\n";
+		hINIFile << "InvokeDistributor=1\n";
+		hINIFile << "LogEstimatedTime=0\n";
+		hINIFile.flush();
+		hINIFile.close();
+	}
 
-	return s;
+	ifstream hINIFile(csINIFile.c_str());
+	if (!hINIFile.is_open())
+	{
+		csRet = bstr.StrFormat("\nCannot open \"%s\"\n", csINIFile.c_str());
+		return csRet;
+	}
+
+	settings.bCreateLog = FALSE;
+	settings.bPauseBeforeExit = FALSE;
+	settings.iStartFrame = 0;
+	settings.iStopFrame = -1;
+	settings.bInvokeDistributor = TRUE;
+	settings.bLogEstimatedTime = FALSE;
+
+	string csCurrentLine = "";
+	size_t iPos = 0;
+
+	while (getline(hINIFile, csCurrentLine))
+	{
+		bstr.StrToLC(csCurrentLine);
+		bstr.StrTrim(csCurrentLine);
+		csCurrentLine.erase(remove(csCurrentLine.begin(), csCurrentLine.end(), ' '), csCurrentLine.end());
+
+		if ((csCurrentLine.substr(0, 9) == "createlog") && (csCurrentLine.substr(csCurrentLine.length() - 1) == "1"))
+			settings.bCreateLog = TRUE;
+		if ((csCurrentLine.substr(0, 15) == "pausebeforeexit") && (csCurrentLine.substr(csCurrentLine.length() - 1) == "1"))
+			settings.bPauseBeforeExit = TRUE;
+		if ((csCurrentLine.substr(0, 17) == "invokedistributor") && (csCurrentLine.substr(csCurrentLine.length() - 1) == "0"))
+			settings.bInvokeDistributor = FALSE;
+		if ((csCurrentLine.substr(0, 16) == "logestimatedtime") && (csCurrentLine.substr(csCurrentLine.length() - 1) == "1"))
+			settings.bLogEstimatedTime = TRUE;
+		if (csCurrentLine.substr(0, 10) == "framerange")
+		{
+			iPos = csCurrentLine.find("=");
+			if (iPos == 10)
+			{
+				csTemp = csCurrentLine.substr(iPos + 1);
+				iPos = csTemp.find(",");
+				if (iPos > 0)
+				{
+					settings.iStartFrame = atoi(csTemp.substr(0, iPos).c_str());
+					settings.iStopFrame = atoi(csTemp.substr(iPos + 1).c_str());
+				}
+			}
+		}
+	}
+
+	hINIFile.close();
+
+	return csRet;
 }
 
 
-std::string pad(std::string s_line)
+string CreateLogFile(string &cs_avsfile, string &cs_logbuffer, perfdata * cs_pdata, unsigned int ui_index, string &cs_avserror, unsigned int ui_frameinterval)
 {
-	std::string s_padding(((uiConsoleWidth - s_line.length()) - 1), ' ');
-	return (s_line + s_padding);
+	string csRet = "";
+	string csAVSBuffer = "";
+	string csCurrentLine = "";
+
+	ifstream hAVSFile(cs_avsfile.c_str());
+	if (!hAVSFile.is_open())
+	{
+		csRet = bstr.StrFormat("\nCannot open \"%s\"\n", cs_avsfile.c_str());
+		return csRet;
+	}
+
+	while (getline(hAVSFile, csCurrentLine))
+		csAVSBuffer += csCurrentLine + "\n";
+
+	hAVSFile.close();
+
+	string csLogFile = cs_avsfile + ".log";
+	ofstream hLogFile(csLogFile.c_str());
+	if (!hLogFile.is_open())
+	{
+		csRet = bstr.StrFormat("\nCannot create \"%s\"\n", csLogFile.c_str());
+		return csRet;
+	}
+
+	string csLog = "";
+
+	csLog = cs_logbuffer + "\n";
+	hLogFile << csLog;
+	csLog = "\n[Script]\n" + csAVSBuffer + "\n";
+	hLogFile << csLog;
+
+	if (ui_index > 0)
+	{
+		if (ui_frameinterval == 1)
+			csLog = "\n[Performance data]\n       Frame   Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+		else
+			csLog = "\n[Performance data]\n       Frame interval   Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+
+		hLogFile << csLog;
+
+		string stemp1 = "";
+		string stemp2 = "";
+		if (ui_index > 0)
+		{
+			for (unsigned int i = 0; i < ui_index; i++)
+			{
+				if (ui_frameinterval == 1)
+				{
+					stemp1 = bstr.StrFormat("%u", cs_pdata[i].frame_low);
+					string spad((12 - stemp1.length()), ' ');
+					stemp2 = bstr.StrFormat("%s%u %12.2f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, 1.0 / cs_pdata[i].frame_interval_time, cs_pdata[i].frame_interval_time * 1000.0, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+				}
+				else
+				{
+					stemp1 = bstr.StrFormat("%u-%u", cs_pdata[i].frame_low, cs_pdata[i].frame_high);
+					string spad((21 - stemp1.length()), ' ');
+					stemp2 = bstr.StrFormat("%s%u-%u %12.2f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, 1.0 / cs_pdata[i].frame_interval_time, cs_pdata[i].frame_interval_time * 1000.0, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+				}
+
+				hLogFile << stemp2 + "\n";
+			}
+		}
+	}
+
+	if (cs_avserror != "")
+	{
+		hLogFile << "\n\n[AVISynth error]\n" + cs_avserror + "\n";
+	}
+
+	hLogFile.flush();
+	hLogFile.close();
+
+	return csRet;
 }
 
 
-double GetTimer()
+void SleepUntilEsc()
 {
-	LARGE_INTEGER liPerfCounter = {0, 0};
-	LARGE_INTEGER liPerfFreq = {0, 0};
+	if (settings.bPauseBeforeExit)
+	{
+		printf("\nPress ESC to exit...");
+		for (;;)
+		{
+			Sleep(100);
+			if (_kbhit())
+			{
+				if (_getch() == 0x1B) //ESC
+					break;
+			}
+		}
+		printf("\r%s", bstr.StrPad("", utils.GetConsoleWidth()).c_str());
+	}
 
-	if (QueryPerformanceCounter(&liPerfCounter) == 0)
-		return -1.0;
-	if (QueryPerformanceFrequency(&liPerfFreq) == 0)
-		return -1.0;
-
-	return (double)liPerfCounter.QuadPart / (double)liPerfFreq.QuadPart;
+	return;
 }
 
 
-std::string FormatHMS(unsigned int &ui_milliseconds)
+unsigned int CalculateFrameInterval(string &avs_file, string &cs_avserror)
 {
-	unsigned int hours = (ui_milliseconds / 1000) / 3600;
-	unsigned int minutes = ((ui_milliseconds / 1000) / 60) % 60;
-	unsigned int seconds = (ui_milliseconds / 1000) % 60;
-	unsigned int milliseconds = ui_milliseconds % 1000;
+	unsigned int uiFI = 1000;
+	cs_avserror = "";
 
-	return format("%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+	HINSTANCE hDLL = ::LoadLibrary("avisynth");
+	if (!hDLL)
+	{
+		cs_avserror = "Failed to load avisynth.dll";
+		return 0;
+	}
+
+	try
+	{
+		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			cs_avserror = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return 0;
+		}
+
+		IScriptEnvironment *AVS_env = CreateEnvironment(AVISYNTH_INTERFACE_VERSION);
+		if (!AVS_env)
+		{
+			cs_avserror = "Could not create IScriptenvironment";
+			::FreeLibrary(hDLL);
+			return 0;
+		}
+
+		#if defined(AVS26_32) || defined(AVS26_64)
+			AVS_linkage = AVS_env->GetAVSLinkage();
+		#endif
+
+		AVSValue AVS_main;
+		AVS_main = AVS_env->Invoke("Import", avs_file.c_str());
+
+		if (!AVS_main.IsClip()) //not a clip
+			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", avs_file.c_str());
+
+		AVSValue AVS_temp;
+		PClip AVS_clip;
+		VideoInfo	AVS_vidinfo;
+
+		int iMTMode = 0;
+		try
+		{
+			AVS_temp = AVS_env->Invoke("GetMTMode", false);
+			iMTMode = AVS_temp.IsInt() ? AVS_temp.AsInt() : 0;
+			if ((iMTMode > 0) && (iMTMode < 5) && settings.bInvokeDistributor)
+				AVS_main = AVS_env->Invoke("Distributor", AVS_main);
+		}
+		catch (IScriptEnvironment::NotFound)
+		{
+		}
+
+		AVS_clip = AVS_main.AsClip();
+		AVS_vidinfo = AVS_clip->GetVideoInfo();
+		unsigned int uiTotalFrames = (unsigned int)AVS_vidinfo.num_frames;
+
+		if (uiTotalFrames < 1)
+			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", avs_file.c_str());
+
+		BOOL bTesting = TRUE;
+		unsigned int uiCurrentFrame = 0;
+		double dT1 = utils.GetTimer();
+		double dT2 = dT1;
+		while (bTesting)
+		{
+			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
+			++uiCurrentFrame;
+			dT2 = utils.GetTimer();
+
+			if (((dT2 - dT1) >= 4.0) || (uiCurrentFrame == uiTotalFrames))
+				break;
+		}
+
+		double dTDelta = (dT2 - dT1) * 1000.0; //ms
+		double dAverageFrameTime = 0.0;
+		if (dTDelta > 200)
+			dAverageFrameTime = dTDelta / (double)uiCurrentFrame;
+
+		if (dAverageFrameTime > 0.10)
+			uiFI = 500;
+		if (dAverageFrameTime > 0.25)
+			uiFI = 200;
+		if (dAverageFrameTime > 0.50)
+			uiFI = 100;
+		if (dAverageFrameTime > 1.00)
+			uiFI = 50;
+		if (dAverageFrameTime > 2.50)
+			uiFI = 20;
+		if (dAverageFrameTime > 5.00)
+			uiFI = 10;
+		if (dAverageFrameTime > 50.0)
+			uiFI = 1;
+
+		AVS_clip = 0;
+		AVS_main = 0;
+		AVS_temp = 0;
+
+		#if defined(AVS26_32) || defined(AVS26_64)
+			AVS_env->DeleteScriptEnvironment();
+		#else
+			AVS_env->~IScriptEnvironment();
+		#endif
+	}
+	catch(AvisynthError err)
+	{
+		cs_avserror = bstr.StrFormat("%s", (PCSTR)err.msg);
+		uiFI = 0;
+	}
+
+	#if defined(AVS26_32) || defined(AVS26_64)
+		AVS_linkage = 0;
+	#endif
+	::FreeLibrary(hDLL);
+
+	return uiFI;
 }
 
-BOOL TestTimer()
+
+void PrintUsage()
 {
-	BOOL bRet = FALSE;
+		printf("\nUsage:  AVSMeter script.avs [switches]\n\n");
+		printf("Switches:\n");
+		printf("-i      Display clip info only\n");
+		printf("-l      Create log file\n");
 
-	double start = 0.0;
-	double dtime = 0.0;
-	start = GetTimer();
-	Sleep(1000);
-	dtime = GetTimer() - start;
-		
-	if ((dtime > 0.90) && (dtime < 1.1))
-		bRet = TRUE;
-
-	return bRet;
+		return;
 }
+
+
+string FormatFPS(double d_FPSCurrent, double d_FPSMin, double d_FPSMax, double d_FPSAverage)
+{
+	string sRet = "";
+	string sTemp = "";
+
+	if (d_FPSCurrent > 0.0)
+	{
+		if (d_FPSCurrent < 10000.0)
+			sTemp = bstr.StrFormat("%.2f", d_FPSCurrent);
+		else
+			sTemp = bstr.StrFormat("%u", (unsigned int)d_FPSCurrent);
+
+		sRet += sTemp;
+	}
+
+	if (d_FPSMin > 0.0)
+	{
+		if (d_FPSMin < 10000.0)
+			sTemp = bstr.StrFormat("%.2f", d_FPSMin);
+		else
+			sTemp = bstr.StrFormat("%u", (unsigned int)d_FPSMin);
+
+		if (d_FPSCurrent > 0.0)
+			sRet += " | ";
+
+		sRet += sTemp;
+	}
+
+	if (d_FPSMax > 0.0)
+	{
+		if (d_FPSMax < 10000.0)
+			sTemp = bstr.StrFormat("%.2f", d_FPSMax);
+		else
+			sTemp = bstr.StrFormat("%u", (unsigned int)d_FPSMax);
+
+		if (d_FPSMin > 0.0)
+			sRet += " | ";
+
+		sRet += sTemp;
+	}
+
+	if (d_FPSAverage > 0.0)
+	{
+		if (d_FPSAverage < 10000.0)
+			sTemp = bstr.StrFormat("%.2f", d_FPSAverage);
+		else
+			sTemp = bstr.StrFormat("%u", (unsigned int)d_FPSAverage);
+
+		if (d_FPSMax > 0.0)
+			sRet += " | ";
+
+		sRet += sTemp;
+	}
+
+
+	return sRet;
+}
+
 

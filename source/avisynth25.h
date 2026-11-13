@@ -39,7 +39,7 @@
 #ifndef __AVISYNTH_H__
 #define __AVISYNTH_H__
 
-enum { AVISYNTH_INTERFACE_VERSION = 3 };
+enum {AVISYNTH_INTERFACE_VERSION = 3};
 
 
 /* Define all types necessary for interfacing with avisynth.dll
@@ -133,7 +133,26 @@ struct VideoInfo {
     CS_BGR = 1<<28,
     CS_YUV = 1<<29,
     CS_INTERLEAVED = 1<<30,
-    CS_PLANAR = 1<<31
+    CS_PLANAR = 1<<31,
+		CS_Shift_Sub_Width   =  0,
+		CS_Shift_Sub_Height  =  8,
+		CS_Sub_Width_Mask    = 7 << CS_Shift_Sub_Width,
+		CS_Sub_Width_1       = 3 << CS_Shift_Sub_Width, // YV24
+    CS_Sub_Width_2       = 0 << CS_Shift_Sub_Width, // YV12, I420, YV16
+    CS_Sub_Width_4       = 1 << CS_Shift_Sub_Width, // YUV9, YV411
+    CS_VPlaneFirst       = 1 << 3, // YV12, YV16, YV24, YV411, YUV9
+    CS_UPlaneFirst       = 1 << 4, // I420
+		CS_Sub_Height_Mask   = 7 << CS_Shift_Sub_Height,
+		CS_Sub_Height_1      = 3 << CS_Shift_Sub_Height, // YV16, YV24, YV411
+		CS_Shift_Sample_Bits = 16,
+		CS_Sample_Bits_Mask  = 7 << CS_Shift_Sample_Bits,
+		CS_Sample_Bits_8     = 0 << CS_Shift_Sample_Bits,
+		CS_PLANAR_MASK = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_BGR | CS_Sample_Bits_Mask | CS_Sub_Height_Mask | CS_Sub_Width_Mask,
+		CS_PLANAR_FILTER     = ~( CS_VPlaneFirst | CS_UPlaneFirst ),
+		CS_YV411 = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_4,  // YUV 4:1:1 planar
+		CS_YV24  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1,  // YUV 4:4:4 planar
+    CS_YV16  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2,  // YUV 4:2:2 planar
+		CS_Y8    = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_Sample_Bits_8                                     // Y   4:0:0 planar
   };
 
   // Specific colorformats
@@ -164,6 +183,11 @@ struct VideoInfo {
   };
 
   // useful functions of the above
+	bool IsYV411() const { return (pixel_type & CS_PLANAR_MASK) == (CS_YV411 & CS_PLANAR_FILTER); }
+	bool IsYV24()  const { return (pixel_type & CS_PLANAR_MASK) == (CS_YV24  & CS_PLANAR_FILTER); }
+	bool IsYV16()  const { return (pixel_type & CS_PLANAR_MASK) == (CS_YV16  & CS_PLANAR_FILTER); }
+	bool IsY8()    const { return (pixel_type & CS_PLANAR_MASK) == (CS_Y8    & CS_PLANAR_FILTER); } 
+
   bool HasVideo() const { return (width!=0); }
   bool HasAudio() const { return (audio_samples_per_second!=0); }
   bool IsRGB() const { return !!(pixel_type&CS_BGR); }
@@ -179,7 +203,6 @@ struct VideoInfo {
   bool IsParityKnown() const { return ((image_type & IT_FIELDBASED)&&(image_type & (IT_BFF|IT_TFF))); }
   bool IsBFF() const { return !!(image_type & IT_BFF); }
   bool IsTFF() const { return !!(image_type & IT_TFF); }
-
   bool IsVPlaneFirst() const {return ((pixel_type & CS_YV12) == CS_YV12); }  // Don't use this
   int BytesFromPixels(int pixels) const { return pixels * (BitsPerPixel()>>3); }   // Will not work on planar images, but will return only luma planes
   int RowSize() const { return BytesFromPixels(width); }  // Also only returns first plane on planar images
@@ -434,6 +457,7 @@ public:
   virtual void __stdcall SetCacheHints(int cachehints,int frame_range) = 0 ;  // We do not pass cache requests upwards, only to the next filter.
   virtual const VideoInfo& __stdcall GetVideoInfo() = 0;
   virtual __stdcall ~IClip() {}
+  //virtual ~IClip() {}
 };
 
 
@@ -686,6 +710,7 @@ enum {
 class IScriptEnvironment {
 public:
   virtual __stdcall ~IScriptEnvironment() {}
+  //virtual ~IScriptEnvironment() {}
 
   virtual /*static*/ long __stdcall GetCPUFlags() = 0;
 
