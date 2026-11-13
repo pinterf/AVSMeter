@@ -62,7 +62,7 @@ private:
 	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
 	void    FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint);
 	__int64 FileSize(string s_file);
-	string  StrFormat(const char *fmt, ...);
+	string  StrFormat(LPCSTR fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
 };
@@ -106,7 +106,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		{
 			s_ErrorMsg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 			if (sHint != "")
-				s_ErrorMsg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
+				s_ErrorMsg += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 		}
 
 		return 0;
@@ -298,7 +298,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	try
 	{
 		_set_se_translator(SE_Translator);
-		HANDLE hFile = CreateFile(sTempDLLPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+		HANDLE hFile = CreateFile(sTempDLLPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 		if (hFile != INVALID_HANDLE_VALUE)
 		{
 			if (!GetFileNameFromHandle(hFile, sDLLPath))
@@ -441,7 +441,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	Sleep(50);
 
 	EnumPluginDirs();
-	EnumPluginDLLs();
 
 	return bRet;
 }
@@ -800,7 +799,7 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 
 string CAvisynthInfo::GetTimeStamp(string s_file)
 {
-	HANDLE hFile = CreateFile(s_file.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE hFile = CreateFile(s_file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 		return "Cannot determine timestamp";
 
@@ -831,35 +830,27 @@ string CAvisynthInfo::GetTimeStamp(string s_file)
 }
 
 
-string CAvisynthInfo::StrFormat(const char *fmt, ...)
+string CAvisynthInfo::StrFormat(LPCSTR fmt, ...)
 {
 	if (!fmt)	return "";
 
-	unsigned int maxbufsize = 16384;
-	unsigned int length = 256;
-	char *buffer = NULL;
-	int result = -1;
-
 	va_list args;
 	va_start(args, fmt);
-	while (result < 0)
+	char *buffer = NULL;
+	unsigned int bufsize = 4096;
+	buffer = new char[bufsize];
+	memset(buffer, 0, sizeof(buffer));
+	int result = _vsnprintf(buffer, bufsize - 2, fmt, args);
+	if (result < 0)
 	{
-		if (buffer)	delete [] buffer;
-		buffer = new char[length];
-		memset(buffer, ' ', sizeof(buffer));
-		result = _vsnprintf(buffer, length, fmt, args);
-		length *= 2;
-		if (length >= maxbufsize)
-		{
-			delete [] buffer;
-			va_end(args);
-			return "";
-		}
-	}
-	va_end(args);
+		delete [] buffer;
+		va_end(args);
+		return "\n_vsnprintf buffer overflow\n";
+	}		
 
 	string str(buffer);
 	delete [] buffer;
+	va_end(args);
 
 	return str;
 }
@@ -1124,7 +1115,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
@@ -1162,6 +1153,10 @@ void CAvisynthInfo::AVSCheckPlugins()
 			bPlugError = TRUE;
 			s_Msg = StrFormat("%s", sAVSError.c_str());
 			StrTrim(s_Msg);
+
+			StrToLC(sAVSError);
+			if (sAVSError.find("0x36b3") != std::string::npos)
+				s_Msg += "\n\nNote: Microsoft Visual Studio 2005 Runtime Distributable\n      is required but doesn't seem to be installed.";
 		}
 
 		if (bPlugError)
@@ -1173,7 +1168,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
@@ -1222,7 +1217,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
@@ -1270,7 +1265,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
@@ -1318,7 +1313,7 @@ void CAvisynthInfo::AVSCheckPlugins()
 			{
 				s_Msg += StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 				if (sHint != "")
-					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required doesn't seem to be installed.", sHint.c_str());
+					s_Msg += StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
 			}
 		}
 		else
@@ -1360,6 +1355,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 	HANDLE hFileMapping = NULL;
 	LPBYTE lpbaseAddress = NULL;
 	s_failed_dependencies = "";
+	string sTemp = "";
 
 	try
 	{
@@ -1403,8 +1399,13 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 		{
 
 			LPCSTR szDepName = (LPCSTR)ImageRvaToVa(pNtHeaders, lpbaseAddress, pImageTable[i].Name,NULL);
-			sDepDLL = StrFormat("  %s\n", szDepName);
+			sTemp = StrFormat("%s", szDepName);
+			StrToLC(sTemp);
+			StrTrim(sTemp);
+			if ((sTemp == "msvcm80.dll") || (sTemp == "msvcp80.dll") || (sTemp == "msvcr80.dll")) 
+				continue;
 
+			sDepDLL = StrFormat("  %s\n", szDepName);
 			HINSTANCE hDLL = ::LoadLibraryEx(szDepName, NULL, LOAD_LIBRARY_AS_DATAFILE);
 
 			if (!hDLL)
@@ -1424,14 +1425,12 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 	if (hFile)
 		CloseHandle(hFile);
 
-	string sTemp = s_failed_dependencies;
+	sTemp = s_failed_dependencies;
 	StrToLC(sTemp);
 
 	s_hint = "";
 	if ((sTemp.find("msvcm71.dll") != std::string::npos) || (sTemp.find("msvcp71.dll") != std::string::npos) || (sTemp.find("msvcr71.dll") != std::string::npos))
 		s_hint += "Microsoft Visual Studio 2003 Runtime Distributable\n";
-	if ((sTemp.find("msvcm80.dll") != std::string::npos) || (sTemp.find("msvcp80.dll") != std::string::npos) || (sTemp.find("msvcr80.dll") != std::string::npos))
-		s_hint += "Microsoft Visual Studio 2005 Runtime Distributable\n";
 	if ((sTemp.find("msvcm90.dll") != std::string::npos) || (sTemp.find("msvcp90.dll") != std::string::npos) || (sTemp.find("msvcr90.dll") != std::string::npos))
 		s_hint += "Microsoft Visual Studio 2008 Runtime Distributable\n";
 	if ((sTemp.find("msvcm100.dll") != std::string::npos) || (sTemp.find("msvcp100.dll") != std::string::npos) || (sTemp.find("msvcr100.dll") != std::string::npos))

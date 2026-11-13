@@ -63,15 +63,15 @@ public:
 	BOOL           FileExists(string s_file);
 	BOOL           DirectoryExists(string s_dir);
 	void           CursorUp(unsigned int iLines);
+	int            GetConsoleWidth();
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
 	string         GetFormattedSystemTime();
 	string         GetOSVersion();
-	int            iConsoleWidth;
 
 	//string functions
-	string         StrFormat(const char *fmt, ...);
+	string         StrFormat(LPCSTR fmt, ...);
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);
 	void           StrTrim(string &s_string);
@@ -96,13 +96,21 @@ CUtils::CUtils()
 	CONSOLE_SCREEN_BUFFER_INFO csbi; 
 	GetConsoleScreenBufferInfo(hConsole, &csbi); 
 	wSaveAttributes = csbi.wAttributes;
-	iConsoleWidth = (int)csbi.dwSize.X;
 }
 
 CUtils::~CUtils()
 {
 	//retrieve saved attributes
 	SetConsoleTextAttribute(hConsole, wSaveAttributes);
+}
+
+
+int CUtils::GetConsoleWidth()
+{
+	CONSOLE_SCREEN_BUFFER_INFO csbi; 
+	GetConsoleScreenBufferInfo(hConsole, &csbi); 
+
+	return (int)csbi.dwSize.X;
 }
 
 
@@ -174,35 +182,27 @@ string CUtils::GetFormattedSystemTime()
 }
 
 
-string CUtils::StrFormat(const char *fmt, ...)
+string CUtils::StrFormat(LPCSTR fmt, ...)
 {
 	if (!fmt)	return "";
 
-	unsigned int maxbufsize = 16384;
-	unsigned int length = 256;
-	char *buffer = NULL;
-	int result = -1;
-
 	va_list args;
 	va_start(args, fmt);
-	while (result < 0)
+	char *buffer = NULL;
+	unsigned int bufsize = 4096;
+	buffer = new char[bufsize];
+	memset(buffer, 0, sizeof(buffer));
+	int result = _vsnprintf(buffer, bufsize - 2, fmt, args);
+	if (result < 0)
 	{
-		if (buffer)	delete [] buffer;
-		buffer = new char[length];
-		memset(buffer, ' ', sizeof(buffer));
-		result = _vsnprintf(buffer, length, fmt, args);
-		length *= 2;
-		if (length >= maxbufsize)
-		{
-			delete [] buffer;
-			va_end(args);
-			return "";
-		}
-	}
-	va_end(args);
+		delete [] buffer;
+		va_end(args);
+		return "\n_vsnprintf buffer overflow\n";
+	}		
 
 	string str(buffer);
 	delete [] buffer;
+	va_end(args);
 
 	return str;
 }
@@ -253,7 +253,7 @@ void CUtils::StrToLC(string &s_string)
 
 string CUtils::StrPad(string s_line)
 {
-	int iPadLen = iConsoleWidth - (int)s_line.length();
+	int iPadLen = GetConsoleWidth() - (int)s_line.length();
 
 	if ((iPadLen <= 0) || (iPadLen > 1000))
 		return s_line;

@@ -65,18 +65,20 @@ static void SE_Translator(unsigned int u, EXCEPTION_POINTERS* pExcept)
 	char module[1024];
 	string sExceptionName = "Unknown system exception";
 	string sTempModulePath = "";
-	string sExceptionModule = "Unknown module";
+	string sExceptionModule = "Cannot determine module";
 
 	if (GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress, module))
+	{
 		sTempModulePath = module;
 
-	HANDLE hFile = CreateFile(sTempModulePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
-	if (hFile != INVALID_HANDLE_VALUE)
-	{
-		if (!GetFileNameFromHandle(hFile, sExceptionModule))
-			sExceptionModule = sTempModulePath;
+		HANDLE hFile = CreateFile(sTempModulePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		if (hFile != INVALID_HANDLE_VALUE)
+		{
+			if (!GetFileNameFromHandle(hFile, sExceptionModule))
+				sExceptionModule = sTempModulePath;
+		}
+		CloseHandle(hFile);
 	}
-	CloseHandle(hFile);
 
 	switch (pExcept->ExceptionRecord->ExceptionCode)
 	{

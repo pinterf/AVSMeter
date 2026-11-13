@@ -1,3 +1,8 @@
+v2.3.0
+- Moved enumeration and testing of auto-load plugins back to main.
+- Changed file access modes in CreateFile() calls
+- Various fixes
+
 v2.2.9
 - Added hints to plugin error messages relating to missing support DLLs (fftw3.dll, etc.)
 - Added graphics card / GPU model info to the console output and log file

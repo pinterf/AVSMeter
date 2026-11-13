@@ -441,6 +441,11 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n\r%s\r", utils.StrPad("Query auto-load plugins...").c_str());
+		AvisynthInfo.EnumPluginDLLs();
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+		utils.CursorUp(1);
+
 		string sPluginDLL = "";
 
 		//CPP26 plugs
@@ -566,12 +571,14 @@ int main(int argc, char* argv[])
 
 		//Plug errors
 		string sPluginError = "";
+		string sLineSep(utils.GetConsoleWidth() - 2, '-');
+
 		if (!AvisynthInfo.mPluginErrors.empty())
 		{
 			sOutBuf = "\n\n[Plugin errors]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-			sOutBuf = utils.StrFormat("%s\n", std::string(utils.iConsoleWidth - 1, '-').c_str());
+			sOutBuf = sLineSep + "\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 		}
@@ -579,7 +586,8 @@ int main(int argc, char* argv[])
 		for (set<string>::iterator err = AvisynthInfo.mPluginErrors.begin(); err != AvisynthInfo.mPluginErrors.end(); ++err)
 		{
 			sPluginError = *err;
-			sOutBuf = utils.StrFormat("\n%s\n\n%s\n", sPluginError.c_str(), std::string(utils.iConsoleWidth - 1, '-').c_str());
+			sOutBuf = utils.StrFormat("\n%s\n\n", sPluginError.c_str());
+			sOutBuf += sLineSep + "\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
 		}
