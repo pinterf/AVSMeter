@@ -55,12 +55,16 @@
 
 
 
+
+
           Monitor GPU/VPU usage<font color="#ff0000"><sup>2</sup></font><br>
           &nbsp;-range=first,last&nbsp;&nbsp; Specify frame range<font
             color="#ff0000"><sup>3</sup></font><br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Specify time (sec) after which the process will exit<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -103,6 +107,11 @@
     If set to "1", pauses the program at the end and returns to the
     console prompt only after pressing "ESC".<br>
     <b><br>
+    </b><b><b>"ConUseSTDOUT" (<font color="Red">0</font> or 1):</b><br>
+    </b>If set to "1", directs all console output to stdout. The default
+    setting "0" uses stderr except the "command line usage" message
+    which always goes through stdout.<br>
+    <b> <br>
       "FrameRange" (first,last):</b><br>
     Specify the range of frames to be processed. "FrameRange=<font
       color="Red"><b>0,-1</b></font>" processes all frames in the

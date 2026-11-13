@@ -1,3 +1,6 @@
+v2.0.6
+- Added ini option "ConUseSTDOUT".
+
 v2.0.5
 - Added plugin directory info for AVS+ 32 and 64 Bit to the log file.
 - Added avisynth.dll linker/compiler version to the log file
