@@ -103,9 +103,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 	{
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
-			s_ErrorMsg = utils.StrFormat("Cannot load avisynth.dll.\nWindows returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", s_ErrorMsg.c_str(), PROCESS_64 ? "x64" : "x86");
+			s_ErrorMsg = utils.StrFormat("Error: Cannot load avisynth.dll.\nWindows returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", s_ErrorMsg.c_str(), PROCESS_64 ? "x64" : "x86");
 		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
+			s_ErrorMsg = "Error: Cannot load avisynth.dll";
 
 		return FALSE;
 	}
@@ -121,7 +121,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 			if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
 			{
 				UnMapAndLoad(&li);
-				s_ErrorMsg = "AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
+				s_ErrorMsg = "Error: AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
 				return FALSE;
 			}
 		}
@@ -130,7 +130,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 			if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
 			{
 				UnMapAndLoad(&li);
-				s_ErrorMsg = "AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
+				s_ErrorMsg = "Error: AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
 				return FALSE;
 			}
 		}
@@ -163,9 +163,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 		bSuccess = FALSE;
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
+			s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
 		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
+			s_ErrorMsg = "Error: Cannot load avisynth.dll";
 	}
 
 	UnMapAndLoad(&li);
@@ -179,9 +179,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 		string sFileVersion = utils.GetFileVersion(sDLLPath);
 
 		if (sFileVersion.substr(0, 3) == "2.6")
-			s_ErrorMsg = utils.StrFormat("The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str());
+			s_ErrorMsg = utils.StrFormat("Error: The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str());
 		else
-			s_ErrorMsg = utils.StrFormat("Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str(), sFileVersion.c_str());
+			s_ErrorMsg = utils.StrFormat("Error: Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str(), sFileVersion.c_str());
 
 		return FALSE;
 	}
@@ -201,7 +201,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 
 	if (sFailedDeps != "")
 	{
-		s_ErrorMsg = utils.StrFormat("Cannot load avisynth.dll\n\nDependencies that could not be loaded:\n%s", sFailedDeps.c_str());
+		s_ErrorMsg = utils.StrFormat("Error: Cannot load avisynth.dll\n\nDependencies that could not be loaded:\n%s", sFailedDeps.c_str());
 		if (sHint != "")
 			s_ErrorMsg += utils.StrFormat("\n\nNote:\n  %s\n", sHint.c_str());
 
@@ -218,9 +218,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 	{
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
+			s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
 		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
+			s_ErrorMsg = "Error: Cannot load avisynth.dll";
 
 		return FALSE;
 	}
@@ -234,7 +234,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
-			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
+			s_ErrorMsg = "Error: Failed to load CreateScriptEnvironment()";
 			::FreeLibrary(hDLL);
 			return FALSE;
 		}
@@ -246,7 +246,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 
 			if (iInterfaceVersion < 5)
 			{
-				s_ErrorMsg = "Cannot create IScriptenvironment";
+				s_ErrorMsg = "Error: Cannot create IScriptenvironment";
 				::FreeLibrary(hDLL);
 				return 0;
 			}
@@ -276,7 +276,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
-			sVersionNumber = "Cannot invoke \"VersionNumber\"";
+			sVersionNumber = "Error: Cannot invoke \"VersionNumber\"";
 		}
 
 		try
@@ -285,7 +285,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
-			sVersionString = "Cannot invoke \"VersionString\"";
+			sVersionString = "Error: Cannot invoke \"VersionString\"";
 		}
 
 		string sInternalFunctions = "";
@@ -334,9 +334,9 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 		bSuccess = FALSE;
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
+			s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
 		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
+			s_ErrorMsg = "Error: Cannot load avisynth.dll";
 	}
 
 	::FreeLibrary(hDLL);
@@ -793,16 +793,16 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	catch (exception& ex)
 	{
 		bRet = FALSE;
-		s_Msg = utils.StrFormat("\"%s\"\n", s_dll.c_str()) + ex.what();
+		s_Msg = utils.StrFormat("\"Error: %s\"\n", s_dll.c_str()) + ex.what();
 	}
 	catch (...)
 	{
 		bRet = FALSE;
 		s_Msg = utils.SysErrorMessage();
 		if (s_Msg != "")
-			s_Msg = utils.StrFormat("\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
+			s_Msg = utils.StrFormat("\"Error: %s\"\n%s", s_dll.c_str(), s_Msg.c_str());
 		else
-			s_Msg = utils.StrFormat("Unknown exception:\n\"%s\"", s_dll.c_str());
+			s_Msg = utils.StrFormat("Error: Unknown exception:\n\"%s\"", s_dll.c_str());
 	}
 
 	UnMapAndLoad(&li);

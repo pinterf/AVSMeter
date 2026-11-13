@@ -1,3 +1,10 @@
+v3.0.5.0
+- Added command line switch "-p"
+  This pauses the program at the end and returns after pressing
+  a key irrespective of the INI setting "PauseBeforeExit".
+- Modified some error messages
+
+
 v3.0.4.0
 - "avsinfo" is now a switch ("-avsinfo")
 - Removed custom avisynth.dll dialog selection from the command line

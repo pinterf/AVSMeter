@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
 
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nOne instance of AVSMeter is already running\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: One instance of AVSMeter is already running\n");
 			PollKeys();
 			return -1;
 		}
@@ -187,6 +187,7 @@ int main(int argc, char* argv[])
 
 	if (argc < 2)
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: No command line arguments\n");
 		PrintUsage();
 		PollKeys();
 		return -1;
@@ -225,6 +226,12 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
+		if (sArgTest == "-p")
+		{
+			Settings.bPauseBeforeExit = TRUE;
+			continue;
+		}
+
 		if ((sArgTest == "-i") || (sArgTest == "-info"))
 		{
 			CLSwitches_info = TRUE;
@@ -260,7 +267,7 @@ int main(int argc, char* argv[])
 			sTemp = sArgTest.substr(7);
 			if (sTemp.length() < 3)
 			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid parameter format: \"%s\"\n", sArg.c_str());
 				PrintUsage();
 				PollKeys();
 				return -1;
@@ -269,7 +276,7 @@ int main(int argc, char* argv[])
 			size_t spos = sTemp.find(",");
 			if ((spos < 1) || (spos > 27))
 			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid parameter format: \"%s\"\n", sArg.c_str());
 				PrintUsage();
 				PollKeys();
 				return -1;
@@ -284,7 +291,7 @@ int main(int argc, char* argv[])
 			}
 			else
 			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid parameter format: \"%s\"\n", sArg.c_str());
 				PrintUsage();
 				PollKeys();
 				return -1;
@@ -334,7 +341,7 @@ int main(int argc, char* argv[])
 					sAVSFile = utils.StrFormat("%s", szOut);
 					if (!utils.FileExists(sAVSFile))
 					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sAVSFile.c_str());
+						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: File not found: \"%s\"\n", sAVSFile.c_str());
 						PollKeys();
 						return -1;
 					}
@@ -356,7 +363,7 @@ int main(int argc, char* argv[])
 					sAVSFile = utils.StrFormat("%s", szOut);
 					if (!utils.FileExists(sAVSFile))
 					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
+						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: File not found: \"%s\"\n", sTemp.c_str());
 						PollKeys();
 						return -1;
 					}
@@ -366,7 +373,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid argument: \"%s\"\n", sArg.c_str());
 		PrintUsage();
 		PollKeys();
 		return -1;
@@ -377,7 +384,7 @@ int main(int argc, char* argv[])
 	{
 		if (CLSwitches_info)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-info [-i]\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"-info [-i]\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -385,7 +392,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_highpriority)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-hp\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"-hp\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -393,7 +400,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_timelimit)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-timelimit\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"-timelimit\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -401,7 +408,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_range)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-range\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"-range\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -409,7 +416,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_csv)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-csv\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"-csv\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -417,7 +424,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_o)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-o\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"-o\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -474,7 +481,7 @@ int main(int argc, char* argv[])
 		if (!gpuinfo.bInitialized)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Cannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
 			PollKeys();
 			return -1;
 		}
@@ -483,7 +490,7 @@ int main(int argc, char* argv[])
 	if (!timer.supported)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: QueryPerformanceCounter() is not supported\n");
 		PollKeys();
 		return -1;
 	}
@@ -791,7 +798,7 @@ int main(int argc, char* argv[])
 
 	if (sAVSFile == "")
 	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: No script file specified\n");
 		PollKeys();
 		return -1;
 	}
@@ -818,7 +825,7 @@ int main(int argc, char* argv[])
 
 	if (!hDLL)
 	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Cannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
 		PollKeys();
 		return -1;
 	}
@@ -832,7 +839,7 @@ int main(int argc, char* argv[])
 		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Failed to load CreateScriptEnvironment()\n");
 			PollKeys();
 			return -1;
 		}
@@ -841,7 +848,7 @@ int main(int argc, char* argv[])
 
 		if (!AVS_env)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Could not create IScriptenvironment\n");
 			PollKeys();
 			return -1;
 		}
@@ -1752,7 +1759,7 @@ string ParseINIFile()
 	{
 		if (!WriteINIFile(sINIFile))
 	  {
-			sRet = utils.StrFormat("\nCannot create \"%s\"\n", sINIFile.c_str());
+			sRet = utils.StrFormat("\nError: Cannot create \"%s\"\n", sINIFile.c_str());
 			return sRet;
 		}
 
@@ -1762,7 +1769,7 @@ string ParseINIFile()
 	ifstream hINIFile(sINIFile.c_str());
 	if (!hINIFile.is_open())
 	{
-		sRet = utils.StrFormat("\nCannot open \"%s\"\n", sINIFile.c_str());
+		sRet = utils.StrFormat("\nError: Cannot open \"%s\"\n", sINIFile.c_str());
 		return sRet;
 	}
 
@@ -1788,7 +1795,7 @@ string ParseINIFile()
 			utils.StrTrim(Settings.sLogDirectory);
 			if ((!utils.DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
 			{
-				sRet = utils.StrFormat("\nLog directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
+				sRet = utils.StrFormat("\nError: Log directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
 				return sRet;
 			}
 			continue;
@@ -1802,7 +1809,7 @@ string ParseINIFile()
 				Settings.nLoadPluginInterval = (BYTE)atol(sTemp.c_str());
 				if ((Settings.nLoadPluginInterval < 1) || (Settings.nLoadPluginInterval > 49))
 				{
-					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be between \'1\' and \'49\'\n", sOrgLine.c_str());
+					sRet = utils.StrFormat("\nError: INI setting is invalid:\n\"%s\"\nThe value must be between \'1\' and \'49\'\n", sOrgLine.c_str());
 					return sRet;
 				}
 			}
@@ -1870,7 +1877,7 @@ string ParseINIFile()
 	//Write INI file with new settings
 	if (!WriteINIFile(sINIFile))
   {
-		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sINIFile.c_str());
+		sRet = utils.StrFormat("\nError: Cannot create \"%s\"\n", sINIFile.c_str());
 		return sRet;
 	}
 
@@ -2218,7 +2225,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Failed to load CreateScriptEnvironment()\n");
 			PollKeys();
 			return -1;
 		}
@@ -2359,8 +2366,8 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Add video adapter info to the log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the avsinfo*.log file\n\n\n\n");
-
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the avsinfo*.log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -p                  Pauses the program at the end and returns after pressing a key.\n\n\n\n");
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  settings read the documentation (AVSMeter.html) included\n");
