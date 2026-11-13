@@ -23,6 +23,7 @@
 #endif
 
 #include <windows.h>
+#include <shlobj.h>
 #include <commdlg.h>
 #include <process.h>
 #include <math.h>

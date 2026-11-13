@@ -1,3 +1,9 @@
+v2.7.2
+- Added new switch "-c". This allows in combination with "-avsinfo" to specify a custom plugin directory.
+- "Save as..." dialog for all log/csv files when using "-log" and/or "-csv" switches
+- Updated AVS+ headers
+- Cosmetics
+
 v2.7.1
 - When using the switch "-avsinfo" in combination with "-log", a "Save as..." dialog will open enabling the user to save the log file
 - Minor fixes and refactoring

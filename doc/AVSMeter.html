@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
     <meta content="en-us" http-equiv="Content-Language">
@@ -124,7 +124,15 @@
 
 
 
+
+
         Display extended Avisynth info<br>
+        &nbsp;-c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Specify custom plugin directory<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+        in combination with "-avsinfo"<br>
+        <br>
         &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
         &nbsp;-log&nbsp; [-l]&nbsp; &nbsp;
@@ -133,6 +141,8 @@
           &nbsp;-csv&nbsp; &nbsp; &nbsp; &nbsp;
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -302,6 +312,8 @@
 
 
 
+
+
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <b><big><font face="Courier New"><br>
         </font></big></b><b><br>
@@ -309,20 +321,21 @@
     </b>Displays extended info about the installed Avisynth version and
     the plugin sub-system. If a custom avisynth.dll is specified in the
     ini file, info about that file will be displayed. The "-avsinfo"
-    switch can be combined with "-log" in order to write the info to a
-    log file (a "Save as..." dialog will open enabling the user to save
-    the log file). The log file contains additional info about
-    OS/hardware, a list of DLL dependencies for avisynth.dll and all
-    auto-load plugins and a list of internal/external Avisynth
-    functions.<br>
+    switch can be combined with "-log" in order to save the info to a
+    log file. The log file contains additional info about OS/hardware, a
+    list of DLL dependencies for avisynth.dll and all auto-load plugins
+    and a list of internal/external Avisynth functions.<br>
     <br>
-    <b>"-log"<br>
+    <b><b>"-c"</b><br>
+    </b>In combination with "-avsinfo", this switch allows to select a
+    custom plugin directory (other than the directory/directories
+    referenced in the registry).<br>
+    <b><br>
+      "-log"<br>
     </b>Creates a log file with various details about the installed
     Avisynth version, clip info, runtime results, a copy of the script
     and a performance data table with the measured details about each
-    frame/frame interval. The log file is created in the same directory
-    as the script unless the INI option "LogDirectory" points to another
-    (valid) directory.<b><nobr></nobr><br>
+    frame/frame interval.<b><br>
     </b><b><i>Note:</i></b> The numbering of the frames in the
     performance data section is not zero-based, i.e. the first frame is
     1, not 0.<br>
@@ -330,9 +343,7 @@
     <b>"-csv"<br>
     </b>Creates a CSV file containing the performance data formatted as
     comma-separated values for direct import in Excel or a similar
-    spread sheet program (OpenOffice, LibreOffice). The CSV file is
-    created in the same directory as the script unless the INI option
-    "LogDirectory" points to another (valid) directory.<nobr></nobr><br>
+    spread sheet program (OpenOffice, LibreOffice).<nobr></nobr><br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -377,66 +388,45 @@
     <br>
     <b>"CreateLog" (<font color="#ff0000">0</font> or 1):</b><br>
     Creates a log file with various details about the installed Avisynth
-    version, clip info, runtime<br>
-    results, a copy of the script and a performance data table with the
-    measured details about each<br>
-    frame/frame interval. The log file is created in the same directory
-    as the script unless the INI<br>
-    option "LogDirectory" points to a valid directory.<br>
-    Note: The numbering of the frames in the performance data section is
-    not zero-based, i.e. the first<br>
-    frame is 1, not 0.<br>
+    version, clip info, runtime results, a copy of the script and a
+    performance data table with the measured details about each
+    frame/frame interval.<b><br>
+    </b><b><i>Note:</i></b> The numbering of the frames in the
+    performance data section is not zero-based, i.e. the first frame is
+    1, not 0.<br>
     <br>
     <b>"CreateCSV" (<font color="#ff0000">0</font> or 1):</b><br>
     Creates a CSV file containing the performance data formatted as
-    comma-separated values for direct<br>
-    import in Excel or a similar spread sheet program (OpenOffice,
-    LibreOffice). The CSV file is created<br>
-    in the same directory as the script unless the INI option
-    "LogDirectory" points to a valid<br>
-    directory.<br>
-    Note: The numbering of the frames in the .csv file is not
-    zero-based, i.e. the first frame is 1, not 0.<br>
+    comma-separated values for direct import in Excel or a similar
+    spread sheet program (OpenOffice, LibreOffice).<nobr></nobr><br>
+    <b><i>Note:</i></b> The numbering of the frames in the .csv file is
+    not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
     <b>"MonitorGPULoad" (<font color="#ff0000">0</font> or 1):</b><br>
     If set to "1", enables display of the GPU/VPU usage which of course
-    is only useful if a filter<br>
-    that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the
-    graphics card sensors through a<br>
+    is only useful if a filter that uses the GPU is in the chain.
+    AVSMeter uses GPU-Z to access the graphics card sensors through a
     shared memory interface. GPU-Z must be running in order to use this
-    feature<br>
+    feature.<br>
     <br>
     <b>"TimeLimit" (1 - 999999):</b><br>
     Specify a time limit (in seconds) after which the program stops
-    reading frames and terminates.<br>
-    Setting this to "<font color="#ff0000"><b>-1</b></font>" disables
-    the feature.<br>
-    <br>
-    <b>"LogDirectory"</b><br>
-    The user can specify a directory in which all log files are stored.
-    This has to be a fully qualified<br>
-    path, for example "LogDirectory=c:\LogFiles" (without the quotes).
-    The <font color="#ff0000">default is an empty string</font><br>
-    which means that all log files are stored in the script directory
-    or, in case the "-avsinfo"<br>
-    switch was used, the current (working) directory.<br>
+    reading frames and terminates. Setting this to "<font
+      color="#ff0000"><b>-1</b></font>" disables the feature.<br>
     <br>
     <b>"AVSDLL"</b><br>
     The user can specify the avisynth.dll to be used. This has to be a
-    fully qualified path, for example<br>
+    fully qualified path, for example
     "AVSDLL=d:\apps\avisynth\avisynth.dll" (without the quotes). The <font
-      color="#ff0000">default is an empty string</font> which<br>
-    means that AVSMeter will attempt to load avisynth.dll through the
-    standard Windows search hierarchy.<br>
-    <br>
-    <b>"LogFileDateTimeSuffix" (<font color="#ff0000">0</font> or 1):</b><br>
-    If set to "1", adds a date/time suffix to all .log and .csv files.<br>
+      color="#ff0000">default is an empty string </font>which means
+    that AVSMeter will attempt to load avisynth.dll through the standard
+    Windows search hierarchy.<br>
     <br>
     <b>"FrameRange" (first,last):</b><br>
     Specify the range of frames to be processed. "FrameRange=<font
       color="#ff0000"><b>0,-1</b></font>" processes all frames in the
-    script.<br>
-    "FrameRange=1500,1999" processes 500 frames starting at frame 1500.<br>
+    script. For example, "FrameRange=1500,1999" processes 500 frames
+    starting at frame 1500.<br>
     <br>
     <b>"AllowOnlyOneInstance" (0 or <font color="#ff0000">1</font>):</b><br>
     If set to "1", only one instance of AVSMeter can be started.<br>
@@ -447,94 +437,17 @@
     <br>
     <b>"InvokeDistributor" (0 or <font color="#ff0000">1</font>):</b><br>
     For users of SEt's Avisynth MT: If set to "1", adds the
-    "Distributor" call internally if the<br>
-    script uses one of the MT Modes 1~4.<br>
+    "Distributor" call internally if the script uses one of the MT Modes
+    1~4.<br>
     <br>
     <b>"ConUseSTDOUT" (<font color="#ff0000">0</font> or 1):</b><br>
     If set to "1", directs all console output to stdout. The default
-    setting "0" uses stderr except<br>
-    the "command line usage" message which always goes through stdout.<br>
+    setting "0" uses stderr except the "command line usage" message
+    which always goes to stdout.<br>
     <br>
     <b>"UseColor" (0 or <font color="#ff0000">1</font>):</b><br>
     If set to "0", coloring of the console output is disabled.<br>
-    <br style="mso-special-character:line-break">
-    <meta name="ProgId" content="Word.Document">
-    <meta name="Generator" content="Microsoft Word 11">
-    <meta name="Originator" content="Microsoft Word 11">
-    <link rel="File-List"
-      href="file:///D:%5C____TEMP%5Cmsohtml1%5C01%5Cclip_filelist.xml">
-    <!--[if gte mso 9]><xml>
- <w:WordDocument>
-  <w:View>Normal</w:View>
-  <w:Zoom>0</w:Zoom>
-  <w:PunctuationKerning/>
-  <w:ValidateAgainstSchemas/>
-  <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
-  <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
-  <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
-  <w:Compatibility>
-   <w:BreakWrappedTables/>
-   <w:SnapToGridInCell/>
-   <w:WrapTextWithPunct/>
-   <w:UseAsianBreakRules/>
-   <w:DontGrowAutofit/>
-  </w:Compatibility>
-  <w:BrowserLevel>MicrosoftInternetExplorer4</w:BrowserLevel>
- </w:WordDocument>
-</xml><![endif]--><!--[if gte mso 9]><xml>
- <w:LatentStyles DefLockedState="false" LatentStyleCount="156">
- </w:LatentStyles>
-</xml><![endif]-->
-    <style>
-<!--
- /* Style Definitions */
- p.MsoNormal, li.MsoNormal, div.MsoNormal
-	{mso-style-parent:"";
-	margin:0cm;
-	margin-bottom:.0001pt;
-	mso-pagination:widow-orphan;
-	font-size:10.0pt;
-	font-family:Arial;
-	mso-fareast-font-family:"Times New Roman";
-	mso-bidi-font-family:"Times New Roman";
-	mso-fareast-language:EN-US;}
-a:link, span.MsoHyperlink
-	{color:blue;
-	text-decoration:underline;
-	text-underline:single;}
-a:visited, span.MsoHyperlinkFollowed
-	{color:navy;
-	text-decoration:underline;
-	text-underline:single;}
-@page Section1
-	{size:595.3pt 841.9pt;
-	margin:72.0pt 90.0pt 72.0pt 90.0pt;
-	mso-header-margin:35.4pt;
-	mso-footer-margin:35.4pt;
-	mso-paper-source:0;}
-div.Section1
-	{page:Section1;}
--->
-</style><!--[if gte mso 10]>
-<style>
- /* Style Definitions */
- table.MsoNormalTable
-	{mso-style-name:"Table Normal";
-	mso-tstyle-rowband-size:0;
-	mso-tstyle-colband-size:0;
-	mso-style-noshow:yes;
-	mso-style-parent:"";
-	mso-padding-alt:0cm 5.4pt 0cm 5.4pt;
-	mso-para-margin:0cm;
-	mso-para-margin-bottom:.0001pt;
-	mso-pagination:widow-orphan;
-	font-size:10.0pt;
-	font-family:"Times New Roman";
-	mso-ansi-language:#0400;
-	mso-fareast-language:#0400;
-	mso-bidi-language:#0400;}
-</style>
-<![endif]--><br>
+    <br>
     <br>
   </body>
 </html>

@@ -31,7 +31,7 @@ public:
 	CAvisynthInfo();
 	virtual ~CAvisynthInfo();
 
-	BOOL    GetInfo(string s_AVSDLL, string &s_ErrorMsg);
+	BOOL    GetInfo(string s_AVSDLL, BOOL b_SpecifyCustomPluginDir, string &s_ErrorMsg);
 	int     iInterfaceVersion;
 	vector  <string> vPluginDirs;
 	vector  <string> vInternalFunctions;
@@ -51,15 +51,16 @@ public:
 	BOOL    bIsMTVersion;
 
 private:
-	CUtils         utils;
-	string         sAVSDLL;
-  void           EnumPluginDirs();
-	void           EnumPluginDLLs();
-	BOOL           GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
-	void           TestLoadPlugins();
-	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
-	BOOL           IsRuntimeInstalled(string s_version);
-	BOOL           Is64BitOS();
+	CUtils              utils;
+	string              sAVSDLL;
+  void                EnumPluginDirs(BOOL b_CustomPluginDir);
+	void                EnumPluginDLLs();
+	BOOL                GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
+	void                TestLoadPlugins();
+	void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
+	BOOL                IsRuntimeInstalled(string s_version);
+	BOOL                Is64BitOS();
+	string              BrowseDirectory();
 };
 
 
@@ -72,7 +73,39 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg)
+string CAvisynthInfo::BrowseDirectory()
+{
+	BROWSEINFO		bi;
+	LPITEMIDLIST	pidlBrowse;
+	char					szFullDir [MAX_PATH + 1];
+	string				sDir = "INVALID";
+
+	bi.hwndOwner      = NULL;
+	bi.pidlRoot       = NULL;
+	bi.pszDisplayName = NULL;
+	bi.lpszTitle      = "Specify custom plugin directory:";
+	bi.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON;
+	bi.lpfn           =	NULL;
+	bi.lParam         = NULL;
+	bi.iImage         = 0;
+
+	pidlBrowse = SHBrowseForFolder (&bi);	
+	if (pidlBrowse != NULL)
+	{
+		if (SHGetPathFromIDList(pidlBrowse, szFullDir))
+		{
+			sDir = utils.StrFormat("%s", szFullDir);
+			utils.StrTrim(sDir);
+			if ((!utils.DirectoryExists(sDir)) || (sDir.length() < 4))
+				sDir = "INVALID";
+		}
+	}
+
+	return sDir;
+}
+
+
+BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_ErrorMsg)
 {
 	sDLLPath = "";
 	bIs64BitAVSDLL = FALSE;
@@ -329,7 +362,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg)
 
 	::FreeLibrary(hDLL);
 
-	EnumPluginDirs();
+	EnumPluginDirs(b_CustomPluginDir);
 	EnumPluginDLLs();
 	TestLoadPlugins();
 
@@ -337,8 +370,20 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg)
 }
 
 
-void CAvisynthInfo::EnumPluginDirs()
+void CAvisynthInfo::EnumPluginDirs(BOOL b_CustomPluginDir)
 {
+	vPluginDirs.empty();
+
+	if (b_CustomPluginDir)
+	{
+		string sCustomPlugDir = BrowseDirectory();
+		if (sCustomPlugDir != "INVALID")
+		{
+			vPluginDirs.push_back("Custom plugin directory :\t" + sCustomPlugDir);
+			return;
+		}
+	}
+
 	vPluginDirs.empty();
 
 	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER

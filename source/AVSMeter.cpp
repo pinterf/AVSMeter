@@ -38,7 +38,6 @@
 
 struct stSettings
 {
-	string    sLogDirectory;
 	string    sAVSDLL;
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
@@ -55,11 +54,10 @@ struct stSettings
 	BOOL      bGPUInfo;
 	BYTE      nProcessPriority;
 	BOOL      bConUseStdOut;
-	string    sSystemDateTime;
 	BOOL      bLogEstimatedTime;
 	BOOL      bDisplayEfficiencyIndex;
 	BOOL      bAutoCompleteExtension;
-	BOOL      bLogFileDateTimeSuffix;
+	BOOL      bSpecifyCustomPluginDir;
 } Settings;
 
 
@@ -132,7 +130,6 @@ int main(int argc, char* argv[])
 	unsigned int uiFrameInterval = 10;
 	string sErrorMsg = "";
 	BOOL bPrintAVSInfo = FALSE;
-	Settings.sSystemDateTime = "";
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -171,6 +168,12 @@ int main(int argc, char* argv[])
 		if (sArgTest == "-avsinfo")
 		{
 			bPrintAVSInfo = TRUE;
+			continue;
+		}
+
+		if (sArgTest == "-c")
+		{
+			Settings.bSpecifyCustomPluginDir = TRUE;
 			continue;
 		}
 
@@ -356,7 +359,7 @@ int main(int argc, char* argv[])
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
-	BOOL bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, sErrorMsg);
+	BOOL bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg);
 	if (!bRet)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
@@ -513,12 +516,17 @@ int main(int argc, char* argv[])
 
 				sPluginVersion = utils.GetFileVersion(sPluginDLL);
 				if (sPluginVersion != "n/a")
+				{
 					sOutBuf = utils.StrFormat("  [%s]\n", sPluginVersion.c_str());
+					PrintConsole(TRUE, FG_HYELLOW | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
 				else
+				{
 					sOutBuf = utils.StrFormat("  [%s]\n", utils.GetFileDateStamp(sPluginDLL).c_str());
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
 
 				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
 			}
 		}
 
@@ -626,40 +634,41 @@ int main(int argc, char* argv[])
 			else
 				sprintf(szAVSInfoFile, "avsinfo_x86.log");
 
-			OPENFILENAME OpenFileName;
-			OpenFileName.lStructSize       = sizeof(OPENFILENAME);
-			OpenFileName.hwndOwner         = GetForegroundWindow();
-			OpenFileName.hInstance         = NULL;
-			OpenFileName.lpstrFilter       = "*.log";
-			OpenFileName.lpstrCustomFilter = NULL;
-			OpenFileName.nMaxCustFilter    = 0;
-			OpenFileName.nFilterIndex      = 1;
-			OpenFileName.lpstrFile         = szAVSInfoFile;
-			OpenFileName.nMaxFile          = MAX_PATH;
-			OpenFileName.lpstrFileTitle    = NULL;
-			OpenFileName.nMaxFileTitle     = NULL;
-			OpenFileName.lpstrInitialDir   = NULL;
-			OpenFileName.lpstrTitle        = "Save log file as...";
-			OpenFileName.nFileOffset       = 0;
-			OpenFileName.nFileExtension    = 0;
-			OpenFileName.lpstrDefExt       = NULL;
-			OpenFileName.lCustData         = 0;
-			OpenFileName.lpfnHook          = NULL;
-			OpenFileName.lpTemplateName    = NULL;
-			OpenFileName.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+			OPENFILENAME ofn;
+			ofn.lStructSize       = sizeof(OPENFILENAME);
+			ofn.hwndOwner         = GetForegroundWindow();
+			ofn.hInstance         = NULL;
+			ofn.lpstrFilter       = "*.log";
+			ofn.lpstrCustomFilter = NULL;
+			ofn.nMaxCustFilter    = 0;
+			ofn.nFilterIndex      = 1;
+			ofn.lpstrFile         = szAVSInfoFile;
+			ofn.nMaxFile          = MAX_PATH;
+			ofn.lpstrFileTitle    = NULL;
+			ofn.nMaxFileTitle     = NULL;
+			ofn.lpstrInitialDir   = NULL;
+			ofn.lpstrTitle        = "Save log file as...";
+			ofn.nFileOffset       = 0;
+			ofn.nFileExtension    = 0;
+			ofn.lpstrDefExt       = NULL;
+			ofn.lCustData         = 0;
+			ofn.lpfnHook          = NULL;
+			ofn.lpTemplateName    = NULL;
+			ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
 			
-			if (!GetSaveFileName(&OpenFileName))
+			if (GetSaveFileName(&ofn) == 0)
 			{
-				PollKeyHit();
-				return 0;
+				MessageBox(GetForegroundWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
 			}
-
-			ofstream hAVSInfoFile(szAVSInfoFile);
-			if (hAVSInfoFile.is_open())
-		  {
-				hAVSInfoFile << sLogBuffer;
-				hAVSInfoFile.flush();
-				hAVSInfoFile.close();
+			else
+			{
+				ofstream hAVSInfoFile(szAVSInfoFile);
+				if (hAVSInfoFile.is_open())
+			  {
+					hAVSInfoFile << sLogBuffer;
+					hAVSInfoFile.flush();
+					hAVSInfoFile.close();
+				}
 			}
 		}
 
@@ -773,12 +782,6 @@ int main(int argc, char* argv[])
 
 		sOutBuf = utils.StrFormat("Script file:                %s", sAVSFile.c_str());
 		sLogBuffer += sOutBuf + "\n";
-
-		if (Settings.sLogDirectory != "")
-		{
-			sOutBuf = utils.StrFormat("Log file directory:         %s", Settings.sLogDirectory.c_str());
-			sLogBuffer += sOutBuf + "\n";
-		}
 
 		sLogBuffer += "\n[OS/Hardware info]\n";
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
@@ -1489,7 +1492,6 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
-		Settings.bCreateLog = TRUE;
 		iRet = -1;
 
 		if (bEarlyExit == FALSE)
@@ -1506,7 +1508,6 @@ int main(int argc, char* argv[])
 	catch (exception& ex)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-		Settings.bCreateLog = TRUE;
 		iRet = -1;
 		if (bEarlyExit == FALSE)
 		{
@@ -1526,7 +1527,6 @@ int main(int argc, char* argv[])
 	catch (...)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-		Settings.bCreateLog = TRUE;
 		iRet = -1;
 		if (bEarlyExit == FALSE)
 		{
@@ -1597,13 +1597,11 @@ string ParseINIFile()
 	string sCurrentLine = "";
 
 	//defaults
-	Settings.sLogDirectory = "";
 	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
 	Settings.bCreateLog = FALSE;
 	Settings.bCreateCSV = FALSE;
-	Settings.bLogFileDateTimeSuffix = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
 	Settings.iStartFrame = 0;
 	Settings.iStopFrame = -1;
@@ -1650,19 +1648,6 @@ string ParseINIFile()
 
 		if ((sCurrentLine.substr(0, 1) == "#") || (sCurrentLine == ""))
 			continue;
-
-		if (sCurrentLine.substr(0, 12) == "logdirectory")
-		{
-			Settings.sLogDirectory = sOrgLine.substr(13);
-			Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of("\\") + 1); //remove trailing bs if present
-			utils.StrTrim(Settings.sLogDirectory);
-			if ((!utils.DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
-			{
-				sRet = utils.StrFormat("\nLog directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
-				return sRet;
-			}
-			continue;
-		}
 
 		if (sCurrentLine.substr(0, 6) == "avsdll")
 		{
@@ -1764,9 +1749,6 @@ string ParseINIFile()
 			if (sCurrentLine.substr(0, 9) == "createcsv")
 				Settings.bCreateCSV = (iBoolValue == 0) ? FALSE : TRUE;
 
-			if (sCurrentLine.substr(0, 21) == "logfiledatetimesuffix")
-				Settings.bLogFileDateTimeSuffix = (iBoolValue == 0) ? FALSE : TRUE;
-
 			if (sCurrentLine.substr(0, 15) == "pausebeforeexit")
 				Settings.bPauseBeforeExit = (iBoolValue == 0) ? FALSE : TRUE;
 
@@ -1831,9 +1813,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	sSettings += utils.StrFormat("MonitorGPULoad=%u\n", Settings.bGPUInfo);
 	sSettings += utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
-	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	sSettings += utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
-	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
 	sSettings += utils.StrFormat("FrameRange=%I64d,%I64d\n", Settings.iStartFrame, Settings.iStopFrame);
 	sSettings += utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	sSettings += utils.StrFormat("ProcessPriority=%u\n", Settings.nProcessPriority);
@@ -1858,9 +1838,6 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	string sAVSBuffer = "";
 	string sCurrentLine = "";
 
-	if (Settings.sSystemDateTime == "")
-		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
-
 	ifstream hAVSFile(s_avsfile.c_str());
 	if (!hAVSFile.is_open())
 	{
@@ -1876,39 +1853,50 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 
 	string sLogFile = "";
 	size_t ilen = s_avsfile.length();
+	sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
 
-	if (ilen > 4)
+	for (ilen = (sLogFile.length() - 1); ilen > 0; ilen--)
 	{
-		if (Settings.bLogFileDateTimeSuffix)
-			sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].log";
-		else
-			sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
-	}
-	else
-	{
-		if (Settings.bLogFileDateTimeSuffix)
-			sLogFile = s_avsfile + " [" + Settings.sSystemDateTime + "].log";
-		else
-			sLogFile = s_avsfile + ".log";
+		if (sLogFile[ilen] == '\\')
+			break;
 	}
 
-	if (Settings.sLogDirectory != "")
+	sLogFile = sLogFile.substr(ilen + 1);
+	char szLogFile[MAX_PATH + 1] = "";
+	sprintf(szLogFile, sLogFile.c_str());
+
+	OPENFILENAME ofn;
+	ofn.lStructSize       = sizeof(OPENFILENAME);
+	ofn.hwndOwner         = GetForegroundWindow();
+	ofn.hInstance         = NULL;
+	ofn.lpstrFilter       = "*.log";
+	ofn.lpstrCustomFilter = NULL;
+	ofn.nMaxCustFilter    = 0;
+	ofn.nFilterIndex      = 1;
+	ofn.lpstrFile         = szLogFile;
+	ofn.nMaxFile          = MAX_PATH;
+	ofn.lpstrFileTitle    = NULL;
+	ofn.nMaxFileTitle     = NULL;
+	ofn.lpstrInitialDir   = ".";
+	ofn.lpstrTitle        = "Save log file as...";
+	ofn.nFileOffset       = 0;
+	ofn.nFileExtension    = 0;
+	ofn.lpstrDefExt       = NULL;
+	ofn.lCustData         = 0;
+	ofn.lpfnHook          = NULL;
+	ofn.lpTemplateName    = NULL;
+	ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+			
+	if (GetSaveFileName(&ofn) == 0)
 	{
-		size_t sLen = sLogFile.length();
-		for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
-		{
-			if (sLogFile[nPos] == '\\')
-			{
-				sLogFile = Settings.sLogDirectory + "\\" + sLogFile.substr(nPos + 1);
-				break;
-			}
-		}
+		MessageBox(GetForegroundWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
+		return "";
 	}
 
-	ofstream hLogFile(sLogFile.c_str());
+	ofstream hLogFile(szLogFile);
 	if (!hLogFile.is_open())
 	{
-		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sLogFile.c_str());
+		sRet = utils.StrFormat("\nCannot create \"%s\"\n", szLogFile);
 		return sRet;
 	}
 
@@ -1972,48 +1960,53 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP)
 {
 	string sRet = "";
-	string sCurrentLine = "";
 	string sCSVFile = "";
 
-	if (Settings.sSystemDateTime == "")
-		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
-
 	size_t ilen = s_avsfile.length();
+	sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
 
-	if (ilen > 4)
+	for (ilen = (sCSVFile.length() - 1); ilen > 0; ilen--)
 	{
-		if (Settings.bLogFileDateTimeSuffix)
-			sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].csv";
-		else
-			sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
-	}
-	else
-	{
-		if (Settings.bLogFileDateTimeSuffix)
-			sCSVFile = s_avsfile + " [" + Settings.sSystemDateTime + "].csv";
-		else
-			sCSVFile = s_avsfile + ".csv";
+		if (sCSVFile[ilen] == '\\')
+			break;
 	}
 
+	sCSVFile = sCSVFile.substr(ilen + 1);
+	char szCSVFile[MAX_PATH + 1] = "";
+	sprintf(szCSVFile, sCSVFile.c_str());
 
-	if (Settings.sLogDirectory != "")
+	OPENFILENAME ofn;
+	ofn.lStructSize       = sizeof(OPENFILENAME);
+	ofn.hwndOwner         = GetForegroundWindow();
+	ofn.hInstance         = NULL;
+	ofn.lpstrFilter       = "*.csv";
+	ofn.lpstrCustomFilter = NULL;
+	ofn.nMaxCustFilter    = 0;
+	ofn.nFilterIndex      = 1;
+	ofn.lpstrFile         = szCSVFile;
+	ofn.nMaxFile          = MAX_PATH;
+	ofn.lpstrFileTitle    = NULL;
+	ofn.nMaxFileTitle     = NULL;
+	ofn.lpstrInitialDir   = ".";
+	ofn.lpstrTitle        = "Save csv file as...";
+	ofn.nFileOffset       = 0;
+	ofn.nFileExtension    = 0;
+	ofn.lpstrDefExt       = NULL;
+	ofn.lCustData         = 0;
+	ofn.lpfnHook          = NULL;
+	ofn.lpTemplateName    = NULL;
+	ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+			
+	if (GetSaveFileName(&ofn) == 0)
 	{
-		size_t sLen = sCSVFile.length();
-		for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
-		{
-			if (sCSVFile[nPos] == '\\')
-			{
-				sCSVFile = Settings.sLogDirectory + "\\" + sCSVFile.substr(nPos + 1);
-				break;
-			}
-		}
+		MessageBox(GetForegroundWindow(), "\rCSV file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
+		return "";
 	}
 
-
-	ofstream hCSVFile(sCSVFile.c_str());
+	ofstream hCSVFile(szCSVFile);
 	if (!hCSVFile.is_open())
 	{
-		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sCSVFile.c_str());
+		sRet = utils.StrFormat("\nCannot create \"%s\"\n", szCSVFile);
 		return sRet;
 	}
 
@@ -2268,6 +2261,9 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display extended Avisynth info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
+ 	PrintConsole(TRUE, COLOR_EMPHASIS, "                      in combination with \"-avsinfo\"\n\n");
+	
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info [-i]          Display clip info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log  [-l]          Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
