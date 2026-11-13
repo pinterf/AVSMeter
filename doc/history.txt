@@ -1,3 +1,8 @@
+v2.0.5
+- Added plugin directory info for AVS+ 32 and 64 Bit to the log file.
+- Added avisynth.dll linker/compiler version to the log file
+- Minor fixes
+
 v2.0.4
 - Added GPU/VPU data to the performance data section in the log file
 - Changed app icon

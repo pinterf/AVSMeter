@@ -22,6 +22,7 @@
 #include "stdafx.h"
 
 #define BUFSIZE 2048
+#define NUM_PLUG_DIRS 6
 
 class CAvisynthInfo
 {
@@ -29,15 +30,18 @@ public:
 	CAvisynthInfo();
 	BOOL    GetAvisynthInfo(string &s_ErrorMsg);
 	string  StrFormat(const char *fmt, ...);
+	void    StrTrim(string &s_string);
 	string  OSErrorMessage();
 	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string  GetFileVersion(string s_file);
 
 	int     iInterfaceVersion;
-	string  sPluginDir;
+	string  saPluginDirs[NUM_PLUG_DIRS];
+	BYTE    NumPlugDirs;
 	string  sDLLPath;
 	string  sVersionNumber;
 	string  sVersionString;
+	string  sLinkerVersion;
 	BOOL    bLoadError;
 	BOOL    bIs64BitVersion;
 	virtual ~CAvisynthInfo();
@@ -49,6 +53,7 @@ private:
 
 CAvisynthInfo::CAvisynthInfo()
 {
+	NumPlugDirs = NUM_PLUG_DIRS;
 }
 
 CAvisynthInfo::~CAvisynthInfo()
@@ -96,8 +101,6 @@ int CAvisynthInfo::GetAVSInterfaceVersion(string &s_ErrorMsg)
 		{
 			AVS_env->CheckVersion(6);
 			iInterfaceVersion = 6;
-			AVS_env->CheckVersion(7); //for potential future versions
-			iInterfaceVersion = 7;
 		}
 		catch (AvisynthError)
 		{
@@ -130,7 +133,6 @@ int CAvisynthInfo::GetAVSInterfaceVersion(string &s_ErrorMsg)
 BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 {
 	sDLLPath = "";
-	sPluginDir = "";
 	bIs64BitVersion = FALSE;
 	bIsMTVersion = FALSE;
 	iInterfaceVersion = 0;
@@ -138,6 +140,9 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 	sVersionString = "Unknown Avisynth Version";
 	bAVSLinkage = FALSE;
 	bLoadError = FALSE;
+
+	for (unsigned int n = 0; n < NUM_PLUG_DIRS; n++)
+		saPluginDirs[n] = "";
 
 	BOOL bRet = TRUE;
 	s_ErrorMsg = "";
@@ -177,6 +182,26 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 				return FALSE;
 			#endif
 		}
+
+		sLinkerVersion = StrFormat("%u.%u", li.FileHeader->OptionalHeader.MajorLinkerVersion, li.FileHeader->OptionalHeader.MinorLinkerVersion);
+		if (sLinkerVersion.substr(0, 2) == "6.")
+			sLinkerVersion += " (VC 6)";
+		if (sLinkerVersion.substr(0, 3) == "7.0")
+			sLinkerVersion += " (VC 2002)";
+		if (sLinkerVersion.substr(0, 3) == "7.1")
+			sLinkerVersion += " (VC 2003)";
+		if (sLinkerVersion.substr(0, 2) == "8.")
+			sLinkerVersion += " (VC 2005)";
+		if (sLinkerVersion.substr(0, 2) == "9.")
+			sLinkerVersion += " (VC 2008)";
+		if (sLinkerVersion.substr(0, 3) == "10.")
+			sLinkerVersion += " (VC 2010)";
+		if (sLinkerVersion.substr(0, 3) == "11.")
+			sLinkerVersion += " (VC 2012)";
+		if (sLinkerVersion.substr(0, 3) == "12.")
+			sLinkerVersion += " (VC 2013)";
+		if (sLinkerVersion.substr(0, 3) == "14.")
+			sLinkerVersion += " (VC 2015)";
 
 		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
@@ -223,7 +248,7 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 	}
 
 
-	//The only reliable way to determine the real path of avisynth.dll (System32 / SysWoW64)
+	//This seems to be the only reliable way to determine the real path of avisynth.dll (System32/SysWoW64) across OS versions
 	try
 	{
 		HANDLE hFile = CreateFile(sTempDLLPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
@@ -291,6 +316,9 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 		try
 		{
 			sVersionString = StrFormat("%s", AVS_env->Invoke("VersionString", AVSValue(&foo, 0)).AsString());
+			size_t spos = sVersionString.find("(ICL10)");
+			if ((spos > 1) && (spos < 0xFFFF))
+				sLinkerVersion = "6.0 (ICL 10.1)";
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
@@ -302,11 +330,11 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 
 		try
 		{
-			sPluginDir = StrFormat("%s", (char*)AVS_env->GetVar("$PluginDir$").AsString());
+			saPluginDirs[0] = StrFormat("%s", (char*)AVS_env->GetVar("$PluginDir$").AsString());
 		}
 		catch (...)
 		{
-			sPluginDir = "";
+			saPluginDirs[0] = "";
 		}
 
 		foo = 0;
@@ -330,6 +358,128 @@ BOOL CAvisynthInfo::GetAvisynthInfo(string &s_ErrorMsg)
 
 	AVS_linkage = 0;
 	::FreeLibrary(hDLL);
+
+	if (saPluginDirs[0] != "")
+		return bRet;
+
+
+	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
+	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
+	//- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
+	//- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
+
+	LONG lRes;
+	HKEY hKeyResult = 0;
+	map <string, BYTE> mDups;
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		char szPlugDir[2050] = "";
+		DWORD dwType = REG_SZ;
+		DWORD dwBytes;
+		RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
+		string sTemp(szPlugDir);
+		StrTrim(sTemp);
+		if (sTemp != "")
+		{
+			saPluginDirs[0] = sTemp;
+			mDups[sTemp] = 1;
+		}
+		RegCloseKey(hKeyResult);
+	}
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		char szPlugDir[2050] = "";
+		DWORD dwType = REG_SZ;
+		DWORD dwBytes;
+		RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
+		string sTemp(szPlugDir);
+		StrTrim(sTemp);
+		if ((sTemp != "") && (mDups.find(sTemp) == mDups.end()))
+		{
+			saPluginDirs[1] = sTemp;
+			mDups[sTemp] = 1;
+		}
+		RegCloseKey(hKeyResult);
+	}
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		char szPlugDir[2050] = "";
+		DWORD dwType = REG_SZ;
+		DWORD dwBytes;
+		RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
+		string sTemp(szPlugDir);
+		StrTrim(sTemp);
+		if ((sTemp != "") && (mDups.find(sTemp) == mDups.end()))
+		{
+			saPluginDirs[2] = sTemp;
+			mDups[sTemp] = 1;
+		}
+		RegCloseKey(hKeyResult);
+	}
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_32KEY, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		char szPlugDir[2050] = "";
+		DWORD dwType = REG_SZ;
+		DWORD dwBytes;
+		RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
+		string sTemp(szPlugDir);
+		StrTrim(sTemp);
+		if ((sTemp != "") && (mDups.find(sTemp) == mDups.end()))
+		{
+			saPluginDirs[3] = sTemp;
+			mDups[sTemp] = 1;
+		}
+		RegCloseKey(hKeyResult);
+	}
+
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		char szPlugDir[2050] = "";
+		DWORD dwType = REG_SZ;
+		DWORD dwBytes;
+		RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
+		string sTemp(szPlugDir);
+		StrTrim(sTemp);
+		if ((sTemp != "") && (mDups.find(sTemp) == mDups.end()))
+		{
+			saPluginDirs[4] = sTemp;
+			mDups[sTemp] = 1;
+		}
+		RegCloseKey(hKeyResult);
+	}
+
+	hKeyResult = 0;
+	lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
+	if (lRes == ERROR_SUCCESS)
+	{
+		char szPlugDir[2050] = "";
+		DWORD dwType = REG_SZ;
+		DWORD dwBytes;
+		RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
+		string sTemp(szPlugDir);
+		StrTrim(sTemp);
+		if ((sTemp != "") && (mDups.find(sTemp) == mDups.end()))
+		{
+			saPluginDirs[5] = sTemp;
+			mDups[sTemp] = 1;
+		}
+		RegCloseKey(hKeyResult);
+	}
 
 	return bRet;
 }
@@ -388,6 +538,15 @@ string CAvisynthInfo::StrFormat(const char *fmt, ...)
 	delete [] buffer;
 
 	return str;
+}
+
+
+void CAvisynthInfo::StrTrim(string &s_string)
+{
+	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
+	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
+
+	return;
 }
 
 

@@ -16,7 +16,6 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
 
-
 #include "stdafx.h"
 #include "AvisynthInfo.h"
 #include "utility.h"
@@ -502,28 +501,42 @@ int main(int argc, char* argv[])
 		}
 
 		sLogBuffer += "[General info]\n";
-		sOutBuf = utils.StrFormat("Log file created with:   AVSMeter %s", sAVSMVersion.c_str());
+		sOutBuf = utils.StrFormat("Log file created with:                 AVSMeter %s", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Script file:             %s", sAVSFile.c_str());
+		sOutBuf = utils.StrFormat("Script file:                           %s", sAVSFile.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
 		if (sCommandLine != "")
 		{
-			sOutBuf = utils.StrFormat("Command line switches:   %s", sCommandLine.c_str());
+			sOutBuf = utils.StrFormat("Command line switches:                 %s", sCommandLine.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-		sOutBuf = utils.StrFormat("Avisynth version:        %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
+		sOutBuf = utils.StrFormat("Avisynth version:                      %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = utils.StrFormat("Avisynth DLL location:   %s", AvisynthInfo.sDLLPath.c_str());
+		sOutBuf = utils.StrFormat("Avisynth.dll linker/compiler version:  %s", AvisynthInfo.sLinkerVersion.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		if (AvisynthInfo.sPluginDir != "")
+		sOutBuf = utils.StrFormat("Avisynth DLL location:                 %s", AvisynthInfo.sDLLPath.c_str());
+		sLogBuffer += sOutBuf + "\n";
+
+		unsigned int nDir = 0;
+		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
 		{
-			sOutBuf = utils.StrFormat("Plugin directory:        %s", AvisynthInfo.sPluginDir.c_str());
-			sLogBuffer += sOutBuf + "\n";
+			sTemp = AvisynthInfo.saPluginDirs[uiPlugDir];
+			if (sTemp != "")
+			{
+				++nDir;
+
+				if (uiPlugDir <= 3)
+					sOutBuf = utils.StrFormat("AutoLoadDir %u (x86):                   %s", nDir, AvisynthInfo.saPluginDirs[uiPlugDir].c_str());
+				else
+					sOutBuf = utils.StrFormat("AutoLoadDir %u (x64):                   %s", nDir, AvisynthInfo.saPluginDirs[uiPlugDir].c_str());
+
+				sLogBuffer += sOutBuf + "\n";
+			}
 		}
 
 		PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
@@ -533,7 +546,7 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("Active MT Mode: %d", iMTMode);
 			PrintFmt(STD_ERR, COLOR_DEFAULT, "\r%s\n", sOutBuf.c_str());
 
-			sOutBuf = utils.StrFormat("Active MT Mode:          %d", iMTMode);
+			sOutBuf = utils.StrFormat("Active MT Mode:                        %d", iMTMode);
 			sLogBuffer += sOutBuf + "\n";
 		}
 
@@ -1158,10 +1171,10 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateLog)
 	{
-		string sRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, gpuinfo.data.NVVP);
-		if (sRet != "")
+		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, uiPDIndex, sAVSError, uiFrameInterval, gpuinfo.data.NVVP);
+		if (sr != "")
 		{
-			PrintFmt(STD_ERR, COLOR_ERROR, sRet.c_str());
+			PrintFmt(STD_ERR, COLOR_ERROR, sr.c_str());
 			Pause();
 			return -1;
 		}
