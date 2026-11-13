@@ -59,12 +59,20 @@
 
 
 
+
+
+
+
           Monitor GPU/VPU usage (<font color="#ff0000">2</font>)<br>
           &nbsp;-range=first,last&nbsp;&nbsp; Specify frame range (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Specify time (sec) after which the process will exit<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
 
 
 
@@ -108,7 +116,15 @@
     Supported settings for the INI file (default values in <b><font
         color="Red">red</font></b>):<br>
     <br>
-    <b><b>"DisplayFPS" </b></b><b><b><b>(0 or <font color="Red">1</font>)</b>:</b><br>
+    <b><b><b><b>"AVSDLL"</b></b><b><b><b></b>:</b><br>
+        </b></b></b>The user can specify the avisynth.dll to be used.
+    This has to be a fully qualified path, for example
+    "AVSDLL=d:\apps\avisynth\avisynth.dll" (<b>without</b> the quotes).
+    The default is an empty string which means that AVSMeter will
+    attempt to load avisynth.dll through the standard Windows search <span
+      data-dobid="hdw">hierarchy.</span><br>
+    <b><b><br>
+        "DisplayFPS" </b></b><b><b><b>(0 or <font color="Red">1</font>)</b>:</b><br>
     </b> If set to "1", frames/second is printed to the console.<br>
     <b><b><b><br>
           "DisplayTPF" (<font color="Red">0</font> or 1):</b></b><br>

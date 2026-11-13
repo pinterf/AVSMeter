@@ -19,7 +19,7 @@
 #ifndef _AVISYNTHINFO_H
 #define _AVISYNTHINFO_H
 
-#include "stdafx.h"
+#include "common.h"
 
 #define BUFSIZE 2048
 #define NUM_PLUG_DIRS 8
@@ -28,7 +28,7 @@ class CAvisynthInfo
 {
 public:
 	CAvisynthInfo();
-	BOOL    GetInfo(string &s_ErrorMsg);
+	BOOL    GetInfo(string &s_ErrorMsg, string &s_avsdll);
 	virtual ~CAvisynthInfo();
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
@@ -42,13 +42,12 @@ public:
 	BOOL    bLoadError;
 
 private:
-	string  StrFormat(const char *fmt, ...);
-	void    StrTrim(string &s_string);
-	string  OSErrorMessage();
 	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string  GetFileVersion(string s_file);
-	int     GetInterfaceVersion(string &s_ErrorMsg);
+	int     GetInterfaceVersion(string &s_ErrorMsg, string &s_avsdll);
   void    EnumPluginDirs();
+	string  StrFormat(const char *fmt, ...);
+	void    StrTrim(string &s_string);
 };
 
 CAvisynthInfo::CAvisynthInfo()
@@ -61,15 +60,20 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
+int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg, string &s_avsdll)
 {
 	int iInterfaceVersion = 0;
 	s_ErrorMsg = "";
 
-	HINSTANCE hDLL = ::LoadLibrary("avisynth");
+	HINSTANCE hDLL;
+	if (s_avsdll == "")
+		hDLL = ::LoadLibrary("avisynth");
+	else
+		hDLL = ::LoadLibrary(s_avsdll.c_str());
+
 	if (!hDLL)
 	{
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -80,6 +84,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 
 	try
 	{
+		_set_se_translator(SE_Translator);
 		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
@@ -117,10 +122,15 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		iInterfaceVersion = 0;
 		s_ErrorMsg = StrFormat("%s", (PCSTR)err.msg);
 	}
+	catch (SE_Exception ep)
+	{
+		iInterfaceVersion = 0;
+		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+	}
 	catch (...)
 	{
 		iInterfaceVersion = 0;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -130,7 +140,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 	if (!::FreeLibrary(hDLL))
 	{
 		iInterfaceVersion = 0;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot unload avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -142,7 +152,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
+BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string &s_avsdll)
 {
 	sDLLPath = "";
 	bIs64BitVersion = FALSE;
@@ -157,11 +167,17 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	string sTempDLLPath = "";
 
 	LOADED_IMAGE li;
-	BOOL bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
+	BOOL bLoaded;
+
+	if (s_avsdll == "")
+		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
+	else
+		bLoaded = MapAndLoad((LPSTR)s_avsdll.c_str(), NULL, &li,	TRUE,	TRUE);
+	
 	if (!bLoaded)
 	{
 		bLoadError = TRUE;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -172,6 +188,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	try
 	{
+		_set_se_translator(SE_Translator);
 		sTempDLLPath = StrFormat("%s", li.ModuleName);
 		if ((li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_IA64) || (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64))
 		{
@@ -234,10 +251,15 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			}
 		}
 	}
+	catch (SE_Exception ep)
+	{
+		bRet = FALSE;
+		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+	}
 	catch (...)
 	{
 		bRet = FALSE;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -247,7 +269,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	if (!UnMapAndLoad(&li))
 	{
 		bRet = FALSE;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot unload avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -267,6 +289,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	//This seems to be the only reliable way to determine the real path of avisynth.dll (System32/SysWoW64) across OS versions
 	try
 	{
+		_set_se_translator(SE_Translator);
 		HANDLE hFile = CreateFile(sTempDLLPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
 		if (hFile != INVALID_HANDLE_VALUE)
 		{
@@ -276,10 +299,15 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 		CloseHandle(hFile);
 	}
+	catch (SE_Exception ep)
+	{
+		bRet = FALSE;
+		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+	}
 	catch (...)
 	{
 		bRet = FALSE;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot open avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -291,15 +319,19 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	sVersionNumber = GetFileVersion(sDLLPath);
 
-	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg);
+	iInterfaceVersion = GetInterfaceVersion(s_ErrorMsg, s_avsdll);
 	if (iInterfaceVersion == 0)
 		return FALSE;
 
+	HINSTANCE hDLL;
+	if (s_avsdll == "")
+		hDLL = ::LoadLibrary("avisynth");
+	else
+		hDLL = ::LoadLibrary(s_avsdll.c_str());
 
-	HINSTANCE hDLL = ::LoadLibrary("avisynth");
 	if (!hDLL)
 	{
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -310,6 +342,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	try
 	{
+		_set_se_translator(SE_Translator);
 		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
@@ -354,10 +387,15 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		bRet = FALSE;
 		s_ErrorMsg = StrFormat("%s", (PCSTR)err.msg);
 	}
+	catch (SE_Exception ep)
+	{
+		bRet = FALSE;
+		s_ErrorMsg = SE_ErrorMessage(ep.GetCode());
+	}
 	catch (...)
 	{
 		bRet = FALSE;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -368,7 +406,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	if (!::FreeLibrary(hDLL))
 	{
 		bRet = FALSE;
-		s_ErrorMsg = OSErrorMessage();
+		s_ErrorMsg = SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot unload avisynth.dll\n" + s_ErrorMsg;
 		else
@@ -549,71 +587,6 @@ void CAvisynthInfo::EnumPluginDirs()
 }
 
 
-string CAvisynthInfo::OSErrorMessage()
-{
-	DWORD dwLastError = GetLastError();
-	char *szMsg;
-
-	if (dwLastError == ERROR_SUCCESS)
-		return "";
-		
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-								NULL,
-								dwLastError,
-								MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-								(LPTSTR)&szMsg,
-								0,
-								NULL);
-
-	string sMsg(szMsg);
-
-	return sMsg;
-}
-
-
-string CAvisynthInfo::StrFormat(const char *fmt, ...)
-{
-	if (!fmt)	return "";
-
-	unsigned int bufsize = 16384;
-	unsigned int length = 256;
-	char *buffer = NULL;
-	int result = -1;
-
-	va_list args;
-	va_start(args, fmt);
-	while (result == -1)
-	{
-		if (buffer)	delete [] buffer;
-		buffer = new char[length];
-		memset(buffer, ' ', sizeof(buffer));
-		result = _vsnprintf(buffer, length, fmt, args);
-		length *= 2;
-		if (length >= bufsize)
-		{
-			delete [] buffer;
-			va_end(args);
-			return "";
-		}
-	}
-	va_end(args);
-
-	string str(buffer);
-	delete [] buffer;
-
-	return str;
-}
-
-
-void CAvisynthInfo::StrTrim(string &s_string)
-{
-	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
-	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
-
-	return;
-}
-
-
 BOOL CAvisynthInfo::GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 {
 	BOOL bSuccess = FALSE;
@@ -707,6 +680,49 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 	delete [] VersionInfoBuffer;
 
 	return sFileVersion;
+}
+
+
+string CAvisynthInfo::StrFormat(const char *fmt, ...)
+{
+	if (!fmt)	return "";
+
+	unsigned int maxbufsize = 16384;
+	unsigned int length = 256;
+	char *buffer = NULL;
+	int result = -1;
+
+	va_list args;
+	va_start(args, fmt);
+	while (result == -1)
+	{
+		if (buffer)	delete [] buffer;
+		buffer = new char[length];
+		memset(buffer, ' ', sizeof(buffer));
+		result = _vsnprintf(buffer, length, fmt, args);
+		length *= 2;
+		if (length >= maxbufsize)
+		{
+			delete [] buffer;
+			va_end(args);
+			return "";
+		}
+	}
+	va_end(args);
+
+	string str(buffer);
+	delete [] buffer;
+
+	return str;
+}
+
+
+void CAvisynthInfo::StrTrim(string &s_string)
+{
+	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
+	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
+
+	return;
 }
 
 

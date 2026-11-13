@@ -19,7 +19,7 @@
 #ifndef _GPUINFO_H
 #define _GPUINFO_H
 
-#include "stdafx.h"
+#include "common.h"
 
 #define SHMEM_NAME "GPUZShMem"
 #define MAX_RECORDS 128
@@ -67,7 +67,6 @@ public:
 
 private:
 	unsigned __int64 GetSTDTimer();
-	string OSErrorMessage();
 	BOOL IsValidVersionNumber(string s_string);
 
 	#pragma pack(push, 1)
@@ -121,13 +120,13 @@ BOOL CGPUInfo::MemInit()
 
 	if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHMEM_NAME)) == 0)
 	{
-		sError = OSErrorMessage();
+		sError = SysErrorMessage();
 		return FALSE;
 	}
 
 	if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
 	{
-		sError = OSErrorMessage();
+		sError = SysErrorMessage();
 		if (hMapFile)
 			CloseHandle(hMapFile);
 
@@ -249,20 +248,6 @@ void CGPUInfo::ReadSensors()
 	uiLastTimeRun = GetSTDTimer();
 
 	return;
-}
-
-
-string CGPUInfo::OSErrorMessage()
-{
-	LPVOID lpf;
-	DWORD dwLastError = GetLastError();
-
-	if (dwLastError == ERROR_SUCCESS)
-		return "";
-		
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR)&lpf, 0,	NULL);
-	
-	return (LPCTSTR)lpf;
 }
 
 

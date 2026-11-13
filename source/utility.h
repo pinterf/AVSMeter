@@ -20,7 +20,7 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 
-#include "stdafx.h"
+#include "common.h"
 
 #define FG_BLACK    0
 #define FG_RED			FOREGROUND_RED
@@ -63,19 +63,18 @@ public:
 	CUtils();
 	virtual        ~CUtils();
 	BOOL           FileExists(string s_file);
-	string         OSErrorMessage();
 	void           CursorUp(unsigned int iLines);
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
 
 	//string functions
+	string         StrFormat(const char *fmt, ...);
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);
 	void           StrTrim(string &s_string);
 	void           StrToUC(string &s_string);
 	void           StrToLC(string &s_string);
-	string         StrFormat(const char *fmt, ...);
 	string         StrPad(string s_line);
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatFrameTime(double d_frametime);
@@ -150,6 +149,40 @@ BOOL CUtils::FileExists(string s_file)
 }
 
 
+string CUtils::StrFormat(const char *fmt, ...)
+{
+	if (!fmt)	return "";
+
+	unsigned int maxbufsize = 16384;
+	unsigned int length = 256;
+	char *buffer = NULL;
+	int result = -1;
+
+	va_list args;
+	va_start(args, fmt);
+	while (result == -1)
+	{
+		if (buffer)	delete [] buffer;
+		buffer = new char[length];
+		memset(buffer, ' ', sizeof(buffer));
+		result = _vsnprintf(buffer, length, fmt, args);
+		length *= 2;
+		if (length >= maxbufsize)
+		{
+			delete [] buffer;
+			va_end(args);
+			return "";
+		}
+	}
+	va_end(args);
+
+	string str(buffer);
+	delete [] buffer;
+
+	return str;
+}
+
+
 void CUtils::StrTrimLeft(string &s_string)
 {
 	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
@@ -190,40 +223,6 @@ void CUtils::StrToLC(string &s_string)
 		s_string[i] = tolower(s_string[i]);
 
 	return;
-}
-
-
-string CUtils::StrFormat(const char *fmt, ...)
-{
-	if (!fmt)	return "";
-
-	unsigned int bufsize = 16384;
-	unsigned int length = 256;
-	char *buffer = NULL;
-	int result = -1;
-
-	va_list args;
-	va_start(args, fmt);
-	while (result == -1)
-	{
-		if (buffer)	delete [] buffer;
-		buffer = new char[length];
-		memset(buffer, ' ', sizeof(buffer));
-		result = _vsnprintf(buffer, length, fmt, args);
-		length *= 2;
-		if (length >= bufsize)
-		{
-			delete [] buffer;
-			va_end(args);
-			return "";
-		}
-	}
-	va_end(args);
-
-	string str(buffer);
-	delete [] buffer;
-
-	return str;
 }
 
 
@@ -314,28 +313,6 @@ string CUtils::GetFileVersion(string s_file)
 	delete [] VersionInfoBuffer;
 
 	return sFileVersion;
-}
-
-
-string CUtils::OSErrorMessage()
-{
-	DWORD dwLastError = GetLastError();
-	char *szMsg;
-
-	if (dwLastError == ERROR_SUCCESS)
-		return "";
-		
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-								NULL,
-								dwLastError,
-								MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-								(LPTSTR)&szMsg,
-								0,
-								NULL);
-
-	string sMsg(szMsg);
-
-	return sMsg;
 }
 
 

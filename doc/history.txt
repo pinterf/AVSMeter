@@ -1,3 +1,7 @@
+v2.1.1
+- Added ini setting "AVSDLL". The user can specify the avisynth.dll to be used.
+- Added handler for C structured exceptions
+
 v2.1.0
 - Fixes for potential timing issues when releasing the script environment
 - Additional error handling

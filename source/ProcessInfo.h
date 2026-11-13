@@ -22,7 +22,7 @@
 #ifndef _PROCESSINFO_H
 #define _PROCESSINFO_H
 
-#include "stdafx.h"
+#include "common.h"
 
 class CProcessInfo
 {

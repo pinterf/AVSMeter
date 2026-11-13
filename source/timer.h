@@ -19,7 +19,7 @@
 #ifndef _TIMER_H
 #define _TIMER_H
 
-#include "stdafx.h"
+#include "common.h"
 
 class CTimer
 {
@@ -30,7 +30,6 @@ public:
 	double       GetSTDTimer();
 	BOOL         TestTimer();
 	string       FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
-	string       StrFormat(const char *fmt, ...);
 private:
 };
 
@@ -93,6 +92,7 @@ double CTimer::GetSTDTimer()
 
 string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 {
+	char buff[512];
 	string sTime = "";
 	unsigned int hours = (unsigned int)(i_milliseconds / 3600000);
 	unsigned int minutes = (unsigned int)(i_milliseconds / 60000) % 60;
@@ -100,48 +100,16 @@ string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 	unsigned int milliseconds = (unsigned int)i_milliseconds % 1000;
 
 	if (hours < 100)
-		sTime = StrFormat("   %02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+		_snprintf(buff, sizeof(buff), "   %02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
 	else
-		sTime = StrFormat("%5d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+		_snprintf(buff, sizeof(buff), "%5d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+
+	sTime = buff;
 
 	if (!b_rightaligned)
 		sTime.erase(0, sTime.find_first_not_of(" "));
 
 	return sTime;
-}
-
-
-string CTimer::StrFormat(const char *fmt, ...)
-{
-	if (!fmt)	return "";
-
-	unsigned int bufsize = 16384;
-	unsigned int length = 256;
-	char *buffer = NULL;
-	int result = -1;
-
-	va_list args;
-	va_start(args, fmt);
-	while (result == -1)
-	{
-		if (buffer)	delete [] buffer;
-		buffer = new char[length];
-		memset(buffer, ' ', sizeof(buffer));
-		result = _vsnprintf(buffer, length, fmt, args);
-		length *= 2;
-		if (length >= bufsize)
-		{
-			delete [] buffer;
-			va_end(args);
-			return "";
-		}
-	}
-	va_end(args);
-
-	string str(buffer);
-	delete [] buffer;
-
-	return str;
 }
 
 
