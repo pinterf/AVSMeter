@@ -31,9 +31,8 @@
 
 #define REFRESH_INTERVAL 0.25
 
-class CSettings
+struct RTSettings
 {
-public:
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
 	BOOL      bCreateLog;
@@ -57,10 +56,9 @@ public:
 
 struct PerformanceData
 {
-	unsigned int  frame_low;
-	unsigned int  frame_high;
-	double        fps;
-	double        fps_avg;
+	unsigned int  current_frame;
+	double        fps_current;
+	double        fps_average;
 	WORD          cpu_usage;
 	WORD          gpu_usage;
 	WORD          vpu_usage;
@@ -73,7 +71,7 @@ struct PerformanceData
 CAvisynthInfo AvisynthInfo;
 CUtils utils;
 CTimer timer;
-CSettings Settings;
+RTSettings Settings;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
@@ -126,9 +124,12 @@ int main(int argc, char* argv[])
 	BOOL bInfoOnly = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 0;
-
 	string sErrorMsg = "";
+
+
+	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
+	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 	if (!bRet)
 	{
@@ -495,6 +496,7 @@ int main(int argc, char* argv[])
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Loading script...").c_str());
 		AVS_main = AVS_env->Invoke("Import", sAVSFile.c_str());
+		Sleep(250);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 		if (!AVS_main.IsClip())
@@ -545,6 +547,15 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Avisynth version:                      %s (%s)", AvisynthInfo.sVersionString.c_str(), AvisynthInfo.sVersionNumber.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
+		if (bIsMTVersion)
+		{
+			sOutBuf = utils.StrFormat("Active MT Mode: %d", iMTMode);
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", sOutBuf.c_str());
+
+			sOutBuf = utils.StrFormat("Active MT Mode:                        %d", iMTMode);
+			sLogBuffer += sOutBuf + "\n";
+		}
+
 		sOutBuf = utils.StrFormat("Avisynth Interface Version:            %d", AvisynthInfo.iInterfaceVersion);
 		sLogBuffer += sOutBuf + "\n";
 
@@ -566,15 +577,6 @@ int main(int argc, char* argv[])
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 
-		if (bIsMTVersion)
-		{
-			sOutBuf = utils.StrFormat("Active MT Mode: %d", iMTMode);
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", sOutBuf.c_str());
-
-			sOutBuf = utils.StrFormat("Active MT Mode:                        %d", iMTMode);
-			sLogBuffer += sOutBuf + "\n";
-		}
-
 		if (Settings.bMonitorGPULoad)
 		{
 			sGPUInfo += "\n\n[Graphics card info]\n";
@@ -588,6 +590,8 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("OpenCL version:          %s", gpuinfo.data.OpenCLVersion.c_str());
 			sGPUInfo += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("Driver version:          %s", gpuinfo.data.DriverVersion.c_str());
+			sGPUInfo += sOutBuf + "\n";
+			sOutBuf = utils.StrFormat("Info collected with:     GPU-Z %s", gpuinfo.data.GPUZVersion.c_str());
 			sGPUInfo += sOutBuf + "\n\n";
 		}
 
@@ -701,7 +705,7 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
-			Sleep(200);
+			Sleep(100);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -775,7 +779,6 @@ int main(int argc, char* argv[])
 						AVS_clip = 0;
 						AVS_main = 0;
 						AVS_temp = 0;
-						Sleep(200);
 						AVS_env->DeleteScriptEnvironment();
 						AVS_env = 0;
 			
@@ -812,14 +815,13 @@ int main(int argc, char* argv[])
 			uiFrameInterval *= 10;
 
 		unsigned int uiArraySize = (uiFramesToProcess / uiFrameInterval) + 2;
-
+		unsigned int uiArrayMemSize = (unsigned int)(((double)(sizeof(PerformanceData) * uiArraySize) / 1048576.0) + 0.5);
 		perfdata = new PerformanceData[uiArraySize];
 		for (unsigned int x = 0; x < uiArraySize; x++)
 		{
-			perfdata[x].frame_low = 0;
-			perfdata[x].frame_high = 0;
-			perfdata[x].fps = 0.0;
-			perfdata[x].fps_avg = 0.0;
+			perfdata[x].current_frame = 0;
+			perfdata[x].fps_current = 0.0;
+			perfdata[x].fps_average = 0.0;
 			perfdata[x].cpu_usage = 0;
 			perfdata[x].gpu_usage = 0;
 			perfdata[x].vpu_usage = 0;
@@ -915,10 +917,9 @@ int main(int argc, char* argv[])
 			if (dFPSCurrent < dFPSMin)
 				dFPSMin = dFPSCurrent;
 
-			perfdata[uiPDIndex].frame_low = (uiCurrentFrame + 1) - uiFrameInterval;
-			perfdata[uiPDIndex].frame_high = uiCurrentFrame;
-			perfdata[uiPDIndex].fps = dFPSCurrent;
-			perfdata[uiPDIndex].fps_avg = dFPSAverage;
+			perfdata[uiPDIndex].current_frame = uiCurrentFrame;
+			perfdata[uiPDIndex].fps_current = dFPSCurrent;
+			perfdata[uiPDIndex].fps_average = dFPSAverage;
 			perfdata[uiPDIndex].cpu_usage = processinfo.wCPUUsage;
 
 			if (Settings.bMonitorGPULoad)
@@ -1060,7 +1061,7 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(200);
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 
@@ -1543,67 +1544,38 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 
 	if (ui_index > 0)
 	{
-		if (ui_frameinterval == 1)
+		if (Settings.bMonitorGPULoad)
 		{
-			if (Settings.bMonitorGPULoad)
-			{
-				if (bNVVP)
-					sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
-				else
-					sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
-			}
+			if (bNVVP)
+				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
 			else
-				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+				sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
 		}
 		else
-		{
-			if (Settings.bMonitorGPULoad)
-			{
-				if (bNVVP)
-					sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   VPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
-				else
-					sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   GPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
-			}
-			else
-				sLog = "\n[Performance data]\n       Frame interval    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
-		}
+			sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   PhysMEM(MB)   VirtMEM(MB)\n";
+
 
 		hLogFile << sLog;
 
 		string stemp1 = "";
 		string stemp2 = "";
+		unsigned int uiFrame = 0;
 		if (ui_index > 0)
 		{
 			for (unsigned int i = 0; i < ui_index; i++)
 			{
-				if (ui_frameinterval == 1)
+				uiFrame = cs_pdata[i].current_frame + 1;
+				stemp1 = utils.StrFormat("%u", uiFrame);
+				string spad((12 - stemp1.length()), ' ');
+				if (Settings.bMonitorGPULoad)
 				{
-					stemp1 = utils.StrFormat("%u", cs_pdata[i].frame_low);
-					string spad((12 - stemp1.length()), ' ');
-					if (Settings.bMonitorGPULoad)
-					{
-						if (bNVVP)
-							stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-						else
-							stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-					}
+					if (bNVVP)
+						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 					else
-						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 				else
-				{
-					stemp1 = utils.StrFormat("%u-%u", cs_pdata[i].frame_low, cs_pdata[i].frame_high);
-					string spad((21 - stemp1.length()), ' ');
-					if (Settings.bMonitorGPULoad)
-					{
-						if (bNVVP)
-							stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-						else
-							stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-					}
-					else
-						stemp2 = utils.StrFormat("%s%u-%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), cs_pdata[i].frame_low, cs_pdata[i].frame_high, cs_pdata[i].fps, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
-				}
+					stemp2 = utils.StrFormat("%s%u %13.3f %16.6f %8u %9u %13u %13u", spad.c_str(), uiFrame, cs_pdata[i].fps_current, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 
 				hLogFile << stemp2 + "\n";
 			}
@@ -1611,9 +1583,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	}
 
 	if (s_avserror != "")
-	{
 		hLogFile << "\n\n[AviSynth error]\n" + s_avserror + "\n";
-	}
 
 	hLogFile.flush();
 	hLogFile.close();
@@ -1659,19 +1629,21 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, PerformanceData * cs_
 		hCSVFile << sCSV;
 
 		string stemp = "";
+		unsigned int uiFrame = 0;
 		if (ui_index > 0)
 		{
 			for (unsigned int i = 0; i < ui_index; i++)
 			{
+				uiFrame = cs_pdata[i].current_frame + 1;
 				if (Settings.bMonitorGPULoad)
 				{
 					if (bNVVP)
-						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u,%u", cs_pdata[i].frame_high + 1, cs_pdata[i].fps, cs_pdata[i].fps_avg, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 					else
-						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u", cs_pdata[i].frame_high + 1, cs_pdata[i].fps, cs_pdata[i].fps_avg, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 				}
 				else
-					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u", cs_pdata[i].frame_high + 1, cs_pdata[i].fps, cs_pdata[i].fps_avg, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u", uiFrame, cs_pdata[i].fps_current, cs_pdata[i].fps_average, 1000.0 / cs_pdata[i].fps_current, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
 
 				hCSVFile << stemp + "\n";
 			}
@@ -1812,7 +1784,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(200);
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -1832,7 +1804,16 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 
 	AVS_linkage = 0;
 
-	::FreeLibrary(hDLL);
+	if (!::FreeLibrary(hDLL))
+	{
+		uiFrameInterval = 0;
+		s_avserror = utils.OSErrorMessage();
+		if (s_avserror != "")
+			s_avserror = "Cannot unload avisynth.dll\n" + s_avserror;
+		else
+			s_avserror = "Cannot unload avisynth.dll";
+	}
+	Sleep(50);
 
 	return uiFrameInterval;
 }

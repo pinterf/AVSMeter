@@ -35,7 +35,7 @@
     testing filters/plugins to evaluate their performance and memory
     requirements.<br>
     <b><br>
-      <img alt="" src="avsmeter.png" height="511" width="652"><br>
+      <img alt="" src="avsmeter.png" height="543" width="652"><br>
       <br>
     </b><br>
     <b><big><font face="Courier New">Usage:&nbsp; AVSMeter script.avs
@@ -54,12 +54,22 @@
 
 
 
+
+
+
+
+
           Monitor GPU/VPU usage (<font color="#ff0000">2</font>)<br>
           &nbsp;-range=first,last&nbsp;&nbsp; Specify frame range (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Specify time (sec) after which the process will exit<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
 
 
 
@@ -78,11 +88,17 @@
     files like logs, audio files, etc. and accurate measurements are not
     needed.<br>
     <br>
-    (<b><code><font color="#ff0000"><big>2</big></font></code></b>) See
-    "MonitorGPULoad" INI setting below.<br>
+    (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
+    Enables display of the GPU/VPU usage which of course is only useful
+    if a filter that uses the GPU is in the chain. AVSMeter uses GPU-Z
+    to access the graphics card sensors through a shared memory space.
+    GPU-Z has to be running (the window can be minimized to the system
+    tray) before running AVSMeter.<br>
     <br>
-    (<b><code><font color="#ff0000"><big>3</big></font></code></b>) See
-    "FrameRange" INI setting below.<br>
+    (<b><code><font color="#ff0000"><big>3</big></font></code></b>)
+    Specify the range of frames to be processed. "FrameRange=0,-1"
+    processes all frames in the script. "FrameRange=1500,1999" processes
+    500 frames starting at frame 1500.<br>
     <b><br>
       <br>
       <u> INI file settings</u></b><br>
@@ -100,15 +116,22 @@
     console.<br>
     <b><br>
       "CreateLog" (<font color="Red">0</font> or 1):</b><br>
-    Determines if a log will be created or not.<br>
-    <b><i>Note:</i></b> The command line switch "-log" or "-l" overrides
-    the INI setting.<br>
+    Creates a log file with various details about the installed Avisynth
+    version, clip details, runtime results, a copy of the script and a
+    performance data table with the measured details about each
+    frame/frame interval. <br>
+    <b><i>Note1:</i></b> The command line switch "-log" or "-l"
+    overrides the INI setting.<br>
+    <b><i>Note2:</i></b> The numbering of the frames in the performance
+    data section is not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
     <b> "CreateCSV" (<font color="Red">0</font> or 1):</b><br>
     Creates a .csv file (along with the .log file) containing the
     performance data formatted as comma-separated values for direct
     import in Excel or a similar spread sheet program (OpenOffice,
     LibreOffice).<br>
+    <b><i>Note:</i></b> The numbering of the frames in the .csv file is
+    not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
     <b> </b><b>"PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
     If set to "1", pauses the program at the end and returns to the
@@ -168,7 +191,6 @@
     disables this feature. This setting is ignored when the program is
     invoked with the "-i" ("-info") switch which only determines the
     clip properties.<br>
-    <br>
     <b><i>Note:</i></b> The command line switch "-timelimit" overrides
     the INI setting.<br>
     <br>

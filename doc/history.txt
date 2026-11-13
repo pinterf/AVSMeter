@@ -1,3 +1,8 @@
+v2.1.0
+- Fixes for potential timing issues when releasing the script environment
+- Additional error handling
+- Cosmetics
+
 v2.0.9
 - Added ini setting "CreateCSV". This setting creates a .csv file (along with the .log file)
   containing the performance data formatted as comma-separated values for direct import

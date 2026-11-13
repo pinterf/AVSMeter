@@ -26,6 +26,7 @@
 
 static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam);
 static BOOL bGPUZRunning = FALSE;
+static string GPUZ_Version = "Unknown";
 
 class CGPUInfo
 {
@@ -44,6 +45,7 @@ public:
 
 	struct Data
 	{
+		string GPUZVersion;
 		string CardName;
 		string GPUName;
 		string MemSize;
@@ -66,6 +68,7 @@ public:
 private:
 	unsigned __int64 GetSTDTimer();
 	string OSErrorMessage();
+	BOOL IsValidVersionNumber(string s_string);
 
 	#pragma pack(push, 1)
 		typedef struct GPUZ_RECORD 
@@ -160,6 +163,11 @@ void CGPUInfo::ReadData()
 	BYTE nCUDA = 0;
 	double dCUDACaps = 0.0;
 	data.NVVP = FALSE;
+
+	if (IsValidVersionNumber(GPUZ_Version))
+		data.GPUZVersion = GPUZ_Version;
+	else
+		data.GPUZVersion = "Unknown";
 
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
@@ -270,7 +278,10 @@ static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
 	int iPos = (int)sAppTitle.find("gpu-z");
 	
 	if (iPos >= 0)
+	{
 		bGPUZRunning = TRUE;
+		GPUZ_Version = sAppTitle.substr(sAppTitle.length() - 5);
+	}
 
 	return TRUE;
 }
@@ -284,6 +295,36 @@ unsigned __int64 CGPUInfo::GetSTDTimer()
 	uiLastSTDTimer = uiSTDTimer;
 
 	return (uiSTDTimer + uiTimerWrapComp);
+}
+
+
+BOOL CGPUInfo::IsValidVersionNumber(string s_string)
+{
+	if (s_string == "")
+		return FALSE;
+
+	for (unsigned int ipos = 0; ipos < s_string.length(); ipos++)
+	{
+		switch (s_string[ipos])
+		{
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case '.':
+				continue;
+			default:
+				return FALSE;
+		}
+	}
+
+	return TRUE;
 }
 
 

@@ -29,27 +29,26 @@ class CAvisynthInfo
 public:
 	CAvisynthInfo();
 	BOOL    GetInfo(string &s_ErrorMsg);
+	virtual ~CAvisynthInfo();
+	BOOL    bIsMTVersion;
+	int     iInterfaceVersion;
+	string  saPluginDirs[NUM_PLUG_DIRS];
+	BYTE    NumPlugDirs;
+	string  sDLLPath;
+	string  sLinkerVersion;
+	string  sVersionNumber;
+	string  sVersionString;
+	BOOL    bIs64BitVersion;
+	BOOL    bLoadError;
+
+private:
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	string  OSErrorMessage();
 	BOOL    GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string  GetFileVersion(string s_file);
-
-	int     iInterfaceVersion;
-	string  saPluginDirs[NUM_PLUG_DIRS];
-	BYTE    NumPlugDirs;
-	string  sDLLPath;
-	string  sVersionNumber;
-	string  sVersionString;
-	string  sLinkerVersion;
-	BOOL    bLoadError;
-	BOOL    bIs64BitVersion;
-	virtual ~CAvisynthInfo();
-	BOOL    bIsMTVersion;
-private:
 	int     GetInterfaceVersion(string &s_ErrorMsg);
   void    EnumPluginDirs();
-	BOOL    bAVSLinkage;
 };
 
 CAvisynthInfo::CAvisynthInfo()
@@ -109,7 +108,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		{
 		}
 
-		Sleep(200);
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -128,7 +127,16 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 			s_ErrorMsg = "Cannot load avisynth.dll";
 	}
 
-	::FreeLibrary(hDLL);
+	if (!::FreeLibrary(hDLL))
+	{
+		iInterfaceVersion = 0;
+		s_ErrorMsg = OSErrorMessage();
+		if (s_ErrorMsg != "")
+			s_ErrorMsg = "Cannot unload avisynth.dll\n" + s_ErrorMsg;
+		else
+			s_ErrorMsg = "Cannot unload avisynth.dll";
+	}
+	Sleep(50);
 
 	return iInterfaceVersion;
 }
@@ -142,7 +150,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	iInterfaceVersion = 0;
 	sVersionNumber = "";
 	sVersionString = "Unknown Avisynth Version";
-	bAVSLinkage = FALSE;
+	BOOL bAVSLinkage = FALSE;
 	bLoadError = FALSE;
 	BOOL bRet = TRUE;
 	s_ErrorMsg = "";
@@ -236,7 +244,15 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			s_ErrorMsg = "Cannot load avisynth.dll";
 	}
 
-	UnMapAndLoad(&li);
+	if (!UnMapAndLoad(&li))
+	{
+		bRet = FALSE;
+		s_ErrorMsg = OSErrorMessage();
+		if (s_ErrorMsg != "")
+			s_ErrorMsg = "Cannot unload avisynth.dll\n" + s_ErrorMsg;
+		else
+			s_ErrorMsg = "Cannot unload avisynth.dll";
+	}
 
 	if (!bRet)
 		return FALSE;
@@ -329,7 +345,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			bIsMTVersion = TRUE;
 
 		foo = 0;
-		Sleep(200);
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -349,7 +365,16 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	}
 
 	AVS_linkage = 0;
-	::FreeLibrary(hDLL);
+	if (!::FreeLibrary(hDLL))
+	{
+		bRet = FALSE;
+		s_ErrorMsg = OSErrorMessage();
+		if (s_ErrorMsg != "")
+			s_ErrorMsg = "Cannot unload avisynth.dll\n" + s_ErrorMsg;
+		else
+			s_ErrorMsg = "Cannot unload avisynth.dll";
+	}
+	Sleep(50);
 
 	EnumPluginDirs();
 
