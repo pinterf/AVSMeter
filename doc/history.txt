@@ -1,3 +1,10 @@
+v2.4.0
+- Export a third log file when using the "-avsinfo -log" switch containing
+  DLL dependencies for avisynth.dll and all auto-load plugins
+- Refactoring of dependency checking code
+- Error handling improvements
+
+
 v2.3.9
 - Split list of internal and external functions generated with "-avsinfo"
   into a separate log file ("avsfunctions.log")
@@ -6,6 +13,7 @@ v2.3.9
 - Re-organise source file structure
 - Other minor fixes
 
+
 v2.3.8
 - Updated Avisynth headers
 - Updated libcpuid
@@ -13,11 +21,13 @@ v2.3.8
 - Perfdata -> std::vector
 - Optimisation of some helper functions
 
+
 v2.3.7
 - Updated Avisynth header to the latest AVS+ version (r2151)
 - Updated color space detection accordingly
 - Implemented some standard arrays as std::vector mainly for efficiency
 - Refactoring and cosmetics
+
 
 v2.3.6
 - Added enumeration of all color spaces supported by the latest AVS+,
@@ -25,6 +35,7 @@ v2.3.6
 - Added "VersionNumber()" (defined in internal.h) to the Avisynth info
 - Fixed a buffer overflow problem in the string formatting code
 - Refactoring and cosmetics
+
 
 v2.3.5
 - Minor restructuring of the log files
@@ -36,19 +47,23 @@ v2.3.5
 - Minor fixes
 - Refactoring
 
+
 v2.3.4
 - Fixed a silly bug that prevented correct detection of GPU capabiltities
+
 
 v2.3.3
 - Added real (measured) CPU clock to the CPU info
 - Reduced overhead of the process info functions
 - Various bug and cosmetic fixes
 
+
 v2.3.2
-- Added CPU info to log files (using Veselin Georgiev's LibCPUID)
+- Added CPU info to log files (using Veselin Georgiev's libcpuid)
 - Removed some redundant info from the console output/log
 - Added VP engine info for NVIDIA cards
 - Cosmetics
+
 
 v2.3.1
 - Added switch "-n" which disables the initial speed test.
@@ -56,18 +71,22 @@ v2.3.1
 - Added enumeration of internal functions to the "avsinfo" log
 - Some tweaks and minor fixes
 
+
 v2.3.0
 - Moved enumeration and testing of auto-load plugins back to main.
 - Changed file access modes in CreateFile() calls
 - Various fixes
+
 
 v2.2.9
 - Added hints to plugin error messages relating to missing support DLLs (fftw3.dll, etc.)
 - Added graphics card / GPU model info to the console output and log file
 - Added GPU clock / GPU memory clock info to the console output and log file
 
+
 v2.2.8
 - Improved Exception handling. Module names in which exceptions occur and address are reported
+
 
 v2.2.7
 - Fixed a couple of bugs
@@ -75,34 +94,41 @@ v2.2.7
 - Added some hints to the plugin error messages (for example, pointing out potentially missing
   restributable packages)
 
+
 v2.2.6
 - Added OS version info
 - Added plugin function enumeration to the "avsinfo" log
 - Couple of bugs fixed
 - Minor tweaks
 
+
 v2.2.5
 - Added dependency checking for avisynth.dll
 - More detailed and comprehensive plugin error messages relating to potentially missing dependencies
 
+
 v2.2.4
 - Added DLL dependency checking
 - Various fixes
+
 
 v2.2.3
 - New ini setting "SkipSpeedTest", see documentation.
   I put back the script test at the start because it is the best method to determine a suitable
   interval for measuring CPU/GPU/memory usage and minimizing the overhead for these measurements.
 
+
 v2.2.2
 - Added ini option "LogFileDateTimeSuffix" which makes adding the date/time suffix for .log/.csv files
   optional.
 - More detailed error messages when using "-avsinfo" and plugin loading failures
 
+
 v2.2.1
 - New ini option "LogDirectory". If specified, all .log and .csv files will be created in that directory.
 - All .log and .csv files now have a suffix containing date and time of creation.
 - Various fixes
+
 
 v2.2.0
 - Settings in an existing INI file will no longer be overwritten with default settings
@@ -111,9 +137,11 @@ v2.2.0
 - ["-avsinfo" switch] Combined with "-l" or "-log", writes the info to a file ("avsinfo.log" in the current directory)
 - Cosmetics
 
+
 v2.1.9
 - Bug fix for audio-only scripts not being detected properly (this bug was introduced in 2.1.7)
 - ["-avsinfo" switch] There is now a section for each plugin type (C / CPP)
+
 
 v2.1.8
 - ["-avsinfo" switch] Additional error handling to the plugin enumeration:
@@ -121,29 +149,35 @@ v2.1.8
   - 64/32 bit mismatch detection
 - Separate sections for CPP- and C-plugins
 
+
 v2.1.7
 - Removed the initial speed test.
 - ["-avsinfo" switch] Now also lists all plugin DLLs (with version info if present)
   found in the directory/directories which are referenced in the registry
+
 
 v2.1.6
 - "Efficiency index" ini setting disabled by default
 - Minor tweaks
 - Documentation update
 
+
 v2.1.5
 - Added "Efficiency index" display (FPS / CPU usage)
+
 
 v2.1.4
 - Fixed a problem with the time stamp determination
 - Fixed a minor timing issue
 - Some cosmetic improvements
 
+
 v2.1.3
 - Added some more info to the log and info screen
 - Minor exception handling improvements
 - Refactoring
 - Cosmetics
+
 
 v2.1.2
 - Added switch "-csv" so this option can be set on the command line as well

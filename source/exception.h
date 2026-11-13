@@ -244,7 +244,7 @@ static BOOL GetFileNameFromHandle(HANDLE hFile, string &sFileName)
 static string SysErrorMessage()
 {
 	DWORD dwLastError = GetLastError();
-	char *szMsg;
+	LPTSTR msgBuf;
 
 	if (dwLastError == ERROR_SUCCESS)
 		return "";
@@ -253,11 +253,12 @@ static string SysErrorMessage()
 								NULL,
 								dwLastError,
 								MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-								(LPTSTR)&szMsg,
+								(LPTSTR)&msgBuf,
 								0,
 								NULL);
 
-	string sRet(szMsg);
+	string sRet(msgBuf);
+	LocalFree(msgBuf);
 	sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
 	sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
 

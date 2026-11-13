@@ -25,14 +25,13 @@ CUtils::CUtils()
 	//save attributes
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	GetConsoleScreenBufferInfo(hConsole, &csbi);
-	wSaveAttributes = csbi.wAttributes;
-	bCPUIDSuccess = FALSE;
+	wSavedAttributes = csbi.wAttributes;
 }
 
 CUtils::~CUtils()
 {
 	//retrieve saved attributes
-	SetConsoleTextAttribute(hConsole, wSaveAttributes);
+	SetConsoleTextAttribute(hConsole, wSavedAttributes);
 }
 
 
@@ -58,20 +57,16 @@ void CUtils::CursorUp(unsigned int iLines)
 }
 
 
-void CUtils::SetRGB(WORD wAttributes, BOOL bSet)
+void CUtils::SetRGB(WORD wAttributes)
 {
-	if (bSet)
-		SetConsoleTextAttribute(hConsole, wAttributes);
-
+	SetConsoleTextAttribute(hConsole, wAttributes);
 	return;
 }
 
 
-void CUtils::ResetRGB(BOOL bSet)
+void CUtils::ResetRGB()
 {
-	if (bSet)
-		SetConsoleTextAttribute(hConsole, wSaveAttributes);
-
+	SetConsoleTextAttribute(hConsole, wSavedAttributes);
 	return;
 }
 
@@ -104,15 +99,6 @@ BOOL CUtils::DirectoryExists(string s_dir)
 }
 
 
-string CUtils::GetFormattedSystemTime()
-{
-	SYSTEMTIME st;
-	GetLocalTime(&st);
-
-	return StrFormat("%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-}
-
-
 string CUtils::StrFormat(char const *fmt, ...)
 {
 	va_list args;
@@ -126,7 +112,7 @@ string CUtils::StrFormat(char const *fmt, ...)
 		if (iRet == -1)
 			buffer.resize(buffer.size() * 2);
 		if (buffer.size() > 16384)
-			return "\nPrint buffer overflow";
+			return "buffer overflow";
 	}
 	buffer[buffer.size() - 1] = '\0';
 	string sRet = &buffer[0];
@@ -213,7 +199,9 @@ string CUtils::StrFormatFrameTime(double d_frametime)
 {
 	string sRet = "";
 
-	if (d_frametime < 1.0)
+	if (d_frametime < 0.1)
+		sRet = StrFormat("%.5f", d_frametime);
+	else if (d_frametime < 1.0)
 		sRet = StrFormat("%.4f", d_frametime);
 	else if (d_frametime < 10.0)
 		sRet = StrFormat("%.3f", d_frametime);
@@ -228,38 +216,31 @@ string CUtils::StrFormatFrameTime(double d_frametime)
 }
 
 
-string CUtils::RemoveMultipleWhiteSpaces(string s)
-{
-	string search = "  ";
-	size_t index;
-	while((index = s.find(search)) != string::npos )
-		s.erase(index,1);
-
-	return s;
-}
-
-
 string CUtils::GetFileVersion(string s_file)
 {
 	string sFileVersion = "n/a";
 	string sProductVersion = "n/a";
-	char szFilename[MAX_PATH + 1] = {0};
+	vector<char> szFileName(MAX_PATH + 1);
+
 
 	if (s_file == "")
 	{
-		if (GetModuleFileName(NULL, szFilename, MAX_PATH) == 0)
+		if (GetModuleFileName(NULL, &szFileName[0], (DWORD)szFileName.size() - 1) == 0)
 			return sFileVersion;
 	}
 	else
-		sprintf(szFilename, "%s", s_file.c_str());
+	{
+		if (_snprintf(&szFileName[0], szFileName.size() - 1, "%s", s_file.c_str()) < 0)
+			return sFileVersion;
+	}
 
 	DWORD dummy;
-	DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
+	DWORD dwSize = GetFileVersionInfoSize(&szFileName[0], &dummy);
 	if (dwSize == 0)
 		return "n/a";
 
 	BYTE* VersionInfoBuffer = new BYTE[dwSize];
-	if (!GetFileVersionInfo(szFilename, 0, dwSize, (VOID*)VersionInfoBuffer))
+	if (!GetFileVersionInfo(&szFileName[0], 0, dwSize, (VOID*)VersionInfoBuffer))
 	{
 		delete [] VersionInfoBuffer;
 		return sFileVersion;
@@ -317,133 +298,40 @@ BOOL CUtils::IsNumeric(string s_string)
 }
 
 
-string CUtils::StrAnsiToOEM(string s_string)
+void CUtils::StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups)
 {
-	char *buffer = NULL;
-	buffer = new char[s_string.length() + 1];
-	memset(buffer, ' ', sizeof(buffer));
-	CharToOem(s_string.c_str(), buffer);
-	string sOEM(buffer);
-
-	return sOEM;
-}
-
-
-string CUtils::GetOSVersion()
-{
-	typedef LONG NTSTATUS, *PNTSTATUS;
-	typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOEXW);
-	string sOSVersion = "Unknown OS Version";
-	string sOSAddendum = "";
-
-	string sArchitecture = "(x86)";
-	SYSTEM_INFO stInfo;
-	GetNativeSystemInfo(&stInfo);
-	if ((stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) || (stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64))
-		sArchitecture = "(x64)";
-
-	HMODULE hMod = ::GetModuleHandle("ntdll.dll");
-	if (!hMod)
-		return "Cannot get module handle to ntdll.dll";
-
-	RtlGetVersionPtr rgvPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
-	if (rgvPtr == NULL)
-		return "Cannot invoke \"RtlGetVersion\"";
-
-	RTL_OSVERSIONINFOEXW osvi = {0};
-	osvi.dwOSVersionInfoSize = sizeof(osvi);
-	if (rgvPtr(&osvi) != 0)
-		return "Cannot invoke \"RtlGetVersion\"";
-
-	if (osvi.dwMajorVersion == 5)
+	set <string> mDuplicates;
+	string sToken = "";
+	string sTemp = "";
+	size_t current;
+	size_t next = -1;
+	do
 	{
-		if (osvi.wProductType == VER_NT_WORKSTATION)
-			sOSVersion = StrFormat("Windows XP %s", sArchitecture.c_str());
-		else
-			sOSVersion = StrFormat("Windows Server 2003 %s", sArchitecture.c_str());
-	}
-
-	if (osvi.dwMajorVersion == 6)
-	{
-		if (osvi.dwMinorVersion == 0)
+		current = next + 1;
+		next = s_string.find_first_of(s_separator, current);
+		sToken = s_string.substr(current, next - current);
+		StrTrim(sToken);
+		sTemp = sToken;
+		StrToLC(sTemp);
+		if ((sToken != "") && (mDuplicates.find(sTemp) == mDuplicates.end()))
 		{
-			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows Vista %s", sArchitecture.c_str());
-			else
-				sOSVersion = StrFormat("Windows Server 2008 %s", sArchitecture.c_str());
-		}
-		if (osvi.dwMinorVersion == 1)
-		{
-			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows 7 %s", sArchitecture.c_str());
-			else
-				sOSVersion = StrFormat("Windows Server 2008 R2 %s", sArchitecture.c_str());
-		}
-		if (osvi.dwMinorVersion == 2)
-		{
-			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows 8 %s", sArchitecture.c_str());
-			else
-				sOSVersion = StrFormat("Windows Server 2012 %s", sArchitecture.c_str());
-		}
-		if (osvi.dwMinorVersion == 3)
-		{
-			if (osvi.wProductType == VER_NT_WORKSTATION)
-				sOSVersion = StrFormat("Windows 8.1 %s", sArchitecture.c_str());
-			else
-				sOSVersion = StrFormat("Windows Server 2012 R2 %s", sArchitecture.c_str());
+			Tokens.push_back(sToken);
+			if (b_removedups)
+				mDuplicates.insert(sTemp);
 		}
 	}
-
-	if (osvi.dwMajorVersion == 10)
-	{
-		if (osvi.dwMinorVersion == 0)
-			sOSVersion = StrFormat("Windows 10 %s", sArchitecture.c_str());
-	}
-
-	if (osvi.wServicePackMajor > 0)
-		sOSAddendum = StrFormat(" Service Pack %u (Build %u)", osvi.wServicePackMajor, osvi.dwBuildNumber);
-	else
-		sOSAddendum = StrFormat(" (Build %u)", osvi.dwBuildNumber);
-
-	return sOSVersion + sOSAddendum;
-}
-
-
-void CUtils::GetCPUID()
-{
-	if (!cpuid_present())
-		return;
-
-	struct cpu_raw_data_t raw;
-	struct cpu_id_t data;
-
-	if (cpuid_get_raw_data(&raw) < 0)
-		return;
-
-	if (cpu_identify(&raw, &data) < 0)
-		return;
-
-	if ((cpudata.CPUTotalLogicalCores > cpudata.CPULogicalCores) && (cpudata.CPULogicalCores > 0))
-		cpudata.NumCPUs = (BYTE)data.total_logical_cpus / (BYTE)data.num_logical_cpus;
-	else
-		cpudata.NumCPUs = 1;
-
-	cpudata.CPUCores = (BYTE)data.num_cores * cpudata.NumCPUs;
-	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus * cpudata.NumCPUs;
-	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
-	cpudata.CPUCodeName = RemoveMultipleWhiteSpaces(cpudata.CPUCodeName);
-	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
-	cpudata.CPUBrandString = RemoveMultipleWhiteSpaces(cpudata.CPUBrandString);
-
-	int clk = cpu_clock_by_ic(100, 15);
-	if (clk > 100)
-		cpudata.CPURealClock = (unsigned int)clk;
-	else
-		cpudata.CPURealClock = 0;
-
-	bCPUIDSuccess = TRUE;
+	while (next != string::npos);
 
 	return;
 }
+
+
+string CUtils::StrAnsiToOEM(string s_string)
+{
+	vector<char> buffer(s_string.length() + 1);
+	CharToOem(s_string.c_str(), &buffer[0]);
+	string sOEM(&buffer[0]);
+	return sOEM;
+}
+
 

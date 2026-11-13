@@ -19,7 +19,6 @@
 */
 
 #include "common.h"
-#include "cpuid\libcpuid.h"
 
 #define FG_BLACK    0
 #define FG_RED			FOREGROUND_RED
@@ -65,25 +64,9 @@ public:
 	BOOL           DirectoryExists(string s_dir);
 	void           CursorUp(unsigned int iLines);
 	int            GetConsoleWidth();
-	void           SetRGB(WORD wAttributes, BOOL bSet);
-	void           ResetRGB(BOOL bSet);
+	void           SetRGB(WORD wAttributes);
+	void           ResetRGB();
 	string         GetFileVersion(string s_file);
-	string         GetFormattedSystemTime();
-	string         GetOSVersion();
-
-	//CPUID
-	void           GetCPUID();
-	BOOL           bCPUIDSuccess;
-	struct CPUData
-	{
-		string       CPUBrandString;
-		string       CPUCodeName;
-		BYTE         CPUCores;
-		BYTE         CPULogicalCores;
-		BYTE         NumCPUs;
-		BYTE         CPUTotalLogicalCores;
-		unsigned int CPURealClock; //MHz
-	} cpudata;
 
 	//string functions
 	string         StrFormat(char const *fmt, ...);
@@ -96,12 +79,12 @@ public:
 	string         StrFormatFPS(double d_fps);
 	string         StrFormatFrameTime(double d_frametime);
 	string         StrAnsiToOEM(string s_string);
-	string         RemoveMultipleWhiteSpaces(string s);
+	void           StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups);
 	BOOL           IsNumeric(string s_string);
 
 private:
 	HANDLE         hConsole;
-	WORD           wSaveAttributes;
+	WORD           wSavedAttributes;
 };
 
 

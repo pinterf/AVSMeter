@@ -31,6 +31,7 @@ public:
 	vector  <string> vInternalFunctions;
 	vector  <string> vPluginFunctions;
 	vector  <string> vPlugins;
+	vector  <string> vPluginDependencies;
 	vector  <string> vPluginErrors;
 	string  sDLLPath;
 	string  sLinkerVersion;
@@ -45,7 +46,7 @@ public:
 	virtual ~CAvisynthInfo();
 
 private:
-	void           StrTokenize(string s_string, vector<string> &Tokens);
+	void           StrTokenize(string s_string, vector<string> &Tokens, string s_separator, BOOL b_removedups);
 	BOOL           GetFileNameFromHandle(HANDLE hFile, string &sFileName);
 	string         GetFileVersion(string s_file);
 	string         GetTimeStamp(string s_file);
@@ -54,8 +55,7 @@ private:
 	void           EnumPluginDLLs();
 	BOOL           SYSCheckPlugin(string s_dll, string &s_Msg);
 	void           AVSCheckPlugins();
-	void           GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
-	void           FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint);
+	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
 	__int64        FileSize(string s_file);
 	inline string  StrFormat(char const *fmt, ...);
 	void           StrTrim(string &s_string);
@@ -83,3 +83,4 @@ static BOOL CompareNoCase(string first, string second)
 
 
 #endif //_AVISYNTHINFO_H
+

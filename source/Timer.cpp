@@ -76,19 +76,22 @@ double CTimer::GetSTDTimer()
 
 string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 {
-	char buff[512];
-	string sTime = "";
+	vector<char> buffer(128);
 	unsigned int hours = (unsigned int)(i_milliseconds / 3600000);
 	unsigned int minutes = (unsigned int)(i_milliseconds / 60000) % 60;
 	unsigned int seconds = (unsigned int)(i_milliseconds / 1000) % 60;
 	unsigned int milliseconds = (unsigned int)i_milliseconds % 1000;
 
+	int iRet = -1;
 	if (hours < 100)
-		_snprintf(buff, sizeof(buff), "   %02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+		iRet = _snprintf(&buffer[0], buffer.size() - 1, "   %02u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
 	else
-		_snprintf(buff, sizeof(buff), "%5d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+		iRet = _snprintf(&buffer[0], buffer.size() - 1, "%5u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
 
-	sTime = buff;
+	if (iRet < 0)
+		return "buffer overflow";
+
+	string sTime = &buffer[0];
 
 	if (!b_rightaligned)
 		sTime.erase(0, sTime.find_first_not_of(" "));
