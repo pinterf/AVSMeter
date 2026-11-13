@@ -42,7 +42,6 @@ public:
 	string  sVersionNumber;
 	string  sTimeStamp;
 	BOOL    bIs64BitAVSDLL;
-	BOOL    bLoadError;
 	BOOL    bIsAVSPlus;
 	BOOL    bIsMTVersion;
 	virtual ~CAvisynthInfo();
@@ -100,7 +99,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	sFileVersion = "";
 	sVersionString = "Unknown Avisynth Version";
 	BOOL bAVSLinkage = FALSE;
-	bLoadError = FALSE;
 	BOOL bRet = TRUE;
 	s_ErrorMsg = "";
 
@@ -114,7 +112,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 	if (!bLoaded)
 	{
-		bLoadError = TRUE;
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
@@ -128,20 +125,21 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	{
 		_set_se_translator(SE_Translator);
 		sDLLPath = utils.StrFormat("%s", li.ModuleName);
-		if (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_I386)
-		{
-			#ifdef AVSM64
-				UnMapAndLoad(&li);
-				s_ErrorMsg = "Cannot load avisynth.dll";
-				return FALSE;
-			#endif
-		}
-		else //64 Bit Avisynth DLL
+
+		if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
 		{
 			bIs64BitAVSDLL = TRUE;
 			#ifndef AVSM64
 				UnMapAndLoad(&li);
-				s_ErrorMsg = "Cannot load avisynth.dll";
+				s_ErrorMsg = "AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
+				return FALSE;
+			#endif
+		}
+		else //32 Bit Avisynth DLL
+		{
+			#ifdef AVSM64 //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
+				UnMapAndLoad(&li);
+				s_ErrorMsg = "AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
 				return FALSE;
 			#endif
 		}
@@ -377,7 +375,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		{
 			s_ErrorMsg += utils.StrFormat("\n\nDependencies that couldn't be loaded:\n%s", sFailedDependencies.c_str());
 			if (sHint != "")
-				s_ErrorMsg += utils.StrFormat("\n\nNote: \"%s\"\n      is required but doesn't seem to be installed.", sHint.c_str());
+				s_ErrorMsg += utils.StrFormat("\n\nNote: \"%s\"\n", sHint.c_str());
 		}
 
 		return 0;
@@ -656,20 +654,20 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 	{
 		_set_se_translator(SE_Translator);
 
-		if (li.FileHeader->FileHeader.Machine == IMAGE_FILE_MACHINE_I386)
-		{
-			#ifdef AVSM64
-				UnMapAndLoad(&li);
-				s_Msg = utils.StrFormat("Error loading \"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
-				return FALSE;
-			#endif
-		}
-		else
+		if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
 		{
 			b_Is64BitDLL = TRUE;
 			#ifndef AVSM64
 				UnMapAndLoad(&li);
 				s_Msg = utils.StrFormat("Error loading \"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
+				return FALSE;
+			#endif
+		}
+		else
+		{
+			#ifdef AVSM64
+				UnMapAndLoad(&li);
+				s_Msg = utils.StrFormat("Error loading \"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
 				return FALSE;
 			#endif
 		}
@@ -787,9 +785,9 @@ void CAvisynthInfo::AVSCheckPlugins()
 	AVS_linkage = AVS_env->GetAVSLinkage();
 	AVSValue AVS_main;
 
-	BOOL bPlugError = FALSE;
-	string sPlugError = "";
-	string sPlugErrorLC = "";
+	BOOL bPlugLoadError = FALSE;
+	string sPlugLoadError = "";
+	string sPlugLoadErrorLC = "";
 	string sNote = "";
 	string sPlugin = "";
 	string sPluginType = "";
@@ -821,8 +819,8 @@ void CAvisynthInfo::AVSCheckPlugins()
 		if (bMaxPlugsExceeded)
 			continue;
 
-		bPlugError = FALSE;
-		sPlugError = "";
+		bPlugLoadError = FALSE;
+		sPlugLoadError = "";
 		sNote = "";
 		try
 		{
@@ -830,17 +828,17 @@ void CAvisynthInfo::AVSCheckPlugins()
 		}
 		catch (AvisynthError err)
 		{
-			sPlugError = utils.StrFormat("%s", (PCSTR)err.msg);
-			utils.StrTrim(sPlugError);
-			bPlugError = TRUE;
+			sPlugLoadError = utils.StrFormat("%s", (PCSTR)err.msg);
+			utils.StrTrim(sPlugLoadError);
+			bPlugLoadError = TRUE;
 
-			sPlugErrorLC = sPlugError;
-			utils.StrToLC(sPlugErrorLC);
-			if (sPlugErrorLC.find("too many plugins loaded") != string::npos)
+			sPlugLoadErrorLC = sPlugLoadError;
+			utils.StrToLC(sPlugLoadErrorLC);
+			if (sPlugLoadErrorLC.find("too many plugins loaded") != string::npos)
 				bMaxPlugsExceeded = TRUE;
 		}
 
-		if (bPlugError)
+		if (bPlugLoadError)
 		{
 			if (sFailedDependencies != "")
 			{
@@ -852,22 +850,12 @@ void CAvisynthInfo::AVSCheckPlugins()
 				sNote += "\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need the \"avisynth_c.dll\" support DLL";
 			if (sPluginType.substr(0, 5) == "C 2.5")
 				sNote += "\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"";
-		}
-		else
-		{
-			//Delay-load dependencies
-			if (sFailedDependencies != "")
-			{
-				sNote += utils.StrFormat("\"%s\"\n\nDependencies that could not be loaded:\n  %s", sPlugin.c_str(), sFailedDependencies.c_str());
-				if (sHint != "") sNote += utils.StrFormat("\n\nNote: \"%s\"", sHint.c_str());
-			}
-		}
 
-		if (sNote != "")
-			sPlugError += sNote;
+			sPlugLoadError += sNote;
 
-		if (sPlugError != "")
-			vPluginErrors.push_back(sPlugError);
+			if (sPlugLoadError != "")
+				vPluginErrors.push_back(sPlugLoadError);
+		}
 	}
 
 	AVS_main = 0;

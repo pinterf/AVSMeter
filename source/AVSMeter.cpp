@@ -368,38 +368,10 @@ int main(int argc, char* argv[])
 
 	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
-
 	if (!bRet)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
-		if (AvisynthInfo.bLoadError)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-			WaitForKBHit();
-			return -1;
-		}
-
-		#ifdef AVSM64
-			if (!AvisynthInfo.bIs64BitAVSDLL)
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
-				WaitForKBHit();
-				return -1;
-			}
-		#else
-			if (AvisynthInfo.bIs64BitAVSDLL)
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
-				WaitForKBHit();
-				return -1;
-			}
-		#endif
-
-		if (sErrorMsg != "")
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-		else
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
-
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
 		WaitForKBHit();
 		return -1;
 	}
@@ -646,9 +618,17 @@ int main(int argc, char* argv[])
 				if (Settings.sLogDirectory == "")
 				{
 					if (Settings.bLogFileDateTimeSuffix)
-						sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", szPath, Settings.sSystemDateTime.c_str());
+						#ifdef AVSM64
+							sInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", szPath, Settings.sSystemDateTime.c_str());
+						#else
+							sInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", szPath, Settings.sSystemDateTime.c_str());
+						#endif
 					else
-						sInfoFile = utils.StrFormat("%s\\avsinfo.log", szPath);
+						#ifdef AVSM64
+							sInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", szPath);
+						#else
+							sInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", szPath);
+						#endif
 				}
 				else
 				{
@@ -2188,10 +2168,11 @@ void WaitForKBHit()
 		for (;;)
 		{
 			Sleep(100);
-			if (_kbhit())
+			if (_getch())
 				break;
 		}
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+		utils.CursorUp(1);
 	}
 
 	return;

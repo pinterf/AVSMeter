@@ -1,3 +1,9 @@
+v2.5.3
+- Fixed duplicate error message
+- Fixed a minor console output bug
+- Fixed a couple of cosmetic issues
+- Added "_x64"/"_x86" suffix to the avsinfo log name
+
 v2.5.2
 - Improved exception handling for Avisynth core (avisynth.dll)
 - Updated Avisynth headers
