@@ -54,4 +54,152 @@ private:
 	volatile LONG lRunCount;
 };
 
+
+CProcessInfo::CProcessInfo()
+{
+	hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ::GetCurrentProcessId());
+
+	dwPhysicalMemMB = 0;
+	dwVirtualMemMB = 0;
+
+	::ZeroMemory(&ftPrevSysKernel, sizeof(FILETIME));
+	::ZeroMemory(&ftPrevSysUser, sizeof(FILETIME));
+	::ZeroMemory(&ftPrevProcKernel, sizeof(FILETIME));
+	::ZeroMemory(&ftPrevProcUser, sizeof(FILETIME));
+
+	btCPUUsage = 0;
+	wThreadCount = GetCurrentThreadCount();
+	bFirstRun = TRUE;
+	lRunCount = 0;
+}
+
+CProcessInfo::~CProcessInfo()
+{
+}
+
+
+void CProcessInfo::CloseProcess()
+{
+	if (hProcess)
+		::CloseHandle(hProcess);
+
+	return;
+}
+
+
+void CProcessInfo::Update()
+{
+	static unsigned __int64 uiLastTimeRun;
+
+	GetCPUUsage();
+	bFirstRun = FALSE;
+
+	if (btCPUUsage > 100)
+		btCPUUsage = 100;
+
+	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
+	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
+	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
+
+	//Thread count should only be updated every few seconds to reduce overhead
+	if ((GetSTDTimer() - uiLastTimeRun) < 5000)
+		return;
+
+	wThreadCount = GetCurrentThreadCount();
+	uiLastTimeRun = GetSTDTimer();
+
+	return;
+}
+
+
+void CProcessInfo::GetCPUUsage()
+{
+	if (::InterlockedIncrement(&lRunCount) == 1)
+	{
+		FILETIME ftSysIdle, ftSysKernel, ftSysUser, ftProcCreation, ftProcExit, ftProcKernel, ftProcUser;
+		if (!::GetSystemTimes(&ftSysIdle, &ftSysKernel, &ftSysUser) || !::GetProcessTimes(::GetCurrentProcess(), &ftProcCreation, &ftProcExit, &ftProcKernel, &ftProcUser))
+		{
+			::InterlockedDecrement(&lRunCount);
+			return;
+		}
+
+		if (!bFirstRun)
+		{
+			/*
+			CPU usage is calculated by getting the total amount of time the system
+			has operated since the last measurement (made up of kernel + user) and
+			the total amount of time the process has run (kernel + user).
+			*/
+			unsigned __int64 uiSysKernelDiff = SubtractTimes(ftSysKernel, ftPrevSysKernel);
+			unsigned __int64 uiSysUserDiff = SubtractTimes(ftSysUser, ftPrevSysUser);
+			unsigned __int64 uiProcKernelDiff = SubtractTimes(ftProcKernel, ftPrevProcKernel);
+			unsigned __int64 uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
+
+			if ((uiSysKernelDiff + uiSysUserDiff) > 0)
+				btCPUUsage = (BYTE)((100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff));
+		}
+
+		ftPrevSysKernel = ftSysKernel;
+		ftPrevSysUser = ftSysUser;
+		ftPrevProcKernel = ftProcKernel;
+		ftPrevProcUser = ftProcUser;
+	}
+
+	::InterlockedDecrement(&lRunCount);
+
+	return;
+}
+
+
+unsigned __int64 CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
+{
+	unsigned __int64 a = (((unsigned __int64)ftA.dwHighDateTime) << 32) + (unsigned __int64)ftA.dwLowDateTime;
+	unsigned __int64 b = (((unsigned __int64)ftB.dwHighDateTime) << 32) + (unsigned __int64)ftB.dwLowDateTime;
+
+	return (a - b);
+}
+
+
+WORD CProcessInfo::GetCurrentThreadCount()
+{
+	DWORD dwPID = ::GetCurrentProcessId();
+	HANDLE hThreadSnapshot = INVALID_HANDLE_VALUE;
+	THREADENTRY32 te32;
+
+	hThreadSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	if (hThreadSnapshot == INVALID_HANDLE_VALUE)
+		return 0;
+
+	te32.dwSize = sizeof(THREADENTRY32);
+
+	if (!::Thread32First(hThreadSnapshot, &te32))
+	{
+		::CloseHandle(hThreadSnapshot);
+		return 0;
+	}
+
+	WORD wThreads = 0;
+	while (::Thread32Next(hThreadSnapshot, &te32))
+	{
+		if (te32.th32OwnerProcessID == dwPID)
+			++wThreads;
+	}
+
+	::CloseHandle(hThreadSnapshot);
+
+	return wThreads;
+}
+
+
+unsigned __int64 CProcessInfo::GetSTDTimer()
+{
+	static unsigned __int64 uiLastSTDTimer;
+	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
+	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
+	uiLastSTDTimer = uiSTDTimer;
+
+	return (uiSTDTimer + uiTimerWrapComp);
+}
+
+
 #endif //_PROCESSINFO_H

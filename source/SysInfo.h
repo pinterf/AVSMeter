@@ -19,7 +19,11 @@
 */
 
 #include "common.h"
-#include "cpuid\libcpuid.h"
+#include "utility.h"
+
+#if (defined (_MSC_FULL_VER) && _MSC_FULL_VER >= 160040219)
+#include <immintrin.h>
+#endif
 
 class CSysInfo
 {
@@ -28,26 +32,437 @@ public:
 	virtual        ~CSysInfo();
 	string         GetOSVersion();
 	string         GetFormattedSystemDateTime();
-
+	BOOL           Is64BitOS();
 	//CPUID
-	void           GetCPUID();
+	void           GetCPUInfo();
 	BOOL           bCPUIDSuccess;
-	struct CPUData
-	{
-		string       CPUBrandString;
-		string       CPUCodeName;
-		int32_t      CPUCores;
-		int32_t      CPULogicalCores;
-		int32_t      NumCPUs;
-		int32_t      CPUTotalLogicalCores;
-		unsigned int CPURealClock; //MHz
-		string       CPUSupportedInstructionSets;
-	} cpudata;
+	string         CPUBrandString;
+	string         CPUVendorString;
+	string         CPUFeatures;
 
 private:
-	string         RemoveMultipleWhiteSpaces(string s);
-	string         StrFormat(char const *fmt, ...);
+	CUtils            utils;
+	void              cpuid(int *regs, int info_type);
+	unsigned __int64  xgetbv (int ctr);
+	string            GetCPUFeatures();
+	string            RemoveMultipleWhiteSpaces(string s);
 };
+
+
+CSysInfo::CSysInfo()
+{
+	bCPUIDSuccess = FALSE;
+}
+
+CSysInfo::~CSysInfo()
+{
+}
+
+
+string CSysInfo::GetOSVersion()
+{
+	typedef LONG NTSTATUS, *PNTSTATUS;
+	typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOEXW);
+	string sOSVersion = "Unknown OS Version";
+	string sOSAddendum = "";
+
+	string sArchitecture = "(x86)";
+	if (Is64BitOS())
+		sArchitecture = "(x64)";
+
+	HMODULE hMod = ::GetModuleHandle("ntdll.dll");
+	if (!hMod)
+		return "Cannot get module handle to ntdll.dll";
+
+	RtlGetVersionPtr rgvPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+	if (rgvPtr == NULL)
+		return "Cannot invoke \"RtlGetVersion\"";
+
+	RTL_OSVERSIONINFOEXW osvi = {0};
+	osvi.dwOSVersionInfoSize = sizeof(osvi);
+	if (rgvPtr(&osvi) != 0)
+		return "Cannot invoke \"RtlGetVersion\"";
+
+	if (osvi.dwMajorVersion == 5)
+	{
+		if (osvi.wProductType == VER_NT_WORKSTATION)
+			sOSVersion = utils.StrFormat("Windows XP %s", sArchitecture.c_str());
+		else
+			sOSVersion = utils.StrFormat("Windows Server 2003 %s", sArchitecture.c_str());
+	}
+
+	if (osvi.dwMajorVersion == 6)
+	{
+		if (osvi.dwMinorVersion == 0)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = utils.StrFormat("Windows Vista %s", sArchitecture.c_str());
+			else
+				sOSVersion = utils.StrFormat("Windows Server 2008 %s", sArchitecture.c_str());
+		}
+		if (osvi.dwMinorVersion == 1)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = utils.StrFormat("Windows 7 %s", sArchitecture.c_str());
+			else
+				sOSVersion = utils.StrFormat("Windows Server 2008 R2 %s", sArchitecture.c_str());
+		}
+		if (osvi.dwMinorVersion == 2)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = utils.StrFormat("Windows 8 %s", sArchitecture.c_str());
+			else
+				sOSVersion = utils.StrFormat("Windows Server 2012 %s", sArchitecture.c_str());
+		}
+		if (osvi.dwMinorVersion == 3)
+		{
+			if (osvi.wProductType == VER_NT_WORKSTATION)
+				sOSVersion = utils.StrFormat("Windows 8.1 %s", sArchitecture.c_str());
+			else
+				sOSVersion = utils.StrFormat("Windows Server 2012 R2 %s", sArchitecture.c_str());
+		}
+	}
+
+	if (osvi.dwMajorVersion == 10)
+	{
+		if (osvi.dwMinorVersion == 0)
+			sOSVersion = utils.StrFormat("Windows 10 %s", sArchitecture.c_str());
+	}
+
+	if (osvi.wServicePackMajor > 0)
+		sOSAddendum = utils.StrFormat(" Service Pack %u (Build %u)", osvi.wServicePackMajor, osvi.dwBuildNumber);
+	else
+		sOSAddendum = utils.StrFormat(" (Build %u)", osvi.dwBuildNumber);
+
+	return sOSVersion + sOSAddendum;
+}
+
+
+string CSysInfo::GetFormattedSystemDateTime()
+{
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+
+	return utils.StrFormat("%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+}
+
+
+void CSysInfo::GetCPUInfo()
+{
+	CPUBrandString = "";
+	CPUVendorString = "";
+	char szCPUBrandString[65];
+	char szCPUVendorString[65];
+	unsigned nIds, i;
+	int CPURegs[4];
+
+	cpuid(CPURegs, 0);
+	memset(szCPUVendorString, 0, sizeof(szCPUVendorString));
+	memcpy(szCPUVendorString,     &CPURegs[1], 4);   // copy EBX
+	memcpy(szCPUVendorString + 4, &CPURegs[3], 4); // copy EDX
+	memcpy(szCPUVendorString + 8, &CPURegs[2], 4); // copy ECX
+	CPUVendorString = utils.StrFormat("%s", szCPUVendorString);
+
+	if (CPUVendorString.length() > 3)
+		bCPUIDSuccess = TRUE;
+	else
+		return;
+
+	cpuid(CPURegs, 0x80000000);
+	nIds = CPURegs[0];
+	memset(szCPUBrandString, 0, sizeof(szCPUBrandString));
+
+	for (i = 0x80000000; i <= nIds; ++i)
+	{
+		cpuid(CPURegs, i);
+
+		if  (i == 0x80000002)
+			memcpy(szCPUBrandString, CPURegs, sizeof(CPURegs));
+		if  (i == 0x80000003)
+			memcpy(szCPUBrandString + 16, CPURegs, sizeof(CPURegs));
+		if  (i == 0x80000004)
+			memcpy(szCPUBrandString + 32, CPURegs, sizeof(CPURegs));
+	}
+
+	CPUBrandString = utils.StrFormat("%s", szCPUBrandString);
+	CPUBrandString.erase(CPUBrandString.find_last_not_of(" \t\n\r") + 1);
+	CPUBrandString.erase(0, CPUBrandString.find_first_not_of(" \t\n\r"));
+	CPUBrandString = RemoveMultipleWhiteSpaces(CPUBrandString);
+
+	CPUFeatures = GetCPUFeatures();
+
+	return;
+}
+
+
+string CSysInfo::GetCPUFeatures()
+{
+	BOOL CPU_FEATURE_MMX;
+	BOOL CPU_FEATURE_SSE;
+	BOOL CPU_FEATURE_SSE2;
+	BOOL CPU_FEATURE_SSE3;
+	BOOL CPU_FEATURE_SSSE3;
+	BOOL CPU_FEATURE_SSE41;
+	BOOL CPU_FEATURE_SSE42;
+	BOOL CPU_FEATURE_SSE4A;
+	BOOL CPU_FEATURE_AVX;
+	BOOL CPU_FEATURE_AVX2;
+	BOOL CPU_FEATURE_AVX512F;
+	BOOL CPU_FEATURE_AVX512VL;
+	BOOL CPU_FEATURE_AVX512BW;
+	BOOL CPU_FEATURE_AVX512DQ;
+	BOOL CPU_FEATURE_AVX512ER;
+	BOOL CPU_FEATURE_AVX512CD;
+	BOOL CPU_FEATURE_AVX512PF;
+	BOOL CPU_FEATURE_AVX512IFMA;
+	BOOL CPU_FEATURE_AVX512VBMI;
+	BOOL CPU_FEATURE_3DNOW;
+	BOOL CPU_FEATURE_3DNOWEXT;
+	BOOL CPU_FEATURE_MMXEXT;
+	BOOL CPU_FEATURE_FMA3;
+	BOOL CPU_FEATURE_FMA4;
+
+	int CPURegs[4];
+	cpuid(CPURegs, 0);
+	int nIds = CPURegs[0];
+
+	cpuid(CPURegs, 0x80000000);
+	unsigned nExIds = CPURegs[0];
+
+	if (nIds >= 0x00000001)
+	{
+		cpuid(CPURegs, 0x00000001);
+		CPU_FEATURE_MMX    = (CPURegs[3] & (1 << 23)) != 0;
+		CPU_FEATURE_SSE    = (CPURegs[3] & (1 << 25)) != 0;
+		CPU_FEATURE_SSE2   = (CPURegs[3] & (1 << 26)) != 0;
+		CPU_FEATURE_SSE3   = (CPURegs[2] & (1 <<  0)) != 0;
+		CPU_FEATURE_SSSE3  = (CPURegs[2] & (1 <<  9)) != 0;
+		CPU_FEATURE_SSE41  = (CPURegs[2] & (1 << 19)) != 0;
+		CPU_FEATURE_SSE42  = (CPURegs[2] & (1 << 20)) != 0;
+		CPU_FEATURE_AVX    = (CPURegs[2] & (1 << 28)) != 0;
+		CPU_FEATURE_FMA3   = (CPURegs[2] & (1 << 12)) != 0;
+	}
+
+	if (nIds >= 0x00000007)
+	{
+		cpuid(CPURegs, 0x00000007);
+		CPU_FEATURE_AVX2        = (CPURegs[1] & (1 <<  5)) != 0;
+		CPU_FEATURE_AVX512F     = (CPURegs[1] & (1 << 16)) != 0;
+		CPU_FEATURE_AVX512CD    = (CPURegs[1] & (1 << 28)) != 0;
+		CPU_FEATURE_AVX512PF    = (CPURegs[1] & (1 << 26)) != 0;
+		CPU_FEATURE_AVX512ER    = (CPURegs[1] & (1 << 27)) != 0;
+		CPU_FEATURE_AVX512VL    = (CPURegs[1] & (1 << 31)) != 0;
+		CPU_FEATURE_AVX512BW    = (CPURegs[1] & (1 << 30)) != 0;
+		CPU_FEATURE_AVX512DQ    = (CPURegs[1] & (1 << 17)) != 0;
+		CPU_FEATURE_AVX512IFMA  = (CPURegs[1] & (1 << 21)) != 0;
+		CPU_FEATURE_AVX512VBMI  = (CPURegs[2] & (1 <<  1)) != 0;
+	}
+
+	if (nExIds >= 0x80000001)
+	{
+		cpuid(CPURegs, 0x80000001);
+		CPU_FEATURE_3DNOW =    (CPURegs[3] & (1 << 31)) != 0;
+		CPU_FEATURE_3DNOWEXT = (CPURegs[3] & (1 << 30)) != 0;
+		CPU_FEATURE_MMXEXT =   (CPURegs[3] & (1 << 22)) != 0;
+		CPU_FEATURE_SSE4A =    (CPURegs[2] & (1 <<  6)) != 0;
+		CPU_FEATURE_FMA4  =    (CPURegs[2] & (1 << 16)) != 0;
+	}
+
+
+	BOOL OS_AVX =        FALSE;
+	BOOL OS_AVX2 =       FALSE;
+	BOOL OS_AVX512F =    FALSE;
+	BOOL OS_AVX512DQ =   FALSE;
+	BOOL OS_AVX512IFMA = FALSE;
+	BOOL OS_AVX512PF =   FALSE;
+	BOOL OS_AVX512ER =   FALSE;
+	BOOL OS_AVX512CD =   FALSE;
+	BOOL OS_AVX512BW =   FALSE;
+	BOOL OS_AVX512VL =   FALSE;
+	BOOL OS_AVX512VBMI = FALSE;
+	BOOL OS_FMA3 =       FALSE;
+	BOOL OS_FMA4 =       FALSE;
+
+	#ifndef _XCR_XFEATURE_ENABLED_MASK
+	#define _XCR_XFEATURE_ENABLED_MASK 0
+	#endif
+
+	unsigned __int64 xcrFeatureMask = 0;
+	cpuid(CPURegs, 1);
+	BOOL XSAVE = (CPURegs[2] & (1 << 27)) != 0;
+
+	if (XSAVE && CPU_FEATURE_AVX)
+		xcrFeatureMask = xgetbv(0);
+
+	if ((xcrFeatureMask & 0x6) == 0x6) OS_AVX = TRUE;
+	OS_AVX2 = OS_AVX & CPU_FEATURE_AVX2;
+	OS_FMA3 = OS_AVX & CPU_FEATURE_FMA3;
+	OS_FMA4 = OS_AVX & CPU_FEATURE_FMA4;
+	if ((xcrFeatureMask & (0x7 << 5)) && (xcrFeatureMask & (0x3 << 1)))
+	{
+		OS_AVX512F =    CPU_FEATURE_AVX512F;
+		OS_AVX512DQ =   CPU_FEATURE_AVX512DQ;
+		OS_AVX512IFMA = CPU_FEATURE_AVX512IFMA;
+		OS_AVX512PF =   CPU_FEATURE_AVX512PF;
+		OS_AVX512ER =   CPU_FEATURE_AVX512ER;
+		OS_AVX512CD =   CPU_FEATURE_AVX512CD;
+		OS_AVX512BW =   CPU_FEATURE_AVX512BW;
+		OS_AVX512VL =   CPU_FEATURE_AVX512VL;
+		OS_AVX512VBMI = CPU_FEATURE_AVX512VBMI;
+	}
+
+
+	string sFeatures = "";
+	if (CPU_FEATURE_MMX)                         sFeatures += "MMX, ";
+	if (CPU_FEATURE_SSE)                         sFeatures += "SSE, ";
+	if (CPU_FEATURE_SSE2)                        sFeatures += "SSE2, ";
+	if (CPU_FEATURE_SSE3)                        sFeatures += "SSE3, ";
+	if (CPU_FEATURE_SSSE3)                       sFeatures += "SSSE3, ";
+	if (CPU_FEATURE_SSE41)                       sFeatures += "SSE4.1, ";
+	if (CPU_FEATURE_SSE42)                       sFeatures += "SSE4.2, ";
+	if (CPU_FEATURE_SSE4A)                       sFeatures += "SSE4A, ";
+	if (CPU_FEATURE_3DNOW)                       sFeatures += "3DNOW, ";
+	if (CPU_FEATURE_3DNOWEXT)                    sFeatures += "3DNOWEXT, ";
+	if (CPU_FEATURE_MMXEXT)                      sFeatures += "MMXEXT, ";
+
+	if (CPU_FEATURE_AVX)                         sFeatures += "AVX";
+	if (CPU_FEATURE_AVX & !OS_AVX)               sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX2)                        sFeatures += "AVX2";
+	if (CPU_FEATURE_AVX2 & !OS_AVX2)             sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512F)                     sFeatures += "AVX512F";
+	if (CPU_FEATURE_AVX512F & !OS_AVX512F)       sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512DQ)                    sFeatures += "AVX512DQ";
+	if (CPU_FEATURE_AVX512DQ & !OS_AVX512DQ)     sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512PF)                    sFeatures += "AVX512PF";
+	if (CPU_FEATURE_AVX512PF & !OS_AVX512PF)     sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512ER)                    sFeatures += "AVX512ER";
+	if (CPU_FEATURE_AVX512ER & !OS_AVX512ER)     sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512CD)                    sFeatures += "AVX512CD";
+	if (CPU_FEATURE_AVX512CD & !OS_AVX512CD)     sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512BW)                    sFeatures += "AVX512BW";
+	if (CPU_FEATURE_AVX512BW & !OS_AVX512BW)     sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512VL)                    sFeatures += "AVX512VL";
+	if (CPU_FEATURE_AVX512VL & !OS_AVX512VL)     sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512IFMA)                  sFeatures += "AVX512IFMA";
+	if (CPU_FEATURE_AVX512IFMA & !OS_AVX512IFMA) sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_AVX512VBMI)                  sFeatures += "AVX512VBMI";
+	if (CPU_FEATURE_AVX512VBMI & !OS_AVX512VBMI) sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_FMA3)                        sFeatures += "FMA3";
+	if (CPU_FEATURE_FMA3 & !OS_FMA3)             sFeatures += "*";
+	sFeatures += ", ";
+
+	if (CPU_FEATURE_FMA4)                        sFeatures += "FMA4";
+	if (CPU_FEATURE_FMA4 & !OS_FMA4)             sFeatures += "*";
+	sFeatures += ", ";
+
+	sFeatures.erase(sFeatures.find_last_not_of(", ") + 1);
+
+	return sFeatures;
+}
+
+
+void CSysInfo::cpuid(int *regs, int info_type)
+{
+	regs[0] = 0;
+	regs[1] = 0;
+	regs[2] = 0;
+	regs[3] = 0;
+
+	#if (_MSC_VER < 1500)
+	__asm
+	{
+		mov   esi, regs
+		mov   eax, info_type
+		xor   ecx, ecx
+		cpuid
+		mov   dword ptr [esi +  0], eax
+		mov   dword ptr [esi +  4], ebx
+		mov   dword ptr [esi +  8], ecx
+		mov   dword ptr [esi + 12], edx
+  }
+	#else
+		__cpuid(regs, info_type);
+	#endif
+
+	return;
+}
+
+
+unsigned __int64 CSysInfo::xgetbv(int ctr)
+{
+	#if (defined (_MSC_FULL_VER) && _MSC_FULL_VER >= 160040219)
+		return _xgetbv(ctr);
+	#else
+		unsigned int a, d;
+		__asm
+		{
+			mov ecx, ctr
+			_emit 0x0F
+			_emit 0x01
+			_emit 0xD0 ; // xgetbv
+			mov a, eax
+			mov d, edx
+		}
+		return a | ((unsigned __int64)d << 32);
+	#endif
+}
+
+
+string CSysInfo::RemoveMultipleWhiteSpaces(string s)
+{
+	string search = "  ";
+	size_t index;
+	while((index = s.find(search)) != string::npos )
+		s.erase(index,1);
+
+	return s;
+}
+
+
+BOOL CSysInfo::Is64BitOS()
+{
+	if (sizeof(void*) == 8) //64 on 64
+		return TRUE;
+
+	BOOL bWoW64Process = FALSE;
+	typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
+	LPFN_ISWOW64PROCESS fnIsWow64Process;
+
+	HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
+	if (hKernel32 == NULL)
+		return FALSE;
+
+	fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
+	if (fnIsWow64Process != NULL)
+		fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
+
+	if (bWoW64Process)
+		return TRUE;
+
+	return FALSE;
+}
 
 
 #endif //_SYSINFO_H

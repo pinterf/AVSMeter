@@ -1,5 +1,11 @@
+v2.5.1
+- New CPU feature detection, removed libcpuid dependency
+- WoW64 process detection may have given wrong results in some rare cases, this should be fixed
+- Updated Avisynth headers
+- Various functional and cosmetic fixes
+
 v2.5.0
-- Added warning when no plugin directory references are found in the registry and plugin auto-loading is therefore disabled
+- Added warning when no plugin directory references are found in the registry and "classic" plugin auto-loading is therefore disabled
 - Updated libcpuid
 - Moved log entries created by "-avsinfo" for DLL dependencies and internal/external functions to the main log file (avsinfo.log)
 - Minor fixes and refactoring

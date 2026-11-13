@@ -89,7 +89,7 @@ string       CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata
 string       ParseINIFile();
 BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
-void         PreExit();
+void         Slouch();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 
 
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 	if (sAVSMVersion.length() > 5)
 		sAVSMVersion = sAVSMVersion.substr(0, 5);
 
-	#ifdef AVS64
+	#ifdef AVSM64
 		sAVSMVersion += " (x64)";
 	#else
 		sAVSMVersion += " (x86)";
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 	if (sINIRet != "")
 	{
 		PrintConsole(TRUE, COLOR_ERROR, sINIRet.c_str());
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nOne instance of AVSMeter is already running\n");
-			PreExit();
+			Slouch();
 			return -1;
 		}
 	}
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
 	if (argc < 2)
 	{
 		PrintUsage();
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
 			if (sTemp.length() < 3)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				PreExit();
+				Slouch();
 				return -1;
 			}
 
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 			if ((spos < 1) || (spos > 27))
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				PreExit();
+				Slouch();
 				return -1;
 			}
 
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				PreExit();
+				Slouch();
 				return -1;
 			}
 			continue;
@@ -259,14 +259,14 @@ int main(int argc, char* argv[])
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-					PreExit();
+					Slouch();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-				PreExit();
+				Slouch();
 				return -1;
 			}
 
@@ -283,14 +283,14 @@ int main(int argc, char* argv[])
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-					PreExit();
+					Slouch();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-				PreExit();
+				Slouch();
 				return -1;
 			}
 
@@ -309,7 +309,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sArg.c_str());
-						PreExit();
+						Slouch();
 						return -1;
 					}
 					else
@@ -331,7 +331,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
-						PreExit();
+						Slouch();
 						return -1;
 					}
 					else
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
@@ -351,13 +351,13 @@ int main(int argc, char* argv[])
 		if (bInfoOnly)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
-			PreExit();
+			Slouch();
 			return -1;
 		}
 		if (sAVSFile != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
-			PreExit();
+			Slouch();
 			return -1;
 		}
 	}
@@ -375,29 +375,29 @@ int main(int argc, char* argv[])
 
 	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
-	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 	if (!bRet)
 	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		if (AvisynthInfo.bLoadError)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-			PreExit();
+			Slouch();
 			return -1;
 		}
 
-		#ifdef AVS64
-			if (!AvisynthInfo.bIs64BitAVS)
+		#ifdef AVSM64
+			if (!AvisynthInfo.bIs64BitAVSDLL)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
-				PreExit();
+				Slouch();
 				return -1;
 			}
 		#else
-			if (AvisynthInfo.bIs64BitAVS)
+			if (AvisynthInfo.bIs64BitAVSDLL)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
-				PreExit();
+				Slouch();
 				return -1;
 			}
 		#endif
@@ -405,12 +405,11 @@ int main(int argc, char* argv[])
 		if (sErrorMsg != "")
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
 		else
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", SysErrorMessage().c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
 
-		PreExit();
+		Slouch();
 		return -1;
 	}
-
 
 	if (!bPrintAVSInfo)
 	{
@@ -424,23 +423,22 @@ int main(int argc, char* argv[])
 		gpuinfo.Initialize();
 		if (!gpuinfo.bInitialized)
 		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
-			PreExit();
+			Slouch();
 			return -1;
 		}
 	}
-
-	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query system info...").c_str());
 
 	if (!timer.TestTimer())
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
-	sys.GetCPUID();
+	sys.GetCPUInfo();
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 	if (bPrintAVSInfo)
@@ -451,24 +449,6 @@ int main(int argc, char* argv[])
 		sLogBuffer += "\n[OS/Hardware info]\n";
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
-
-		if (sys.bCPUIDSuccess)
-		{
-			sOutBuf = utils.StrFormat("CPU (brand string):         %s\n", sys.cpudata.CPUBrandString.c_str());
-			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
-			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU instruction sets:       %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
-			sLogBuffer += sOutBuf;
-			if (sys.cpudata.CPURealClock > 100)
-			{
-				sOutBuf = utils.StrFormat("CPU clock (measured):       %u MHz\n", sys.cpudata.CPURealClock);
-				sLogBuffer += sOutBuf;
-			}
-			sOutBuf = utils.StrFormat("CPU cores / Logical cores:  %u / %u\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
-			sLogBuffer += sOutBuf;
-		}
-
 
 		if (Settings.bMonitorGPULoad)
 		{
@@ -492,6 +472,17 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
 			sLogBuffer += sOutBuf;
+		}
+
+
+		if (sys.bCPUIDSuccess)
+		{
+			sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.CPUBrandString.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
+			sLogBuffer += sOutBuf;
+			if (sys.CPUFeatures.find("*") != std::string::npos)
+				sLogBuffer += "                            (* CPU feature not supported by OS)\n";          
 		}
 
 
@@ -615,7 +606,7 @@ int main(int argc, char* argv[])
 		//Plugin Dependencies
 		if (AvisynthInfo.vPluginDependencies.size() > 0)
 		{
-			if (AvisynthInfo.bIs64BitAVS)
+			if (AvisynthInfo.bIs64BitAVSDLL)
 				sOutBuf = "\n\n[DLL dependencies (x64)]\n";
 			else
 				sOutBuf = "\n\n[DLL dependencies (x86)]\n";
@@ -690,14 +681,14 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		PreExit();
+		Slouch();
 		return 0;
 	}
 
 	if (sAVSFile == "")
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
@@ -711,7 +702,7 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
-			PreExit();
+			Slouch();
 			return -1;
 		}
 
@@ -726,8 +717,8 @@ int main(int argc, char* argv[])
 
 	if (!hDLL)
 	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", SysErrorMessage().c_str());
-		PreExit();
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
+		Slouch();
 		return -1;
 	}
 
@@ -735,7 +726,7 @@ int main(int argc, char* argv[])
 	if (!CreateEnvironment)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
@@ -743,7 +734,7 @@ int main(int argc, char* argv[])
 	if (!AVS_env)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
-		PreExit();
+		Slouch();
 		return -1;
 	}
 
@@ -812,27 +803,9 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf + "\n";
 		}
 
-
-		sLogBuffer += "\n\n[OS/Hardware info]\n";
+		sLogBuffer += "\n[OS/Hardware info]\n";
 		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
-
-		if (sys.bCPUIDSuccess)
-		{
-			sOutBuf = utils.StrFormat("CPU (brand string):         %s\n", sys.cpudata.CPUBrandString.c_str());
-			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
-			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU instruction sets:       %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
-			sLogBuffer += sOutBuf;
-			if (sys.cpudata.CPURealClock > 100)
-			{
-				sOutBuf = utils.StrFormat("CPU clock (measured):       %u MHz\n", sys.cpudata.CPURealClock);
-				sLogBuffer += sOutBuf;
-			}
-			sOutBuf = utils.StrFormat("CPU cores / Logical cores:  %u / %u\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
-			sLogBuffer += sOutBuf;
-		}
 
 		if (Settings.bMonitorGPULoad)
 		{
@@ -858,6 +831,16 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 		}
 
+
+		if (sys.bCPUIDSuccess)
+		{
+			sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.CPUBrandString.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
+			sLogBuffer += sOutBuf;
+			if (sys.CPUFeatures.find("*") != std::string::npos)
+				sLogBuffer += "                            (* CPU feature not supported by OS)\n";          
+		}
 
 		sLogBuffer += "\n\n[Avisynth core info]";
 		sOutBuf = utils.StrFormat("\nVersionString:              %s", AvisynthInfo.sVersionString.c_str());
@@ -1110,7 +1093,7 @@ int main(int argc, char* argv[])
 			AVS_linkage = 0;
 			::FreeLibrary(hDLL);
 
-			PreExit();
+			Slouch();
 			return 0;
 		}
 
@@ -1416,7 +1399,7 @@ int main(int argc, char* argv[])
 		if (Settings.bSimpleMode)
 			iMinElapsed = -1;
 
-		if ((uiFramesRead >= uiFrameInterval) && (iElapsedMS >= iMinElapsed))
+		if (iElapsedMS >= iMinElapsed)
 		{
 			if (!bFirstScr)
 				utils.CursorUp(uiCursorOffset);
@@ -1434,7 +1417,7 @@ int main(int argc, char* argv[])
 			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf + "\n";
 
-			if (!Settings.bSimpleMode)
+			if ((!Settings.bSimpleMode) && (uiFramesRead >= uiFrameInterval))
 			{
 				if (Settings.bDisplayFPS)
 				{
@@ -1595,7 +1578,7 @@ int main(int argc, char* argv[])
 			utils.CursorUp(2);
 		}
 
-		sAVSError = SysErrorMessage();
+		sAVSError = utils.SysErrorMessage();
 		if (sAVSError == "")
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nUnknown exception\n");
 		else
@@ -1617,7 +1600,7 @@ int main(int argc, char* argv[])
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
-			PreExit();
+			Slouch();
 			return -1;
 		}
 	}
@@ -1628,12 +1611,12 @@ int main(int argc, char* argv[])
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
-			PreExit();
+			Slouch();
 			return -1;
 		}
 	}
 
-	PreExit();
+	Slouch();
 
 	return iRet;
 }
@@ -2061,7 +2044,7 @@ BOOL WriteINIFile(string &s_inifile)
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"AllowOnlyOneInstance\" (0 or 1):\n";
-	sComment += "# If set to \"1\", only one instance of AVSMeter can run at the same time.\n";
+	sComment += "# If set to \"1\", only one instance of AVSMeter can be started.\n";
 	sCurrentLine = utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
@@ -2309,7 +2292,7 @@ string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL
 }
 
 
-void PreExit()
+void Slouch()
 {
 	if (Settings.bPauseBeforeExit)
 	{
@@ -2478,7 +2461,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	}
 	catch (...)
 	{
-		s_error = SysErrorMessage();
+		s_error = utils.SysErrorMessage();
 		uiFrameInterval = 10;
 	}
 

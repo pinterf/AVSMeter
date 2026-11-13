@@ -24,8 +24,6 @@
 
 #include "common.h"
 
-static string GetExceptionModule(LPVOID address);
-
 //test STATUS_FLOAT_DIVIDE_BY_ZERO:
 //	int a = 0;
 //	int b = 100;
@@ -36,7 +34,97 @@ static string GetExceptionModule(LPVOID address);
 //	*pInt = 20;
 
 
-static void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
+string GetRealFilePath(string s_filepath)
+{
+	string sRealFilePath = s_filepath;
+
+	BOOL bWoW64Process = FALSE;
+	typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
+	LPFN_ISWOW64PROCESS fnIsWow64Process;
+
+	HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
+	if (hKernel32 == NULL)
+		return sRealFilePath;
+
+	fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
+	if (fnIsWow64Process != NULL)
+		fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
+	else
+		return sRealFilePath;
+
+	if (bWoW64Process)
+	{
+		char pszWinDir[1026];
+		GetWindowsDirectory(pszWinDir, 1024);
+		string sTestSystem32(pszWinDir);
+		sTestSystem32 = sTestSystem32 + "\\system32\\";
+		transform(sTestSystem32.begin(), sTestSystem32.end(), sTestSystem32.begin(), ::tolower);
+		string sTempDLLPath = s_filepath;
+		transform(sTempDLLPath.begin(), sTempDLLPath.end(), sTempDLLPath.begin(), ::tolower);
+		size_t slen = sTestSystem32.length();
+		if (sTempDLLPath.substr(0, slen) == sTestSystem32)
+		{
+			char szSysWOW64Directory[1026];
+			typedef UINT (WINAPI *LPFN_GETSYSTEMWOW64DIRECTORY)(LPTSTR, UINT);
+			LPFN_GETSYSTEMWOW64DIRECTORY getSystemWow64Directory;
+
+			HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
+			if (hKernel32 == NULL)
+				return sRealFilePath;
+
+			getSystemWow64Directory = (LPFN_GETSYSTEMWOW64DIRECTORY)GetProcAddress(hKernel32, "GetSystemWow64DirectoryA");
+			if (getSystemWow64Directory == NULL)
+				return sRealFilePath;
+
+			if (getSystemWow64Directory(szSysWOW64Directory, sizeof(szSysWOW64Directory)) > 1)
+			{
+				string sSysWOW64Dir(szSysWOW64Directory);
+				sRealFilePath = sSysWOW64Dir + "\\" + s_filepath.substr(slen);
+			}
+		}
+	}
+
+	return sRealFilePath;
+}
+
+
+string GetExceptionModule(LPVOID address)
+{
+	char modulename[2048];
+	HMODULE hModules[2048];
+	DWORD dwSizeNeeded = 0;
+	if(!EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &dwSizeNeeded) || dwSizeNeeded < sizeof(HMODULE))
+		return "";
+
+	int iCurModule = -1;
+	for (unsigned int i = 0; i < (dwSizeNeeded / sizeof(HMODULE)); i++)
+	{
+		if (hModules[i] < address)
+		{
+			if (iCurModule == -1)
+				iCurModule = i;
+			else
+			{
+				if (hModules[iCurModule] < hModules[i])
+					iCurModule = i;
+			}
+		}
+	}
+
+	if (iCurModule == -1)
+		return "";
+
+	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH))
+		return "";
+
+	string sModule(modulename);
+	sModule = GetRealFilePath(sModule);
+
+	return sModule;
+}
+
+
+void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 {
   char msg[2048];
 	string sModule = "";
@@ -138,110 +226,6 @@ static void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
   throw exception(msg);
 }
 
-
-static string GetExceptionModule(LPVOID address)
-{
-	char modulename[2048];
-	HMODULE hModules[2048];
-	DWORD dwSizeNeeded = 0;
-	if(!EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &dwSizeNeeded) || dwSizeNeeded < sizeof(HMODULE))
-		return "";
-
-	int iCurModule = -1;
-	for (unsigned int i = 0; i < (dwSizeNeeded / sizeof(HMODULE)); i++)
-	{
-		if (hModules[i] < address)
-		{
-			if (iCurModule == -1)
-				iCurModule = i;
-			else
-			{
-				if (hModules[iCurModule] < hModules[i])
-					iCurModule = i;
-			}
-		}
-	}
-
-	if (iCurModule == -1)
-		return "";
-
-	if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH))
-		return "";
-
-	string sModule(modulename);
-
-	#ifndef AVS64
-	SYSTEM_INFO stInfo;
-	GetNativeSystemInfo(&stInfo);
-	if ((stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) || (stInfo.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64))
-	{
-		HANDLE hFile = CreateFile(sModule.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (hFile != INVALID_HANDLE_VALUE)
-		{
-			char pszFilename[2048];
-			HANDLE hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 1, NULL);;
-			if (hFileMap)
-			{
-				void* pMem = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 1);
-				if (pMem)
-				{
-					if (GetMappedFileName(GetCurrentProcess(), pMem, pszFilename, 2046))
-					{
-						char pszWinDir[2048];
-						GetWindowsDirectory(pszWinDir, 2046);
-						string sWinDir(pszWinDir);
-						sWinDir = sWinDir.substr(2);
-						string sTestSystem32 = sWinDir + "\\system32\\";
-						string sTestSysWOW64 = sWinDir + "\\syswow64\\";
-						transform(sTestSystem32.begin(), sTestSystem32.end(), sTestSystem32.begin(), ::tolower);
-						transform(sTestSysWOW64.begin(), sTestSysWOW64.end(), sTestSysWOW64.begin(), ::tolower);
-						string sTempDLLPath = sModule;
-						string sRealDLLPath(pszFilename);
-						transform(sRealDLLPath.begin(), sRealDLLPath.end(), sRealDLLPath.begin(), ::tolower);
-						transform(sTempDLLPath.begin(), sTempDLLPath.end(), sTempDLLPath.begin(), ::tolower);
-						if ((sRealDLLPath.find(sTestSysWOW64) != std::string::npos) && (sTempDLLPath.find(sTestSystem32) != std::string::npos))
-						{
-							size_t spos = sTempDLLPath.find("\\system32\\");
-							if (spos > 2)
-								sModule = sModule.substr(0, spos) + "\\SysWOW64\\" + sModule.substr(spos + 10);
-						}
-					}
-				}
-				UnmapViewOfFile(pMem);
-			}
-			CloseHandle(hFileMap);
-		}
-		CloseHandle(hFile);
-	}
-	#endif //AVS64
-
-	return sModule;
-}
-
-
-static string SysErrorMessage()
-{
-	DWORD dwLastError = GetLastError();
-	LPTSTR msgBuf;
-
-	if (dwLastError == ERROR_SUCCESS)
-		return "";
-
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-								NULL,
-								dwLastError,
-								MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-								(LPTSTR)&msgBuf,
-								0,
-								NULL);
-
-	string sRet(msgBuf);
-	LocalFree(msgBuf);
-	sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
-	sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
-
-	return sRet;
-}
 
 #endif //_EXCEPTION_H
 

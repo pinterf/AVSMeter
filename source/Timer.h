@@ -32,4 +32,80 @@ public:
 private:
 };
 
+CTimer::CTimer()
+{
+}
+
+CTimer::~CTimer()
+{
+}
+
+
+BOOL CTimer::TestTimer()
+{
+	LARGE_INTEGER liPerfCounter = {0,0};
+	LARGE_INTEGER liPerfFreq = {0,0};
+
+	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
+		return FALSE;
+
+	return TRUE;
+}
+
+
+double CTimer::GetTimer()
+{
+	LARGE_INTEGER liPerfCounter = {0,0};
+	LARGE_INTEGER liPerfFreq = {0,0};
+
+	DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x01);
+	Sleep(0);
+
+	::QueryPerformanceFrequency(&liPerfFreq);
+	::QueryPerformanceCounter(&liPerfCounter);
+
+	::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
+	Sleep(0);
+
+	return (double)liPerfCounter.QuadPart / (double)liPerfFreq.QuadPart;
+}
+
+
+double CTimer::GetSTDTimer()
+{
+	static unsigned __int64 uiLastSTDTimer;
+	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
+	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
+	uiLastSTDTimer = uiSTDTimer;
+
+	return (double)(uiSTDTimer + uiTimerWrapComp) / 1000.0;
+}
+
+
+string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
+{
+	vector<char> buffer(128);
+	unsigned int hours = (unsigned int)(i_milliseconds / 3600000);
+	unsigned int minutes = (unsigned int)(i_milliseconds / 60000) % 60;
+	unsigned int seconds = (unsigned int)(i_milliseconds / 1000) % 60;
+	unsigned int milliseconds = (unsigned int)i_milliseconds % 1000;
+
+	int iRet = -1;
+	if (hours < 100)
+		iRet = _snprintf(&buffer[0], buffer.size() - 1, "   %02u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
+	else
+		iRet = _snprintf(&buffer[0], buffer.size() - 1, "%5u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
+
+	if (iRet < 0)
+		return "buffer overflow";
+
+	string sTime = &buffer[0];
+
+	if (!b_rightaligned)
+		sTime.erase(0, sTime.find_first_not_of(" "));
+
+	return sTime;
+}
+
+
 #endif //_TIMER_H
