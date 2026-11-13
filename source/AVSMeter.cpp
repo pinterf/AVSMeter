@@ -756,13 +756,13 @@ int main(int argc, char* argv[])
 			}
 		}
 
-
+		string sFunction = "";
 		if (bLogFunctions)
 		{
 			//Internal Functions
 			if (AvisynthInfo.vInternalFunctions.size() > 0)
 			{
-				string sFunction = "";
+				sFunction = "";
 				sOutBuf = "\n\n\n[Internal (core) functions]\n";
 				sLogBuffer += sOutBuf;
 		
@@ -777,13 +777,28 @@ int main(int argc, char* argv[])
 			//External (plugin) Functions
 			if (AvisynthInfo.vPluginFunctions.size() > 0)
 			{
-				string sFunction = "";
+				sFunction = "";
 				sOutBuf = "\n\n[External (plugin) functions]\n";
 				sLogBuffer += sOutBuf;
 	
 				for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
 				{
 					sFunction = AvisynthInfo.vPluginFunctions[PFunc];
+					sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
+					sLogBuffer += sOutBuf;
+				}
+			}
+
+			//Script Functions
+			if (AvisynthInfo.vScriptFunctions.size() > 0)
+			{
+				sFunction = "";
+				sOutBuf = "\n\n[Script functions]\n";
+				sLogBuffer += sOutBuf;
+	
+				for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vScriptFunctions.size(); PFunc++)
+				{
+					sFunction = AvisynthInfo.vScriptFunctions[PFunc];
 					sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
 					sLogBuffer += sOutBuf;
 				}

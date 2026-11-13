@@ -1,3 +1,8 @@
+v3.0.0.0
+- Added check for duplicate functions
+  This checks for duplicates functions within .avsi files,
+  against functions in other .avsi files and against internal/plugin functions
+
 v2.9.9.3
 - Added new color space definitions (CS_RGBP8 and CS_RGBAP8), removed redundant CS_RGBP / CS_RGBAP
 - Fixed a version resource issue

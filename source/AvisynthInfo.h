@@ -37,6 +37,7 @@ public:
 	vector  <string> vPluginDirs;
 	vector  <string> vInternalFunctions;
 	vector  <string> vPluginFunctions;
+	vector  <string> vScriptFunctions;
 	vector  <string> vPlugins;
 	vector  <string> vPluginErrors;
 	string  sDLLPath;
@@ -52,8 +53,11 @@ public:
 private:
 	CUtils              utils;
 	string              sAVSDLL;
+	set                 <string> stFunctionDuplicates;
   void                EnumPluginDirs(BOOL b_CustomPluginDir);
 	void                EnumPluginDLLs();
+	void                AddScriptFunctions(string s_avsi_file);
+	void                CheckAVSIFunctionDuplicates(string s_avsi_file);
 	BOOL                GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
 	void                TestLoadPlugins();
 	void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, BOOL &fftw_fail);
@@ -380,6 +384,31 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	if (!bSuccess)
 		return FALSE;
 
+	string sFunction = "";
+	string sFunctionLC = "";
+	for (size_t InternalFunctions = 0; InternalFunctions < vInternalFunctions.size(); InternalFunctions++)
+	{
+		sFunction = vInternalFunctions[InternalFunctions];
+		sFunctionLC = sFunction;
+		utils.StrToLC(sFunctionLC);
+		stFunctionDuplicates.insert(sFunctionLC);
+	}
+
+	for (size_t PluginFunctions = 0; PluginFunctions < vPluginFunctions.size(); PluginFunctions++)
+	{
+		sFunction = vPluginFunctions[PluginFunctions];
+		sFunctionLC = sFunction;
+		utils.StrToLC(sFunctionLC);
+		
+		if (stFunctionDuplicates.find(sFunctionLC) != stFunctionDuplicates.end())
+		{
+			vPluginErrors.push_back("Duplicate function (Plugin):  \"" + sFunction + "\"");
+			continue;
+		}
+		stFunctionDuplicates.insert(sFunctionLC);
+	}
+
+
 
 	EnumPluginDirs(b_CustomPluginDir);
 
@@ -595,7 +624,10 @@ void CAvisynthInfo::EnumPluginDLLs()
 						}
 					}
 					else if (sCurrentFileLC.substr(sCurrentFileLC.length() - 5) == ".avsi")
+					{
 						vPlugins.push_back("Scripts (AVSI)|" + sCurrentFile);
+						AddScriptFunctions(sCurrentFile);
+					}
 					else
 						vPlugins.push_back("Uncategorized files|" + sCurrentFile);
 				}
@@ -607,6 +639,79 @@ void CAvisynthInfo::EnumPluginDLLs()
 	}
 
 	sort(vPlugins.begin(), vPlugins.end(), CompareNoCase);
+
+	return;
+}
+
+
+void CAvisynthInfo::AddScriptFunctions(string s_avsi_file)
+{
+	string sOrgLine = "";
+	string sCurrentLine = "";
+	size_t BRPos = 0;
+	string sFunctionName = "";
+	string sFunctionNameLC = "";
+	string sAVSIError = "";
+
+	ifstream h_avsi_file(s_avsi_file.c_str());
+	if (!h_avsi_file.is_open())
+		return;
+
+	while (getline(h_avsi_file, sCurrentLine))
+	{
+		sOrgLine = sCurrentLine;
+		utils.StrToLC(sCurrentLine);
+		utils.StrTrim(sCurrentLine);
+
+		if (sCurrentLine.substr(0, 8) == "function")
+		{
+			BRPos = sCurrentLine.find("(");
+			if (BRPos > 9)
+			{
+				sFunctionName = sOrgLine.substr(8, BRPos - 8);
+				utils.StrTrim(sFunctionName);
+				vScriptFunctions.push_back(sFunctionName);
+				sFunctionNameLC = sFunctionName;
+				utils.StrToLC(sFunctionNameLC);
+
+				if (stFunctionDuplicates.find(sFunctionNameLC) != stFunctionDuplicates.end())
+				{
+					sAVSIError = utils.StrFormat("Duplicate function in \"%s\":\n\"%s\"", s_avsi_file.c_str(), sFunctionName.c_str());
+					vPluginErrors.push_back(sAVSIError);
+				}
+				stFunctionDuplicates.insert(sFunctionNameLC);
+			}
+		}
+	}
+
+	h_avsi_file.close();
+
+
+	return;
+}
+
+
+void CAvisynthInfo::CheckAVSIFunctionDuplicates(string s_avsi_file)
+{
+	string sFunction = "";
+	string sFunctionLC = "";
+	string sAVSIError = "";
+
+	for (size_t ScriptFunctions = 0; ScriptFunctions < vScriptFunctions.size(); ScriptFunctions++)
+	{
+		sFunction = vScriptFunctions[ScriptFunctions];
+		sFunctionLC = sFunction;
+		utils.StrToLC(sFunctionLC);
+		
+		if (stFunctionDuplicates.find(sFunctionLC) != stFunctionDuplicates.end())
+		{
+			sAVSIError = utils.StrFormat("Duplicate function in \"%s\":\n\"%s\"", s_avsi_file.c_str(), sFunction.c_str());
+			vPluginErrors.push_back(sAVSIError);
+			continue;
+		}
+		stFunctionDuplicates.insert(sFunctionLC);
+	}
+
 
 	return;
 }
