@@ -1,3 +1,12 @@
+v2.1.9
+- Bug fix for audio-only scripts not being detected properly (this bug was introduced in 2.1.7)
+- There is now a section for each plugin type:
+  - CPP 2.6 plugins
+  - CPP 2.5 plugins
+  - CPP 2.0 plugins
+  - C 2.5 plugins
+  - C 2.0 plugins 
+
 v2.1.8
 - Added additional error handling to the plugin enumeration:
   - Test DLLs if they are valid Avisynth plugins

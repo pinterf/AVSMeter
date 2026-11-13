@@ -412,25 +412,61 @@ int main(int argc, char* argv[])
 
 		AvisynthInfo.EnumPluginDLLs();
 
-		//CPP plugs
-		if (AvisynthInfo.mPluginDLLsCPP.size() > 0)
+		//CPP26 plugs
+		if (AvisynthInfo.mPluginDLLsCPP26.size() > 0)
 		{
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nCPP-plugins:\n");
-			for (map<string, BYTE>::iterator cpp = AvisynthInfo.mPluginDLLsCPP.begin(); cpp != AvisynthInfo.mPluginDLLsCPP.end(); ++cpp)
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nAvisynth CPP 2.6 plugins:\n");
+			for (map<string, BYTE>::iterator cpp26 = AvisynthInfo.mPluginDLLsCPP26.begin(); cpp26 != AvisynthInfo.mPluginDLLsCPP26.end(); ++cpp26)
 			{
-				sTemp = cpp->first;
+				sTemp = cpp26->first;
 				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
 				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
 			}
 		}
 
-		//C plugs
-		if (AvisynthInfo.mPluginDLLsC.size() > 0)
+		//CPP25 plugs
+		if (AvisynthInfo.mPluginDLLsCPP25.size() > 0)
 		{
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nC-plugins:\n");
-			for (map<string, BYTE>::iterator c = AvisynthInfo.mPluginDLLsC.begin(); c != AvisynthInfo.mPluginDLLsC.end(); ++c)
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nAvisynth CPP 2.5 plugins:\n");
+			for (map<string, BYTE>::iterator cpp25 = AvisynthInfo.mPluginDLLsCPP25.begin(); cpp25 != AvisynthInfo.mPluginDLLsCPP25.end(); ++cpp25)
 			{
-				sTemp = c->first;
+				sTemp = cpp25->first;
+				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+			}
+		}
+
+		//CPP20 plugs
+		if (AvisynthInfo.mPluginDLLsCPP20.size() > 0)
+		{
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nAvisynth CPP 2.0 plugins:\n");
+			for (map<string, BYTE>::iterator cpp20 = AvisynthInfo.mPluginDLLsCPP20.begin(); cpp20 != AvisynthInfo.mPluginDLLsCPP20.end(); ++cpp20)
+			{
+				sTemp = cpp20->first;
+				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+			}
+		}
+
+		//C25 plugs
+		if (AvisynthInfo.mPluginDLLsC25.size() > 0)
+		{
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nAvisynth C 2.5 plugins:\n");
+			for (map<string, BYTE>::iterator c25 = AvisynthInfo.mPluginDLLsC25.begin(); c25 != AvisynthInfo.mPluginDLLsC25.end(); ++c25)
+			{
+				sTemp = c25->first;
+				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
+				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
+			}
+		}
+
+		//C20 plugs
+		if (AvisynthInfo.mPluginDLLsC20.size() > 0)
+		{
+			PrintConsole(TRUE, COLOR_AVSM_VERSION, "\nAvisynth C 2.0 plugins:\n");
+			for (map<string, BYTE>::iterator c20 = AvisynthInfo.mPluginDLLsC20.begin(); c20 != AvisynthInfo.mPluginDLLsC20.end(); ++c20)
+			{
+				sTemp = c20->first;
 				PrintConsole(TRUE, COLOR_EMPHASIS, "%s", utils.StrAnsiToOEM(sTemp).c_str());
 				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, "  (%s)\n", utils.GetFileVersion(sTemp).c_str());
 			}
@@ -806,6 +842,9 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+
+		if (!AVS_vidinfo.HasVideo())
+			AVS_env->ThrowError("\"%s\":\nScript did not return a video clip", sAVSFile.c_str());
 
 		unsigned int uiFramesToProcess = 0;
 		unsigned int uiFirstFrame = 0;

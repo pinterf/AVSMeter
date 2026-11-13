@@ -34,8 +34,11 @@ public:
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	map     <string, BYTE> mPluginDirs;
-	map     <string, BYTE> mPluginDLLsC;
-	map     <string, BYTE> mPluginDLLsCPP;
+	map     <string, BYTE> mPluginDLLsC25;
+	map     <string, BYTE> mPluginDLLsC20;
+	map     <string, BYTE> mPluginDLLsCPP26;
+	map     <string, BYTE> mPluginDLLsCPP25;
+	map     <string, BYTE> mPluginDLLsCPP20;
 	map     <string, BYTE> mPluginErrors;
 	BYTE    NumPlugDirRefs;
 	string  sDLLPath;
@@ -54,6 +57,7 @@ private:
 	int     GetInterfaceVersion(string &s_ErrorMsg);
   void    EnumPluginDirs();
 	BOOL    CheckPlugin(string s_dll, string &s_Msg);
+	BOOL    GetDLLDependencies(string s_dll, string &s_dependencies);
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
@@ -877,10 +881,16 @@ void CAvisynthInfo::EnumPluginDLLs()
 				}
 				else
 				{
-					if (sMessage == "CPlugin")
-						mPluginDLLsC[sCurrentFile] = 1;
-					else
-						mPluginDLLsCPP[sCurrentFile] = 1;
+					if (sMessage == "AVSC25")
+						mPluginDLLsC25[sCurrentFile] = 1;
+					if (sMessage == "AVSC20")
+						mPluginDLLsC20[sCurrentFile] = 1;
+					if (sMessage == "AVS26CPP")
+						mPluginDLLsCPP26[sCurrentFile] = 1;
+					if (sMessage == "AVS25CPP")
+						mPluginDLLsCPP25[sCurrentFile] = 1;
+					if (sMessage == "AVS20CPP")
+						mPluginDLLsCPP20[sCurrentFile] = 1;
 				}
 			}
 			bRet = FindNextFile(hFind, &fd);
@@ -912,6 +922,14 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 			s_Msg = StrFormat("Load error:\n\"%s\"", s_dll.c_str());
 
 		return FALSE;
+	}
+
+	string sDependencies = "";
+	GetDLLDependencies(s_dll, sDependencies);
+	if (sDependencies != "")
+	{
+		for (unsigned int y = 0; y < sDependencies.length(); y++)
+			sDependencies[y] = tolower(sDependencies[y]);
 	}
 
 	try
@@ -951,11 +969,19 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 			for (unsigned int i = 0; i < sName.length(); i++)
 				sName[i] = tolower(sName[i]);
 
-			pos = sName.find("avisynth_c_plugin_init");
+			pos = sName.find("avisynthplugininit3");
 			if (pos != std::string::npos)
 			{
 				bIsPlugin = TRUE;
-				s_Msg = "CPlugin";
+				s_Msg = "AVS26CPP";
+				break;
+			}
+
+			pos = sName.find("avisynthplugininit2");
+			if (pos != std::string::npos)
+			{
+				bIsPlugin = TRUE;
+				s_Msg = "AVS25CPP";
 				break;
 			}
 
@@ -963,7 +989,20 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 			if (pos != std::string::npos)
 			{
 				bIsPlugin = TRUE;
-				s_Msg = "";
+				s_Msg = "AVS20CPP";
+				break;
+			}
+
+			pos = sName.find("avisynth_c_plugin_init");
+			if (pos != std::string::npos)
+			{
+				bIsPlugin = TRUE;
+				size_t dep = sDependencies.find("avisynth_c.dll");
+				if (dep != std::string::npos)
+					s_Msg = "AVSC20";
+				else
+					s_Msg = "AVSC25";
+
 				break;
 			}
 		}
@@ -991,6 +1030,81 @@ BOOL CAvisynthInfo::CheckPlugin(string s_dll, string &s_Msg)
 	}
 
 	UnMapAndLoad(&li);
+
+	return bRet;
+}
+
+
+BOOL CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies)
+{
+	BOOL bRet = TRUE;
+	HANDLE hFile = NULL;
+	HANDLE hFileMapping = NULL;
+	LPBYTE lpbaseAddress = NULL;
+	s_dependencies = "";
+
+	try
+	{
+		hFile = CreateFile(s_dll.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			s_dependencies = StrFormat("Cannot open file %s", s_dll.c_str());
+			return FALSE;
+		}
+		
+		hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+		if (hFileMapping == NULL || hFileMapping == INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(hFile);
+			s_dependencies = "Cannot create file mapping";
+			return FALSE;
+		}
+		
+		lpbaseAddress = (LPBYTE)MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
+		if (lpbaseAddress == NULL)
+		{
+			CloseHandle(hFileMapping);
+			CloseHandle(hFile);
+			s_dependencies = "Cannot create file mapping";
+			return FALSE;
+		}
+		
+		PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)lpbaseAddress;
+		PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(lpbaseAddress + pDosHeader->e_lfanew);
+		DWORD rva_import_table = pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+		if (rva_import_table == 0)
+		{
+			s_dependencies = "No import table";
+			UnmapViewOfFile(lpbaseAddress);
+			CloseHandle(hFileMapping);
+			CloseHandle(hFile);
+			return FALSE;
+		}
+		
+		string sTemp = "";
+		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
+		IMAGE_IMPORT_DESCRIPTOR null_iid;
+		IMAGE_THUNK_DATA null_thunk;
+		memset(&null_iid, 0, sizeof(null_iid));
+		memset(&null_thunk, 0, sizeof(null_thunk));
+		for (int i = 0; memcmp(pImageTable + i, &null_iid, sizeof(null_iid)) != 0; i++)
+		{
+			LPCSTR szDllName = (LPCSTR)ImageRvaToVa(pNtHeaders, lpbaseAddress, pImageTable[i].Name,NULL);
+			sTemp = StrFormat("%s, ", szDllName);
+			s_dependencies += sTemp;
+		}
+	}
+	catch (...)
+	{
+		bRet = FALSE;
+	}
+	
+	if (lpbaseAddress)
+		UnmapViewOfFile(lpbaseAddress);
+	if (hFileMapping)
+		CloseHandle(hFileMapping);
+	if (hFile)
+		CloseHandle(hFile);
 
 	return bRet;
 }
