@@ -135,57 +135,6 @@ int main(int argc, char* argv[])
 	string sErrorMsg = "";
 	BOOL bPrintAVSInfo = FALSE;
 
-	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
-
-	if (!timer.TestTimer())
-	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
-		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-		Pause();
-		return -1;
-	}
-
-	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
-	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
-
-	if (!bRet)
-	{
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
-		if (AvisynthInfo.bLoadError)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-			Pause();
-			return -1;
-		}
-
-		#ifdef AVS64
-			if (!AvisynthInfo.bIs64BitVersion)
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
-				Pause();
-				return -1;
-			}
-		#else
-			if (AvisynthInfo.bIs64BitVersion)
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
-				Pause();
-				return -1;
-			}
-		#endif
-
-		if (sErrorMsg != "")
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-		else
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll\n%s\n", SysErrorMessage().c_str());
-
-		Pause();
-		return -1;
-	}
-
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVISYNTH_VERSION, "\r%s", AvisynthInfo.sVersionString.c_str());
-	PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sFileVersion.c_str());
-
 	if (Settings.bAllowOnlyOneInstance)
 	{
 		CreateMutex(NULL, TRUE, "__avsmeter__single__instance__lock__");
@@ -400,6 +349,52 @@ int main(int argc, char* argv[])
 	else
 		::SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 
+	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
+
+	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
+	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
+	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+
+	if (!bRet)
+	{
+		if (AvisynthInfo.bLoadError)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
+			Pause();
+			return -1;
+		}
+
+		#ifdef AVS64
+			if (!AvisynthInfo.bIs64BitVersion)
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x64) cannot load a 32 Bit avisynth.dll.\n");
+				Pause();
+				return -1;
+			}
+		#else
+			if (AvisynthInfo.bIs64BitVersion)
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nAVSMeter (x86) cannot load a 64 Bit avisynth.dll.\n");
+				Pause();
+				return -1;
+			}
+		#endif
+
+		if (sErrorMsg != "")
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
+		else
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll\n%s\n", SysErrorMessage().c_str());
+
+		Pause();
+		return -1;
+	}
+
+
+	if (!bPrintAVSInfo)
+	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_AVISYNTH_VERSION, "\r%s", AvisynthInfo.sVersionString.c_str());
+		PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sFileVersion.c_str());
+	}
 
 	CGPUInfo gpuinfo;
 	if (Settings.bMonitorGPULoad)
@@ -453,14 +448,20 @@ int main(int argc, char* argv[])
 	}
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query system info...").c_str());
+
+	if (!timer.TestTimer())
+	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
+		Pause();
+		return -1;
+	}
+
 	utils.GetCPUID();
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 
 	if (bPrintAVSInfo)
 	{
-		utils.CursorUp(1);
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-
 		sOutBuf = utils.StrFormat("Log created with:             AVSMeter %s\n", sAVSMVersion.c_str());
 		sLogBuffer += sOutBuf;
 
@@ -538,9 +539,9 @@ int main(int argc, char* argv[])
 		PrintConsole(TRUE, COLOR_EMPHASIS, sOutBuf.c_str());
 
 		string sPluginDir = "";
-		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirRefs; uiPlugDir++)
+		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
 		{
-			sPluginDir = AvisynthInfo.saPluginDirRefs[uiPlugDir];
+			sPluginDir = AvisynthInfo.vPluginDirs[uiPlugDir];
 			if (sPluginDir != "")
 			{
 				size_t spos = sPluginDir.find(":\t");
@@ -552,155 +553,181 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n\r%s\r", utils.StrPad("Query auto-load plugins...").c_str());
-		AvisynthInfo.EnumPluginDLLs();
-		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-		utils.CursorUp(1);
-
 		string sPluginDLL = "";
+		string sPluginType = "";
+		BOOL bHeaderPrinted = FALSE;
 
-		//CPP26 plugs
-		if (AvisynthInfo.mPluginDLLsCPP26.size() > 0)
+		if (AvisynthInfo.mPluginDLLs.size() > 0)
 		{
-			sOutBuf = "\n\n[Avisynth CPP 2.6 plugins]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-
-			for (set<string, StrCaseInsensitiveCompare>::iterator cpp26 = AvisynthInfo.mPluginDLLsCPP26.begin(); cpp26 != AvisynthInfo.mPluginDLLsCPP26.end(); ++cpp26)
+			for (map<string, string, StrCaseInsensitiveCompare>::iterator cpp26 = AvisynthInfo.mPluginDLLs.begin(); cpp26 != AvisynthInfo.mPluginDLLs.end(); ++cpp26)
 			{
-				sPluginDLL = *cpp26;
+				sPluginDLL = cpp26->first;
+				sPluginType = cpp26->second;
+				
+				if (sPluginType == "CPP26")
+				{
+					if (!bHeaderPrinted)
+					{
+						sOutBuf = "\n\n[Avisynth CPP 2.6 plugins]\n";
+						sLogBuffer += sOutBuf;
+						PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+						bHeaderPrinted = TRUE;
+					}
 
-				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
-				sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+					sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+					sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
+			}
+
+			bHeaderPrinted = FALSE;
+			for (map<string, string, StrCaseInsensitiveCompare>::iterator cpp25 = AvisynthInfo.mPluginDLLs.begin(); cpp25 != AvisynthInfo.mPluginDLLs.end(); ++cpp25)
+			{
+				sPluginDLL = cpp25->first;
+				sPluginType = cpp25->second;
+				
+				if (sPluginType == "CPP25")
+				{
+					if (!bHeaderPrinted)
+					{
+						sOutBuf = "\n\n[Avisynth CPP 2.5 plugins]\n";
+						sLogBuffer += sOutBuf;
+						PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+						bHeaderPrinted = TRUE;
+					}
+
+					sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+					sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
+			}
+
+			bHeaderPrinted = FALSE;
+			for (map<string, string, StrCaseInsensitiveCompare>::iterator cpp20 = AvisynthInfo.mPluginDLLs.begin(); cpp20 != AvisynthInfo.mPluginDLLs.end(); ++cpp20)
+			{
+				sPluginDLL = cpp20->first;
+				sPluginType = cpp20->second;
+				
+				if (sPluginType == "CPP20")
+				{
+					if (!bHeaderPrinted)
+					{
+						sOutBuf = "\n\n[Avisynth CPP 2.0 plugins]\n";
+						sLogBuffer += sOutBuf;
+						PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+						bHeaderPrinted = TRUE;
+					}
+
+					sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+					sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
+			}
+
+			bHeaderPrinted = FALSE;
+			for (map<string, string, StrCaseInsensitiveCompare>::iterator c25 = AvisynthInfo.mPluginDLLs.begin(); c25 != AvisynthInfo.mPluginDLLs.end(); ++c25)
+			{
+				sPluginDLL = c25->first;
+				sPluginType = c25->second;
+				
+				if (sPluginType == "C25")
+				{
+					if (!bHeaderPrinted)
+					{
+						sOutBuf = "\n\n[Avisynth C 2.5 plugins]\n";
+						sLogBuffer += sOutBuf;
+						PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+						bHeaderPrinted = TRUE;
+					}
+
+					sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+					sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
+			}
+
+			bHeaderPrinted = FALSE;
+			for (map<string, string, StrCaseInsensitiveCompare>::iterator c20 = AvisynthInfo.mPluginDLLs.begin(); c20 != AvisynthInfo.mPluginDLLs.end(); ++c20)
+			{
+				sPluginDLL = c20->first;
+				sPluginType = c20->second;
+				
+				if (sPluginType == "C20")
+				{
+					if (!bHeaderPrinted)
+					{
+						sOutBuf = "\n\n[Avisynth C 2.0 plugins]\n";
+						sLogBuffer += sOutBuf;
+						PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+						bHeaderPrinted = TRUE;
+					}
+
+					sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
+					sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
+					sLogBuffer += sOutBuf;
+					PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
+				}
 			}
 		}
 
-		//CPP25 plugs
-		if (AvisynthInfo.mPluginDLLsCPP25.size() > 0)
-		{
-			sOutBuf = "\n\n[Avisynth CPP 2.5 plugins]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 
-			for (set<string, StrCaseInsensitiveCompare>::iterator cpp25 = AvisynthInfo.mPluginDLLsCPP25.begin(); cpp25 != AvisynthInfo.mPluginDLLsCPP25.end(); ++cpp25)
-			{
-				sPluginDLL = *cpp25;
-
-				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
-				sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
-			}
-		}
-
-		//CPP20 plugs
-		if (AvisynthInfo.mPluginDLLsCPP20.size() > 0)
-		{
-			sOutBuf = "\n\n[Avisynth CPP 2.0 plugins]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-
-			for (set<string, StrCaseInsensitiveCompare>::iterator cpp20 = AvisynthInfo.mPluginDLLsCPP20.begin(); cpp20 != AvisynthInfo.mPluginDLLsCPP20.end(); ++cpp20)
-			{
-				sPluginDLL = *cpp20;
-
-				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
-				sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
-			}
-		}
-
-		//C25 plugs
-		if (AvisynthInfo.mPluginDLLsC25.size() > 0)
-		{
-			sOutBuf = "\n\n[Avisynth C 2.5 plugins]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-
-			for (set<string, StrCaseInsensitiveCompare>::iterator c25 = AvisynthInfo.mPluginDLLsC25.begin(); c25 != AvisynthInfo.mPluginDLLsC25.end(); ++c25)
-			{
-				sPluginDLL = *c25;
-
-				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
-				sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
-			}
-		}
-
-		//C20 plugs
-		if (AvisynthInfo.mPluginDLLsC20.size() > 0)
-		{
-			sOutBuf = "\n\n[Avisynth C 2.0 plugins]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-
-			for (set<string, StrCaseInsensitiveCompare>::iterator c20 = AvisynthInfo.mPluginDLLsC20.begin(); c20 != AvisynthInfo.mPluginDLLsC20.end(); ++c20)
-			{
-				sPluginDLL = *c20;
-
-				sOutBuf = utils.StrFormat("%s", sPluginDLL.c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
-				sOutBuf = utils.StrFormat("  (%s)\n", utils.GetFileVersion(sPluginDLL).c_str());
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
-			}
-		}
-
-		if (!AvisynthInfo.mPluginErrors.empty())
+		if (AvisynthInfo.vPluginErrors.size() > 0)
 		{
 			sOutBuf = "\n(!) Plugin errors found, see section [Plugin errors] at the end of this document.\n";
 			sLogBuffer += sOutBuf;
 		}
 
-		//Plugin Functions
+
+		//Internal Functions
 		string sFunction = "";
-		if (!AvisynthInfo.mPluginFunctions.empty())
+		if (AvisynthInfo.vInternalFunctions.size() > 0)
+		{
+			sOutBuf = "\n\n[Internal (core) functions]\n";
+			sLogBuffer += sOutBuf;
+		}
+
+		for (unsigned int IFunc = 0; IFunc < AvisynthInfo.vInternalFunctions.size(); IFunc++)
+		{
+			sFunction = AvisynthInfo.vInternalFunctions[IFunc];
+			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
+			sLogBuffer += sOutBuf;
+		}
+
+		//Plugin Functions
+		sFunction = "";
+		if (AvisynthInfo.vPluginFunctions.size() > 0)
 		{
 			sOutBuf = "\n\n[External (plugin) functions]\n";
 			sLogBuffer += sOutBuf;
 		}
 
-		for (set<string, StrCaseInsensitiveCompare>::iterator ppfunc = AvisynthInfo.mPluginFunctions.begin(); ppfunc != AvisynthInfo.mPluginFunctions.end(); ++ppfunc)
+		for (unsigned int PFunc = 0; PFunc < AvisynthInfo.vPluginFunctions.size(); PFunc++)
 		{
-			sFunction = *ppfunc;
+			sFunction = AvisynthInfo.vPluginFunctions[PFunc];
 			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
 			sLogBuffer += sOutBuf;
 		}
 
-
-		//Internal Functions
-		sFunction = "";
-		if (!AvisynthInfo.mInternalFunctions.empty())
-		{
-			sOutBuf = "\n\n[Internal functions]\n";
-			sLogBuffer += sOutBuf;
-		}
-
-		for (set<string, StrCaseInsensitiveCompare>::iterator pifunc = AvisynthInfo.mInternalFunctions.begin(); pifunc != AvisynthInfo.mInternalFunctions.end(); ++pifunc)
-		{
-			sFunction = *pifunc;
-			sOutBuf = utils.StrFormat("%s\n", sFunction.c_str());
-			sLogBuffer += sOutBuf;
-		}
 
 		//Plug errors
 		string sPluginError = "";
 		string sLineSep(utils.GetConsoleWidth() - 2, '-');
 
-		if (!AvisynthInfo.mPluginErrors.empty())
+		if (AvisynthInfo.vPluginErrors.size() > 0)
 		{
 			sOutBuf = "\n\n[Plugin errors]\n";
 			sLogBuffer += sOutBuf;
@@ -710,9 +737,9 @@ int main(int argc, char* argv[])
 			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 		}
 
-		for (set<string>::iterator err = AvisynthInfo.mPluginErrors.begin(); err != AvisynthInfo.mPluginErrors.end(); ++err)
+		for (unsigned int err = 0; err < AvisynthInfo.vPluginErrors.size(); err++)
 		{
-			sPluginError = *err;
+			sPluginError = AvisynthInfo.vPluginErrors[err];
 			sOutBuf = utils.StrFormat("\n%s\n\n", sPluginError.c_str());
 			sOutBuf += sLineSep + "\n";
 			sLogBuffer += sOutBuf;
@@ -942,9 +969,9 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Avisynth DLL time stamp:      %s", AvisynthInfo.sTimeStamp.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirRefs; uiPlugDir++)
+		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
 		{
-			sTemp = AvisynthInfo.saPluginDirRefs[uiPlugDir];
+			sTemp = AvisynthInfo.vPluginDirs[uiPlugDir];
 			if (sTemp != "")
 			{
 				size_t spos = sTemp.find(":\t");
@@ -1010,50 +1037,82 @@ int main(int argc, char* argv[])
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		sOutBuf = "Colorspace:                  ";
+		sOutBuf = "Colorspace:                 ";
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n%s", sOutBuf.c_str());
 		sLogBuffer += sOutBuf;
 
-		if (AVS_vidinfo.pixel_type ==      0xA0000309)
-			sOutBuf = "    YV411";
-		else if (AVS_vidinfo.pixel_type == 0xA000030B)
-			sOutBuf = "     YV24";
-		else if (AVS_vidinfo.pixel_type == 0xA0000308)
-			sOutBuf = "     YV16";
-		else if (AVS_vidinfo.pixel_type == 0xE0000000)
-			sOutBuf = "       Y8";
-		else if (AVS_vidinfo.pixel_type == 0xA0000008)
-			sOutBuf = "     YV12";
-		else if (AVS_vidinfo.pixel_type == 0xA0000010)
-			sOutBuf = "     i420";
-		else if (AVS_vidinfo.pixel_type == 0x60000004)
-			sOutBuf = "     YUY2";
-		else if (AVS_vidinfo.pixel_type == 0x50000001)
-			sOutBuf = "    RGB24";
-		else if (AVS_vidinfo.pixel_type == 0x50000002)
-			sOutBuf = "    RGB32";
-		else if (AVS_vidinfo.pixel_type == 0xA001030B)
-			sOutBuf = "YUV444P16";
-		else if (AVS_vidinfo.pixel_type == 0xA0010308)
-			sOutBuf = "YUV422P16";
-		else if (AVS_vidinfo.pixel_type == 0xA0010008)
-			sOutBuf = "YUV420P16";
-		else if (AVS_vidinfo.pixel_type == 0xA002030B)
-			sOutBuf = "YUV444P32";
-		else if (AVS_vidinfo.pixel_type == 0xA0020308)
-			sOutBuf = "YUV422P32";
-		else if (AVS_vidinfo.pixel_type == 0xA0020008)
-			sOutBuf = "YUV420P32";
-		else if (AVS_vidinfo.pixel_type == 0xA0000109)
-			sOutBuf = "     YUV9";
-		else if (AVS_vidinfo.pixel_type == 0xE0010000)
-			sOutBuf = "      Y16";
-		else if (AVS_vidinfo.pixel_type == 0xE0020000)
-			sOutBuf = "      Y32";
-		else if (!AVS_vidinfo.HasVideo())
+		if (!AVS_vidinfo.HasVideo())
 			sOutBuf = "      n/a";
 		else
-			sOutBuf = "  Unknown";
+		{
+			switch (AVS_vidinfo.pixel_type)
+			{
+				case VideoInfo::CS_YV411:           sOutBuf = "     YV411"; break;
+				case VideoInfo::CS_YV24:            sOutBuf = "      YV24"; break;
+				case VideoInfo::CS_YV16:            sOutBuf = "      YV16"; break;
+				case VideoInfo::CS_Y8:              sOutBuf = "        Y8"; break;
+				case VideoInfo::CS_YV12:            sOutBuf = "      YV12"; break;
+				case VideoInfo::CS_I420:            sOutBuf = "      i420"; break;
+				case VideoInfo::CS_YUY2:            sOutBuf = "      YUY2"; break;
+				case VideoInfo::CS_RAW32:           sOutBuf = "     RAW32"; break;
+				case VideoInfo::CS_BGR24:           sOutBuf = "     RGB24"; break;
+				case VideoInfo::CS_BGR32:           sOutBuf = "     RGB32"; break;
+				case VideoInfo::CS_YUV444P16:       sOutBuf = " YUV444P16"; break;
+				case VideoInfo::CS_YUV422P16:       sOutBuf = " YUV422P16"; break;
+				case VideoInfo::CS_YUV420P16:       sOutBuf = " YUV420P16"; break;
+				case VideoInfo::CS_YUV444PS:        sOutBuf = "  YUV444PS"; break;
+				case VideoInfo::CS_YUV422PS:        sOutBuf = "  YUV422PS"; break;
+				case VideoInfo::CS_YUV420PS:        sOutBuf = "  YUV420PS"; break;
+				case VideoInfo::CS_YUV9:            sOutBuf = "      YUV9"; break;
+				case VideoInfo::CS_Y16:             sOutBuf = "       Y16"; break;
+				case VideoInfo::CS_Y32:             sOutBuf = "       Y32"; break;
+				case VideoInfo::CS_YUV444P10:       sOutBuf = " YUV444P10"; break;
+				case VideoInfo::CS_YUV422P10:       sOutBuf = " YUV422P10"; break;
+				case VideoInfo::CS_YUV420P10:       sOutBuf = " YUV420P10"; break;
+				case VideoInfo::CS_Y10:             sOutBuf = "       Y10"; break;
+				case VideoInfo::CS_YUV444P12:       sOutBuf = " YUV444P12"; break;
+				case VideoInfo::CS_YUV422P12:       sOutBuf = " YUV422P12"; break;
+				case VideoInfo::CS_YUV420P12:       sOutBuf = " YUV420P12"; break;
+				case VideoInfo::CS_Y12:             sOutBuf = "       Y12"; break;
+				case VideoInfo::CS_YUV444P14:       sOutBuf = " YUV444P14"; break;
+				case VideoInfo::CS_YUV422P14:       sOutBuf = " YUV422P14"; break;
+				case VideoInfo::CS_YUV420P14:       sOutBuf = " YUV420P14"; break;
+				case VideoInfo::CS_Y14:             sOutBuf = "       Y14"; break;
+				case VideoInfo::CS_BGR48:           sOutBuf = "     BGR48"; break;
+				case VideoInfo::CS_BGR64:           sOutBuf = "     BGR64"; break;
+				case VideoInfo::CS_RGBP:            sOutBuf = "      RGBP"; break;
+				case VideoInfo::CS_RGBP10:          sOutBuf = "    RGBP10"; break;
+				case VideoInfo::CS_RGBP12:          sOutBuf = "    RGBP12"; break;
+				case VideoInfo::CS_RGBP14:          sOutBuf = "    RGBP14"; break;
+				case VideoInfo::CS_RGBP16:          sOutBuf = "    RGBP16"; break;
+				case VideoInfo::CS_RGBPS:           sOutBuf = "     RGBPS"; break;
+				case VideoInfo::CS_RGBAP:           sOutBuf = "     RGBAP"; break;
+				case VideoInfo::CS_RGBAP10:         sOutBuf = "   RGBAP10"; break;
+				case VideoInfo::CS_RGBAP12:         sOutBuf = "   RGBAP12"; break;
+				case VideoInfo::CS_RGBAP14:         sOutBuf = "   RGBAP14"; break;
+				case VideoInfo::CS_RGBAP16:         sOutBuf = "   RGBAP16"; break;
+				case VideoInfo::CS_RGBAPS:          sOutBuf = "    RGBAPS"; break;
+				case VideoInfo::CS_YUVA444:         sOutBuf = "   YUVA444"; break;
+				case VideoInfo::CS_YUVA422:         sOutBuf = "   YUVA422"; break;
+				case VideoInfo::CS_YUVA420:         sOutBuf = "   YUVA420"; break;
+				case VideoInfo::CS_YUVA444P10:      sOutBuf = "YUVA444P10"; break;
+				case VideoInfo::CS_YUVA422P10:      sOutBuf = "YUVA422P10"; break;
+				case VideoInfo::CS_YUVA420P10:      sOutBuf = "YUVA420P10"; break;
+				case VideoInfo::CS_YUVA444P12:      sOutBuf = "YUVA444P12"; break;
+				case VideoInfo::CS_YUVA422P12:      sOutBuf = "YUVA422P12"; break;
+				case VideoInfo::CS_YUVA420P12:      sOutBuf = "YUVA420P12"; break;
+				case VideoInfo::CS_YUVA444P14:      sOutBuf = "YUVA444P14"; break;
+				case VideoInfo::CS_YUVA422P14:      sOutBuf = "YUVA422P14"; break;
+				case VideoInfo::CS_YUVA420P14:      sOutBuf = "YUVA420P14"; break;
+				case VideoInfo::CS_YUVA444P16:      sOutBuf = "YUVA444P16"; break;
+				case VideoInfo::CS_YUVA422P16:      sOutBuf = "YUVA422P16"; break;
+				case VideoInfo::CS_YUVA420P16:      sOutBuf = "YUVA420P16"; break;
+				case VideoInfo::CS_YUVA444PS:       sOutBuf = " YUVA444PS"; break;
+				case VideoInfo::CS_YUVA422PS:       sOutBuf = " YUVA422PS"; break;
+				case VideoInfo::CS_YUVA420PS:       sOutBuf = " YUVA420PS"; break;
+				default:                            sOutBuf = "  Unknown";
+			}
+		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 		sLogBuffer += sOutBuf + "\n";
@@ -1106,7 +1165,7 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
-			Sleep(50);
+			Sleep(100);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -1189,6 +1248,7 @@ int main(int argc, char* argv[])
 						AVS_clip = 0;
 						AVS_main = 0;
 						AVS_temp = 0;
+						Sleep(100);
 						AVS_env->DeleteScriptEnvironment();
 						AVS_env = 0;
 
@@ -1486,7 +1546,7 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(50);
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 
@@ -2450,7 +2510,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(50);
+		Sleep(100);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}

@@ -287,6 +287,16 @@ struct AVS_Linkage {
   // AviSynth+ additions
   int     (VideoInfo::*NumComponents)() const;
   int     (VideoInfo::*ComponentSize)() const;
+  int     (VideoInfo::*BitsPerComponent)() const;
+  bool    (VideoInfo::*Is444)() const;
+  bool    (VideoInfo::*Is422)() const;
+  bool    (VideoInfo::*Is420)() const;
+  bool    (VideoInfo::*IsY)() const;
+  bool    (VideoInfo::*IsRGB48)() const;
+  bool    (VideoInfo::*IsRGB64)() const;
+  bool    (VideoInfo::*IsYUVA)() const;
+  bool    (VideoInfo::*IsPlanarRGB)() const;
+  bool    (VideoInfo::*IsPlanarRGBA)() const;
   /**********************************************************************/
 };
 
@@ -322,37 +332,84 @@ struct VideoInfo {
 
   // Colorspace properties.
 /*
-7<<0  Planar Width Subsampling bits
-      Use (X+1) & 3 for GetPlaneWidthSubsampling
-        000 => 1        YV12, YV16
-        001 => 2        YV411, YUV9
-        010 => reserved
-        011 => 0        YV24
-        1xx => reserved
 
-1<<3  VPlaneFirst YV12, YV16, YV24, YV411, YUV9
-1<<4  UPlaneFirst I420
+Planar match mask  1111.1000.0000.0111.0000.0111.0000.0111
+Planar signature   10xx.1000.0000.00xx.0000.00xx.00xx.00xx ?
+Planar signature   10xx.1000.0000.0xxx.0000.00xx.000x.x0xx ? *new
+Planar filter mask 1111.1111.1111.1111.1111.1111.1110.0111 (typo from old header fixed)
 
-7<<8  Planar Height Subsampling bits
-      Use ((X>>8)+1) & 3 for GetPlaneHeightSubsampling
-        000 => 1        YV12
-        001 => 2        YUV9
-        010 => reserved
-        011 => 0        YV16, YV24, YV411
-        1xx => reserved
+pixel_type mapping
+==================
+pixel_type bit-map PIYB.Z000.0???.0SSS.0000.0???.????.????
+        planar YUV            CCC            HHH.000u.vWWW
+     planar RGB(A)            CCC                       AR
+         nonplanar            CCC            000.00wx xyAR
+Legend
+======
+Planar YUV:
+  Code Bits Remark
+  W    0-2  Planar Width Subsampling bits
+            Use (X+1) & 3 for GetPlaneWidthSubsampling
+              000 => 1        YV12, YV16, YUV420, YUV422
+              001 => 2        YV411, YUV9
+              010 => reserved
+              011 => 0        YV24, YUV444, RGBP
+              1xx => reserved
+  v    3    VPlaneFirst YV12, YV16, YV24, YV411, YUV9
+  u    4    UPlaneFirst I420
+  H    7-9  Planar Height Subsampling bits
+            Use ((X>>8)+1) & 3 for GetPlaneHeightSubsampling
+              000 => 1        YV12, YUV420
+              001 => 2        YUV9
+              010 => reserved
+              011 => 0        YV16, YV24, YV411, YUV422, YUV444, RGBP
+              1xx => reserved
 
-7<<16 Sample resolution bits
-        000 => 8
-        001 => 16
-        010 => 32
-        011 => reserved
-        1xx => reserved
+Planar RGB
+ Code Bits Remark
+   R   0   BGR,  (with SSS bits for 8/16 bit/sample or float)
+   A   1   BGRA, (with SSS bits for 8/16 bit/sample or float)
 
-Planar match mask  1111.0000.0000.0111.0000.0111.0000.0111
-Planar signature   10xx.0000.0000.00xx.0000.00xx.00xx.00xx
-Planar filter mask 1111.1111.1111.1111.1111.1111.1100.1111
+
+Not Planar, Interleaved (I flag)
+Code Bits Remark
+  R   0   BGR24, and BGRx in future (with SSS bits for 8/16 bit/sample or float)
+  A   1   BGR32, and BGRAx in future (with SSS bits for 8/16 bit/sample or float)
+  y   2   YUY2
+  x   3-4 reserved
+  w   5   Raw32
+
+General
+Code Bits Remark
+  S 16-18 Sample resolution bits
+          000 => 8
+          001 => 16
+          010 => 32 (float)
+          011,100 => reserved
+          101 => 10 bits
+          110 => 12 bits
+          111 => 14 bits
+for packed RGB(A): only 8 and 16 bits are valid
+
+Other YV12 specific (not used?)
+  C 20-22 Chroma Placement values 0-4 see CS_xxx_CHROMA_PLACEMENT
+
+Color family and layout
+                       Packed      Planar               Planar  Planar
+Code Bits Remark       RGB/RGBA     YUV  YUY2  Y_Grey  RGB/RGBA  YUVA
+  R   0                  1/0         -    0      -       1/0       -
+  A   1                  0/1         -    0      -       0/1       -
+  y   2                   -          -    1      -        0        -
+  Z  27   YUVA            0          0    0      0        1        1
+  B  28   BGR             1          0    0      0        1*       0
+  Y  29   YUV             0          1    1      1        0        0
+  I  30   Interleaved     1          0    1      1        0        0
+  P  31   Planar          0          1    0      1        1        1
+* Planar RGB plane order: G,B,R(,A)
+
 */
-  enum {
+enum {
+    CS_YUVA = 1<<27,
     CS_BGR = 1<<28,
     CS_YUV = 1<<29,
     CS_INTERLEAVED = 1<<30,
@@ -377,65 +434,128 @@ Planar filter mask 1111.1111.1111.1111.1111.1111.1100.1111
 
     CS_Sample_Bits_Mask  = 7 << CS_Shift_Sample_Bits,
     CS_Sample_Bits_8     = 0 << CS_Shift_Sample_Bits,
+    CS_Sample_Bits_10    = 5 << CS_Shift_Sample_Bits,
+    CS_Sample_Bits_12    = 6 << CS_Shift_Sample_Bits,
+    CS_Sample_Bits_14    = 7 << CS_Shift_Sample_Bits,
     CS_Sample_Bits_16    = 1 << CS_Shift_Sample_Bits,
     CS_Sample_Bits_32    = 2 << CS_Shift_Sample_Bits,
 
-    CS_PLANAR_MASK       = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_BGR | CS_Sample_Bits_Mask
-                                                  | CS_Sub_Height_Mask | CS_Sub_Width_Mask,
+    CS_PLANAR_MASK       = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_BGR | CS_YUVA | CS_Sample_Bits_Mask
+    | CS_Sub_Height_Mask | CS_Sub_Width_Mask,
     CS_PLANAR_FILTER     = ~( CS_VPlaneFirst | CS_UPlaneFirst ),
 
-  // Specific colorformats
+    CS_RGB_TYPE  = 1 << 0,
+    CS_RGBA_TYPE = 1 << 1,
+
+    // Specific colorformats
     CS_UNKNOWN = 0,
-    CS_BGR24 = 1<<0 | CS_BGR | CS_INTERLEAVED,
-    CS_BGR32 = 1<<1 | CS_BGR | CS_INTERLEAVED,
+
+    CS_BGR24 = CS_RGB_TYPE  | CS_BGR | CS_INTERLEAVED,
+    CS_BGR32 = CS_RGBA_TYPE | CS_BGR | CS_INTERLEAVED,
     CS_YUY2  = 1<<2 | CS_YUV | CS_INTERLEAVED,
-//  CS_YV12  = 1<<3  Reserved
-//  CS_I420  = 1<<4  Reserved
+    //  CS_YV12  = 1<<3  Reserved
+    //  CS_I420  = 1<<4  Reserved
     CS_RAW32 = 1<<5 | CS_INTERLEAVED,
 
-//  YV12 must be 0xA000008 2.5 Baked API will see all new planar as YV12
-//  I420 must be 0xA000010
+    //  YV12 must be 0xA000008 2.5 Baked API will see all new planar as YV12
+    //  I420 must be 0xA000010
 
-    CS_YV24  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1,  // YVU 4:4:4 planar
-    CS_YV16  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2,  // YVU 4:2:2 planar
-    CS_YV12  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2,  // YVU 4:2:0 planar
+    CS_GENERIC_YUV420  = CS_PLANAR | CS_YUV | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2,  // 4:2:0 planar
+    CS_GENERIC_YUV422  = CS_PLANAR | CS_YUV | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2,  // 4:2:2 planar
+    CS_GENERIC_YUV444  = CS_PLANAR | CS_YUV | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1,  // 4:4:4 planar
+    CS_GENERIC_Y       = CS_PLANAR | CS_INTERLEAVED | CS_YUV,                                     // Y only (4:0:0)
+    CS_GENERIC_RGBP    = CS_PLANAR | CS_BGR | CS_RGB_TYPE,                                        // planar RGB. Though name is RGB but plane order G,B,R
+    CS_GENERIC_RGBAP   = CS_PLANAR | CS_BGR | CS_RGBA_TYPE,                                       // planar RGBA
+    CS_GENERIC_YUVA420 = CS_PLANAR | CS_YUVA | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2, // 4:2:0:A planar
+    CS_GENERIC_YUVA422 = CS_PLANAR | CS_YUVA | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2, // 4:2:2:A planar
+    CS_GENERIC_YUVA444 = CS_PLANAR | CS_YUVA | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // 4:4:4:A planar
+
+    CS_YV24  = CS_GENERIC_YUV444 | CS_Sample_Bits_8,  // YVU 4:4:4 planar
+    CS_YV16  = CS_GENERIC_YUV422 | CS_Sample_Bits_8,  // YVU 4:2:2 planar
+    CS_YV12  = CS_GENERIC_YUV420 | CS_Sample_Bits_8,  // YVU 4:2:0 planar
     CS_I420  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_UPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2,  // YUV 4:2:0 planar
     CS_IYUV  = CS_I420,
     CS_YUV9  = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_4 | CS_Sub_Width_4,  // YUV 4:1:0 planar
     CS_YV411 = CS_PLANAR | CS_YUV | CS_Sample_Bits_8 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_4,  // YUV 4:1:1 planar
 
-    CS_Y8    = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_Sample_Bits_8,                                     // Y   4:0:0 planar
+    CS_Y8    = CS_GENERIC_Y | CS_Sample_Bits_8,                                                            // Y   4:0:0 planar
 
     //-------------------------
     // AVS16: new planar constants go live! Experimental PF 160613
-    CS_YUV444P16 = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // YUV 4:4:4 16bit samples
-    CS_YUV422P16 = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2, // YUV 4:2:2 16bit samples
-    CS_YUV420P16 = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2, // YUV 4:2:0 16bit samples
-    // no short naming style. CS_YV24->CS_YV48 = CS_YUV444P16 ok. but YV12->YV24? no-no.
+    // 10-12-14 bit + planar RGB + BRG48/64 160725
 
-    // grey 16
-    CS_Y16 = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_Sample_Bits_16,                                      // Y   4:0:0 16bit samples
+    CS_YUV444P10 = CS_GENERIC_YUV444 | CS_Sample_Bits_10, // YUV 4:4:4 10bit samples
+    CS_YUV422P10 = CS_GENERIC_YUV422 | CS_Sample_Bits_10, // YUV 4:2:2 10bit samples
+    CS_YUV420P10 = CS_GENERIC_YUV420 | CS_Sample_Bits_10, // YUV 4:2:0 10bit samples
+    CS_Y10 = CS_GENERIC_Y | CS_Sample_Bits_10,            // Y   4:0:0 10bit samples
+
+    CS_YUV444P12 = CS_GENERIC_YUV444 | CS_Sample_Bits_12, // YUV 4:4:4 12bit samples
+    CS_YUV422P12 = CS_GENERIC_YUV422 | CS_Sample_Bits_12, // YUV 4:2:2 12bit samples
+    CS_YUV420P12 = CS_GENERIC_YUV420 | CS_Sample_Bits_12, // YUV 4:2:0 12bit samples
+    CS_Y12 = CS_GENERIC_Y | CS_Sample_Bits_12,            // Y   4:0:0 12bit samples
+
+    CS_YUV444P14 = CS_GENERIC_YUV444 | CS_Sample_Bits_14, // YUV 4:4:4 14bit samples
+    CS_YUV422P14 = CS_GENERIC_YUV422 | CS_Sample_Bits_14, // YUV 4:2:2 14bit samples
+    CS_YUV420P14 = CS_GENERIC_YUV420 | CS_Sample_Bits_14, // YUV 4:2:0 14bit samples
+    CS_Y14 = CS_GENERIC_Y | CS_Sample_Bits_14,            // Y   4:0:0 14bit samples
+
+    CS_YUV444P16 = CS_GENERIC_YUV444 | CS_Sample_Bits_16, // YUV 4:4:4 16bit samples
+    CS_YUV422P16 = CS_GENERIC_YUV422 | CS_Sample_Bits_16, // YUV 4:2:2 16bit samples
+    CS_YUV420P16 = CS_GENERIC_YUV420 | CS_Sample_Bits_16, // YUV 4:2:0 16bit samples
+    CS_Y16 = CS_GENERIC_Y | CS_Sample_Bits_16,            // Y   4:0:0 16bit samples
 
     // 32 bit samples (float)
-    CS_YUV444PS = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // YUV 4:4:4 32bit samples
-    CS_YUV422PS = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_2, // YUV 4:2:2 32bit samples
-    CS_YUV420PS = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_2 | CS_Sub_Width_2, // YUV 4:2:0 32bit samples
-    // CS_YV96  = CS_YUV444PS,
+    CS_YUV444PS = CS_GENERIC_YUV444 | CS_Sample_Bits_32,  // YUV 4:4:4 32bit samples
+    CS_YUV422PS = CS_GENERIC_YUV422 | CS_Sample_Bits_32,  // YUV 4:2:2 32bit samples
+    CS_YUV420PS = CS_GENERIC_YUV420 | CS_Sample_Bits_32,  // YUV 4:2:0 32bit samples
+    CS_Y32 = CS_GENERIC_Y | CS_Sample_Bits_32,            // Y   4:0:0 32bit samples
 
-    // grey 32
-    CS_Y32 = CS_PLANAR | CS_INTERLEAVED | CS_YUV | CS_Sample_Bits_32,                                      // Y   4:0:0 32bit samples
+    // RGB packed
+    CS_BGR48 = CS_RGB_TYPE  | CS_BGR | CS_INTERLEAVED | CS_Sample_Bits_16, // BGR 3x16 bit
+    CS_BGR64 = CS_RGBA_TYPE | CS_BGR | CS_INTERLEAVED | CS_Sample_Bits_16, // BGR 4x16 bit
+    // no packed 32 bit (float) support for these legacy types
 
-    // todo: rgb
+    // RGB planar
+    CS_RGBP   = CS_GENERIC_RGBP | CS_Sample_Bits_8,  // Planar RGB 8 bit samples
+    CS_RGBP10 = CS_GENERIC_RGBP | CS_Sample_Bits_10, // Planar RGB 10bit samples
+    CS_RGBP12 = CS_GENERIC_RGBP | CS_Sample_Bits_12, // Planar RGB 12bit samples
+    CS_RGBP14 = CS_GENERIC_RGBP | CS_Sample_Bits_14, // Planar RGB 14bit samples
+    CS_RGBP16 = CS_GENERIC_RGBP | CS_Sample_Bits_16, // Planar RGB 16bit samples
+    CS_RGBPS  = CS_GENERIC_RGBP | CS_Sample_Bits_32, // Planar RGB 32bit samples
 
-/*
-    CS_YV48  = CS_PLANAR | CS_YUV | CS_Sample_Bits_16 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // YUV 4:4:4 16bit samples
+    // RGBA planar
+    CS_RGBAP   = CS_GENERIC_RGBAP | CS_Sample_Bits_8,  // Planar RGBA 8 bit samples
+    CS_RGBAP10 = CS_GENERIC_RGBAP | CS_Sample_Bits_10, // Planar RGBA 10bit samples
+    CS_RGBAP12 = CS_GENERIC_RGBAP | CS_Sample_Bits_12, // Planar RGBA 12bit samples
+    CS_RGBAP14 = CS_GENERIC_RGBAP | CS_Sample_Bits_14, // Planar RGBA 14bit samples
+    CS_RGBAP16 = CS_GENERIC_RGBAP | CS_Sample_Bits_16, // Planar RGBA 16bit samples
+    CS_RGBAPS  = CS_GENERIC_RGBAP | CS_Sample_Bits_32, // Planar RGBA 32bit samples
 
-    CS_YV96  = CS_PLANAR | CS_YUV | CS_Sample_Bits_32 | CS_VPlaneFirst | CS_Sub_Height_1 | CS_Sub_Width_1, // YUV 4:4:4 32bit samples
+    // Planar YUVA
+    CS_YUVA444    = CS_GENERIC_YUVA444 | CS_Sample_Bits_8,  // YUVA 4:4:4 8bit samples
+    CS_YUVA422    = CS_GENERIC_YUVA422 | CS_Sample_Bits_8,  // YUVA 4:2:2 8bit samples
+    CS_YUVA420    = CS_GENERIC_YUVA420 | CS_Sample_Bits_8,  // YUVA 4:2:0 8bit samples
 
-    CS_PRGB  = CS_PLANAR | CS_RGB | CS_Sample_Bits_8,                                                      // Planar RGB
-    CS_RGB48 = CS_PLANAR | CS_RGB | CS_Sample_Bits_16,                                                     // Planar RGB 16bit samples
-    CS_RGB96 = CS_PLANAR | CS_RGB | CS_Sample_Bits_32,                                                     // Planar RGB 32bit samples
-*/
+    CS_YUVA444P10 = CS_GENERIC_YUVA444 | CS_Sample_Bits_10, // YUVA 4:4:4 10bit samples
+    CS_YUVA422P10 = CS_GENERIC_YUVA422 | CS_Sample_Bits_10, // YUVA 4:2:2 10bit samples
+    CS_YUVA420P10 = CS_GENERIC_YUVA420 | CS_Sample_Bits_10, // YUVA 4:2:0 10bit samples
+
+    CS_YUVA444P12 = CS_GENERIC_YUVA444 | CS_Sample_Bits_12, // YUVA 4:4:4 12bit samples
+    CS_YUVA422P12 = CS_GENERIC_YUVA422 | CS_Sample_Bits_12, // YUVA 4:2:2 12bit samples
+    CS_YUVA420P12 = CS_GENERIC_YUVA420 | CS_Sample_Bits_12, // YUVA 4:2:0 12bit samples
+
+    CS_YUVA444P14 = CS_GENERIC_YUVA444 | CS_Sample_Bits_14, // YUVA 4:4:4 14bit samples
+    CS_YUVA422P14 = CS_GENERIC_YUVA422 | CS_Sample_Bits_14, // YUVA 4:2:2 14bit samples
+    CS_YUVA420P14 = CS_GENERIC_YUVA420 | CS_Sample_Bits_14, // YUVA 4:2:0 14bit samples
+
+    CS_YUVA444P16 = CS_GENERIC_YUVA444 | CS_Sample_Bits_16, // YUVA 4:4:4 16bit samples
+    CS_YUVA422P16 = CS_GENERIC_YUVA422 | CS_Sample_Bits_16, // YUVA 4:2:2 16bit samples
+    CS_YUVA420P16 = CS_GENERIC_YUVA420 | CS_Sample_Bits_16, // YUVA 4:2:0 16bit samples
+
+    CS_YUVA444PS  = CS_GENERIC_YUVA444 | CS_Sample_Bits_32,  // YUVA 4:4:4 32bit samples
+    CS_YUVA422PS  = CS_GENERIC_YUVA422 | CS_Sample_Bits_32,  // YUVA 4:2:2 32bit samples
+    CS_YUVA420PS  = CS_GENERIC_YUVA420 | CS_Sample_Bits_32,  // YUVA 4:2:0 32bit samples
+
   };
 
   int pixel_type;                // changed to int as of 2.5
@@ -530,6 +650,36 @@ Planar filter mask 1111.1111.1111.1111.1111.1111.1100.1111
   // Returns the size in bytes of a single component of a pixel
   int ComponentSize() const AVS_BakedCode(return AVS_LinkCall(ComponentSize)())
 
+  // Returns the bit depth of a single component of a pixel
+  int BitsPerComponent() const AVS_BakedCode(return AVS_LinkCall(BitsPerComponent)())
+
+  // like IsYV24, but bit-depth independent also for YUVA
+  bool Is444() const AVS_BakedCode( return AVS_LinkCall(Is444)() )
+  
+  // like IsYV16, but bit-depth independent also for YUVA
+  bool Is422() const AVS_BakedCode( return AVS_LinkCall(Is422)() )
+
+  // like IsYV12, but bit-depth independent also for YUVA
+  bool Is420() const AVS_BakedCode( return AVS_LinkCall(Is420)() )
+
+  // like IsY8, but bit-depth independent
+  bool IsY()      const AVS_BakedCode( return AVS_LinkCall(IsY)() )
+
+  // like IsRGB24 for 16 bit samples
+  bool IsRGB48() const AVS_BakedCode( return AVS_LinkCall(IsRGB48)() )
+
+  // like IsRGB32 for 16 bit samples
+  bool IsRGB64() const AVS_BakedCode( return AVS_LinkCall(IsRGB64)() )
+
+  // YUVA?
+  bool IsYUVA() const AVS_BakedCode( return AVS_LinkCall(IsYUVA)() )
+
+  // Planar RGB?
+  bool IsPlanarRGB() const AVS_BakedCode( return AVS_LinkCall(IsPlanarRGB)() )
+
+  // Planar RGBA?
+  bool IsPlanarRGBA() const AVS_BakedCode( return AVS_LinkCall(IsPlanarRGBA)() )
+
 }; // end struct VideoInfo
 
 
@@ -582,7 +732,11 @@ class VideoFrame {
   // Due to technical reasons these members are not const, but should be treated as such.
   // That means do not modify them once the class has been constructed.
   int offset, pitch, row_size, height, offsetU, offsetV, pitchUV;  // U&V offsets are from top of picture.
-  int row_sizeUV, heightUV;
+  int row_sizeUV, heightUV; // for Planar RGB offsetU, offsetV is for the 2nd and 3rd Plane. 
+                            // for Planar RGB pitchUV and row_sizeUV = 0, because when no VideoInfo (MakeWriteable)
+                            // the decision on existance of UV is checked by zero pitch
+  // AVS+ extension, does not break plugins if appended here
+  int offsetA, pitchA, row_sizeA; // 4th alpha plane support, pitch and row_size is 0 is none
 
   friend class PVideoFrame;
   void AddRef();
@@ -593,6 +747,8 @@ class VideoFrame {
 
   VideoFrame(VideoFrameBuffer* _vfb, int _offset, int _pitch, int _row_size, int _height);
   VideoFrame(VideoFrameBuffer* _vfb, int _offset, int _pitch, int _row_size, int _height, int _offsetU, int _offsetV, int _pitchUV, int _row_sizeUV, int _heightUV);
+  // for Alpha
+  VideoFrame(VideoFrameBuffer* _vfb, int _offset, int _pitch, int _row_size, int _height, int _offsetU, int _offsetV, int _pitchUV, int _row_sizeUV, int _heightUV, int _offsetA);
 
   void* operator new(size_t size);
 // TESTME: OFFSET U/V may be switched to what could be expected from AVI standard!
@@ -608,6 +764,8 @@ public:
   // in plugins use env->SubFrame() -- because implementation code is only available inside avisynth.dll. Doh!
   VideoFrame* Subframe(int rel_offset, int new_pitch, int new_row_size, int new_height) const;
   VideoFrame* Subframe(int rel_offset, int new_pitch, int new_row_size, int new_height, int rel_offsetU, int rel_offsetV, int pitchUV) const;
+  // for Alpha
+  VideoFrame* Subframe(int rel_offset, int new_pitch, int new_row_size, int new_height, int rel_offsetU, int rel_offsetV, int pitchUV, int rel_offsetA) const;
 
   const BYTE* GetReadPtr(int plane=0) const AVS_BakedCode( return AVS_LinkCall(VFGetReadPtr)(plane) )
   bool IsWritable() const AVS_BakedCode( return AVS_LinkCall(IsWritable)() )
@@ -831,7 +989,7 @@ public:
   const char* AsString() const AVS_BakedCode( return AVS_LinkCall(AsString1)() )
   double AsFloat() const AVS_BakedCode( return AVS_LinkCall(AsFloat1)() )
   float AsFloatf() const AVS_BakedCode( return float( AVS_LinkCall(AsFloat1)() ) )
-
+  
   bool AsBool(bool def) const AVS_BakedCode( return AVS_LinkCall(AsBool2)(def) )
   int AsInt(int def) const AVS_BakedCode( return AVS_LinkCall(AsInt2)(def) )
   double AsDblDef(double def) const AVS_BakedCode( return AVS_LinkCall(AsDblDef)(def) ) // Value is still a float
@@ -1025,9 +1183,9 @@ enum AvsAllocType
 };
 
 /* -----------------------------------------------------------------------------
-   Note to plugin authors: The interface in IScriptEnvironment2 is
+   Note to plugin authors: The interface in IScriptEnvironment2 is 
       preliminary / under construction / only for testing / non-final etc.!
-      As long as you see this note here, IScriptEnvironment2 might still change,
+      As long as you see this note here, IScriptEnvironment2 might still change, 
       in which case your plugin WILL break. This also means that you are welcome
       to test it and give your feedback about any ideas, improvements, or issues
       you might have.

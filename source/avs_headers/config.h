@@ -37,7 +37,7 @@
 #define AVSC_USE_STDCALL 1
 
 // NOTE TO PLUGIN AUTHORS:
-// Because FRAME_ALIGN can be substantially higher than the alignment
+// Because FRAME_ALIGN can be substantially higher than the alignment 
 // a plugin actually needs, plugins should not use FRAME_ALIGN to check for
 // alignment. They should always request the exact alignment value they need.
 // This is to make sure that plugins work over the widest range of AviSynth

@@ -211,7 +211,7 @@ inline string CUtils::StrFormat(char const *fmt, ...)
 		if (iRet == -1)
 			buffer.resize(buffer.size() * 2);
 		if (buffer.size() > 16384)
-			return "\nBuffer overflow";
+			return "\nPrint buffer overflow";
 	}
 	buffer[buffer.size() - 1] = '\0';
 	string sRet = &buffer[0];

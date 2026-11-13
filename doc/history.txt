@@ -1,3 +1,9 @@
+v2.3.7
+- Updated Avisynth header to the latest AVS+ version (r2151)
+- Updated color space detection accordingly
+- Implemented some standard arrays as std::vector mainly for efficiency
+- Refactoring and cosmetics
+
 v2.3.6
 - Added enumeration of all color spaces supported by the latest AVS+,
   including 16/32 Bit formats
