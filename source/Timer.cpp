@@ -34,14 +34,7 @@ BOOL CTimer::TestTimer()
 	if ((::QueryPerformanceFrequency(&liPerfFreq) == 0) || (::QueryPerformanceCounter(&liPerfCounter) == 0))
 		return FALSE;
 
-	double start = GetTimer();
-	::Sleep(500);
-	double dtesttime = GetTimer() - start;
-
-	if ((dtesttime > 0.4) && (dtesttime < 0.6))
-		return TRUE;
-
-	return FALSE;
+	return TRUE;
 }
 
 

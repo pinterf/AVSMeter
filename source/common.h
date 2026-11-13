@@ -24,6 +24,7 @@
 
 #include <windows.h>
 #include <process.h>
+#include <math.h>
 #include <string>
 #include <algorithm>
 #include <psapi.h>
@@ -51,22 +52,5 @@ using std::transform;
 using std::getline;
 using std::remove;
 using std::exception;
-
-#define b0000  0
-#define b0001  1
-#define b0010  2
-#define b0011  3
-#define b0100  4
-#define b0101  5
-#define b0110  6
-#define b0111  7
-#define b1000  8
-#define b1001  9
-#define b1010 10
-#define b1011 11
-#define b1100 12
-#define b1101 13
-#define b1110 14
-#define b1111 15
 
 #endif //_COMMON_H

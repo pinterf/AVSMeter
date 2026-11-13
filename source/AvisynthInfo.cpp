@@ -870,6 +870,7 @@ void CAvisynthInfo::EnumPluginDLLs()
 {
 	string sDir = "";
 	string sMessage = "";
+	BOOL bIs64BitDLL = FALSE;
 
 	for (unsigned int uiPlugDir = 0; uiPlugDir < vPluginDirs.size(); uiPlugDir++)
 	{
@@ -890,23 +891,39 @@ void CAvisynthInfo::EnumPluginDLLs()
 				if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
 				{
 					sCurrentFile = sDir + "\\" + fd.cFileName;
-					if (!SYSCheckPlugin(sCurrentFile, sMessage))
+					if (!SYSCheckPlugin(sCurrentFile, sMessage, bIs64BitDLL))
 					{
 						if (sMessage != "")
 							vPluginErrors.push_back(sMessage);
 					}
 					else
 					{
-						if (sMessage == "AVSC25")
-							vPlugins.push_back("C 2.5|" + sCurrentFile);
-						if (sMessage == "AVSC20")
-							vPlugins.push_back("C 2.0|" + sCurrentFile);
-						if (sMessage == "AVS26CPP")
-							vPlugins.push_back("CPP 2.6|" + sCurrentFile);
-						if (sMessage == "AVS25CPP")
-							vPlugins.push_back("CPP 2.5|" + sCurrentFile);
-						if (sMessage == "AVS20CPP")
-							vPlugins.push_back("CPP 2.0|" + sCurrentFile);
+						if (bIs64BitDLL)
+						{
+							if (sMessage == "AVSC25")
+								vPlugins.push_back("C 2.5 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVSC20")
+								vPlugins.push_back("C 2.0 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVS26CPP")
+								vPlugins.push_back("CPP 2.6 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVS25CPP")
+								vPlugins.push_back("CPP 2.5 / 64 Bit|" + sCurrentFile);
+							if (sMessage == "AVS20CPP")
+								vPlugins.push_back("CPP 2.0 / 64 Bit|" + sCurrentFile);
+						}
+						else
+						{
+							if (sMessage == "AVSC25")
+								vPlugins.push_back("C 2.5 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVSC20")
+								vPlugins.push_back("C 2.0 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVS26CPP")
+								vPlugins.push_back("CPP 2.6 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVS25CPP")
+								vPlugins.push_back("CPP 2.5 / 32 Bit|" + sCurrentFile);
+							if (sMessage == "AVS20CPP")
+								vPlugins.push_back("CPP 2.0 / 32 Bit|" + sCurrentFile);
+						}
 					}
 				}
 				bRet = FindNextFile(hFind, &fd);
@@ -924,12 +941,12 @@ void CAvisynthInfo::EnumPluginDLLs()
 }
 
 
-BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
+BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL)
 {
 	BOOL bRet = TRUE;
 	s_Msg = "";
-	BOOL bIs64BitDLL = FALSE;
 	BOOL bIsPlugin = FALSE;
+	b_Is64BitDLL = FALSE;
 
 	LOADED_IMAGE li;
 	BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,	TRUE,	TRUE);
@@ -959,7 +976,7 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 		}
 		else
 		{
-			bIs64BitDLL = TRUE;
+			b_Is64BitDLL = TRUE;
 			#ifndef AVS64
 				UnMapAndLoad(&li);
 				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
@@ -1374,24 +1391,19 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 			{
 				string sValue(szValue);
 				StrToLC(sValue);
-				size_t spos = 0;
-				BYTE mask = 0;
 
-				spos = sValue.find(s_version);
-				if (spos != std::string::npos) mask |= b0001;
-				spos = sValue.find("visual c++");
-				if (spos != std::string::npos) mask |= b0010;
-				spos = sValue.find("redistributable");
-				if (spos != std::string::npos) mask |= b0100;
-				spos = sValue.find("runtime");
-				if (spos != std::string::npos) mask |= b0100;
-				spos = sValue.find("x64");
-				if (spos != std::string::npos) mask |= b1000;
+				BOOL bVersion = FALSE;
+				BOOL bVC = FALSE;
+				BOOL bRedist = FALSE;
+				BOOL b64Bit = FALSE;
 
-				if ((mask == b0111) && (!bIs64BitAVS))
-					bInstalled = TRUE;
-				if ((mask == b1111) && (bIs64BitAVS))
-					bInstalled = TRUE;
+				if (sValue.find(s_version) != std::string::npos) bVersion = TRUE;
+				if (sValue.find("visual c++") != std::string::npos) bVC = TRUE;
+				if ((sValue.find("redistributable") != std::string::npos) || (sValue.find("runtime") != std::string::npos)) bRedist = TRUE;
+				if (sValue.find("x64") != std::string::npos) b64Bit = TRUE;
+
+				if (bVersion && bVC && bRedist && !b64Bit && !bIs64BitAVS) bInstalled = TRUE;
+				if (bVersion && bVC && bRedist && b64Bit && bIs64BitAVS) bInstalled = TRUE;
 			}
 		}
 		RegCloseKey(hKeyResult);

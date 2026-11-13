@@ -86,7 +86,7 @@ CSysInfo sys;
 CTimer timer;
 CSettings Settings;
 
-unsigned int CalculateFrameInterval(string &s_avsfile);
+unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error);
 string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, BOOL bNVVP, BOOL bOmitPerfData);
 string       CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL bNVVP);
 string       ParseINIFile();
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
 	#endif
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2016, Groucho2004\n");
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2017, Groucho2004\n");
 
 	if (sINIRet != "")
 	{
@@ -585,8 +585,9 @@ int main(int argc, char* argv[])
 		}
 
 		string sPluginDLL = "";
-		string sOldPluginType = "";			
-		string sPluginType = "";	
+		string sOldPluginType = "";
+		string sPluginType = "";
+		string sPluginVersion = "";
 		unsigned int uiPlugin = 0;
 		size_t spos = 0;
 
@@ -615,7 +616,12 @@ int main(int argc, char* argv[])
 				sLogBuffer += sOutBuf;
 				PrintConsole(TRUE, COLOR_EMPHASIS, utils.StrAnsiToOEM(sOutBuf).c_str());
 
-				sOutBuf = utils.StrFormat("  [%s]\n", utils.GetFileVersion(sPluginDLL).c_str());
+				sPluginVersion = utils.GetFileVersion(sPluginDLL);
+				if (sPluginVersion != "n/a")
+					sOutBuf = utils.StrFormat("  [%s]\n", sPluginVersion.c_str());
+				else
+					sOutBuf = "\n";
+
 				sLogBuffer += sOutBuf;
 				PrintConsole(TRUE, FG_HGREEN | BG_BLACK, utils.StrAnsiToOEM(sOutBuf).c_str());
 			}
@@ -781,7 +787,15 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Loading script...").c_str());
 		Sleep(200);
-		uiFrameInterval = CalculateFrameInterval(sAVSFile);
+		uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
+		if (sErrorMsg != "")
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
+			Pause();
+			return -1;
+		}
+
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
 	}
 
@@ -1025,7 +1039,7 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 
 		if (!AVS_vidinfo.HasVideo())
-			sOutBuf = "      n/a";
+			sOutBuf = "       n/a";
 		else
 		{
 			switch (AVS_vidinfo.pixel_type)
@@ -1107,15 +1121,19 @@ int main(int argc, char* argv[])
 
 		sOutBuf = "Audio channels:    ";
 		sLogBuffer += sOutBuf;
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+
 		if (AVS_vidinfo.nchannels)
 			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.nchannels);
 		else
 			sOutBuf = "                n/a";
 
 		sLogBuffer += sOutBuf + "\n";
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		sOutBuf = "Audio bits/sample: ";
 		sLogBuffer += sOutBuf;
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
 
 		switch (AVS_vidinfo.sample_type)
 		{
@@ -1128,24 +1146,31 @@ int main(int argc, char* argv[])
 		}
 
 		sLogBuffer += sOutBuf + "\n";
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		sOutBuf = "Audio sample rate: ";
 		sLogBuffer += sOutBuf;
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+
 		if (AVS_vidinfo.audio_samples_per_second)
 			sOutBuf = utils.StrFormat("%19d", AVS_vidinfo.audio_samples_per_second);
 		else
 			sOutBuf = "                n/a";
 
 		sLogBuffer += sOutBuf + "\n";
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		sOutBuf = "Audio samples:     ";
 		sLogBuffer += sOutBuf;
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+
 		if (AVS_vidinfo.num_audio_samples)
 			sOutBuf = utils.StrFormat("%19I64d", AVS_vidinfo.num_audio_samples);
 		else
 			sOutBuf = "                n/a";
 
 		sLogBuffer += sOutBuf + "\n";
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
 		if (bInfoOnly)
 		{
@@ -1173,7 +1198,7 @@ int main(int argc, char* argv[])
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 
 		if (!AVS_vidinfo.HasVideo())
-			AVS_env->ThrowError("\"%s\":\nScript did not return a video clip", sAVSFile.c_str());
+			AVS_env->ThrowError("Script did not return a video clip:\n%s", sAVSFile.c_str());
 
 		unsigned int uiFramesToProcess = 0;
 		unsigned int uiFirstFrame = 0;
@@ -1259,20 +1284,11 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
+		while ((uiFramesToProcess / uiFrameInterval) > 400000)
+			uiFrameInterval *= 10;
+	
 		if (!Settings.bSimpleMode)
-		{
-			while ((uiFramesToProcess / uiFrameInterval) > 200000)
-				uiFrameInterval *= 10;
-
 			perfdata.reserve((uiFramesToProcess / uiFrameInterval) + 2);
-		}
-		else
-		{
-			uiFrameInterval = 1;
-			while ((uiFramesToProcess / uiFrameInterval) > 200000)
-				uiFrameInterval *= 10;
-		}
-
 
 		unsigned int uiFramesRead = 0;
 		BOOL bFirstScr = TRUE;
@@ -2214,8 +2230,7 @@ BOOL WriteINIFile(string &s_inifile)
 	sComment =  "# \"MonitorGPULoad\" (0 or 1):\n";
 	sComment += "# If set to \"1\", enables display of the GPU/VPU usage which of course is only useful if a filter\n";
 	sComment += "# that uses the GPU is in the chain. AVSMeter uses GPU-Z to access the graphics card sensors through a\n";
-	sComment += "# shared memory space. GPU-Z has to be running (the window can be minimized to the system tray) before\n";
-	sComment += "# running AVSMeter.\n";
+	sComment += "# shared memory interface. GPU-Z must be running in order to use this feature\n";
 	sCurrentLine = utils.StrFormat("MonitorGPULoad=%u\n", Settings.bMonitorGPULoad);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
@@ -2225,18 +2240,14 @@ BOOL WriteINIFile(string &s_inifile)
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"TimeLimit\" (1 - 999999):\n";
-	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates. A\n";
-	sComment += "# setting of \"-1\" disables this feature. This setting is ignored when the program is invoked with\n";
-	sComment += "# the \"-i\" (\"-info\") switch which only determines the clip properties.\n";
+	sComment += "# Specify a time limit (in seconds) after which the program stops reading frames and terminates.\n";
+	sComment += "# Setting this to \"-1\" disables the feature.\n";
 	sCurrentLine = utils.StrFormat("TimeLimit=%I64d\n", Settings.iTimeLimit);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
 	sComment =  "# \"InvokeDistributor\" (0 or 1):\n";
 	sComment += "# For users of SEt's Avisynth MT: If set to \"1\", adds the \"Distributor\" call internally if the\n";
-	sComment += "# script uses MT Mode 1~4 (via \"SetMTMode\"). Note: Setting this value to \"1\" and adding the\n";
-	sComment += "# Distributor call in the script will unnecessarily increase the number of threads which leads to\n";
-	sComment += "# increased memory usage and suboptimal performance. The \"InvokeDistributor\" setting is ignored when\n";
-	sComment += "# using non-MT versions of Avisynth.\n";
+	sComment += "# script uses one of the MT Modes 1~4.\n";
 	sCurrentLine = utils.StrFormat("InvokeDistributor=%u\n", Settings.bInvokeDistributor);
 	hINIFile << sComment << sCurrentLine << "\n\n";
 
@@ -2538,9 +2549,9 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 }
 
 
-unsigned int CalculateFrameInterval(string &s_avsfile)
+unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 {
-	string sError = "";
+	s_error = "";
 	unsigned int uiFrameInterval = 10;
 
 	HINSTANCE hDLL;
@@ -2550,11 +2561,15 @@ unsigned int CalculateFrameInterval(string &s_avsfile)
 		hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
 
 	if (!hDLL)
+	{
+		s_error = "Cannot load avisynth.dll";
 		return uiFrameInterval;
+	}
 
 	IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
 	if (!CreateEnvironment)
 	{
+		s_error = "Failed to load CreateScriptEnvironment()";
 		::FreeLibrary(hDLL);
 		return uiFrameInterval;
 	}
@@ -2562,6 +2577,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile)
 	IScriptEnvironment *AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
 	if (!AVS_env)
 	{
+		s_error = "Could not create IScriptenvironment";
 		::FreeLibrary(hDLL);
 		return uiFrameInterval;
 	}
@@ -2579,7 +2595,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile)
 		AVS_main = AVS_env->Invoke("Import", s_avsfile.c_str());
 
 		if (!AVS_main.IsClip()) //not a clip
-			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
+			AVS_env->ThrowError("Script did not return a video clip:\n%s", s_avsfile.c_str());
 
 		int iMTMode = 0;
 		try
@@ -2600,25 +2616,33 @@ unsigned int CalculateFrameInterval(string &s_avsfile)
 		unsigned int uiTotalFrames = (unsigned int)AVS_vidinfo.num_frames;
 
 		if (!AVS_vidinfo.HasVideo())
-			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
+			AVS_env->ThrowError("Script did not return a video clip:\n%s", s_avsfile.c_str());
 
 		unsigned int uiFrame = 0;
 		double TDelta = 0.0;
+		double TDeltaTest = 0.0;
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
 		double T0 = timer.GetSTDTimer();
+		double T0Test = timer.GetTimer();
 		for (;;)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
 			++uiFrame;
 			TDelta = timer.GetSTDTimer() - T0;
+			TDeltaTest = timer.GetTimer() - T0Test;
 			if ((TDelta >= 5.0) || (uiFrame == uiTotalFrames))
 				break;
 		}
 
 		double dAverageFrameTime = 0.0;
 		if (TDelta > 0.5)
+		{
+			if (fabs(TDelta - TDeltaTest) > 0.2)
+				AVS_env->ThrowError("QueryPerformanceCounter() inaccuracy. Try running AVSMeter again.");
+
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //ms
+		}
 		else
 			AVS_env->ThrowError("Script runtime is too short for meaningful measurements");
 
@@ -2653,17 +2677,17 @@ unsigned int CalculateFrameInterval(string &s_avsfile)
 	}
 	catch (AvisynthError err)
 	{
-		sError = utils.StrFormat("%s", (PCSTR)err.msg);
+		s_error = utils.StrFormat("%s", (PCSTR)err.msg);
 		uiFrameInterval = 10;
 	}
 	catch (exception& ex)
 	{
-		sError = ex.what();
+		s_error = ex.what();
 		uiFrameInterval = 10;
 	}
 	catch (...)
 	{
-		sError = SysErrorMessage();
+		s_error = SysErrorMessage();
 		uiFrameInterval = 10;
 	}
 

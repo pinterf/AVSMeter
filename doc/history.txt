@@ -1,3 +1,9 @@
+v2.4.7
+- Added audio info to the console output
+- Tweaked timer test
+- Refactoring
+- Cosmetics
+
 v2.4.6
 - Fixed a bug that would display the wrong number of audio bits/sample in some cases
 - Fixed a bug that stopped enumeration of plugins when the Avisynth auto-loader threw a "too many plugins..." message

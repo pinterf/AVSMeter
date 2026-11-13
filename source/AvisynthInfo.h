@@ -56,7 +56,7 @@ private:
 	int            GetInterfaceVersion(string &s_ErrorMsg);
   void           EnumPluginDirs();
 	void           EnumPluginDLLs();
-	BOOL           SYSCheckPlugin(string s_dll, string &s_Msg);
+	BOOL           SYSCheckPlugin(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
 	void           AVSCheckPlugins();
 	void           GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint);
 	BOOL           IsRuntimeInstalled(string s_version);
