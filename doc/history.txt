@@ -1,3 +1,10 @@
+v1.9.3
+- More GPU info added to the log file
+- Fixed a stupid bug in the command line parser
+- Removed the Admin privilege test
+- Added command line options for frame range and timeout
+- All text output goes now to stderr, except the usage info invoked by "-help" or "-h"
+
 v1.9.2
 - GPU/driver info is added to the log file when GPU monitoring is enabled/active
 - Optimizations, cleanup and cosmetics

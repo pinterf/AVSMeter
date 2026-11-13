@@ -37,15 +37,28 @@
     <b><br>
       <img alt="" src="avsmeter1.png" height="543" width="652"><br>
       <br>
-      <br>
-      Usage:</b><br>
-    <tt><big><b>AVSMeter script.avs [switches]</b><b><br>
-        </b><b>Switches:</b><b><br>
-        </b><b>-info [-i]&nbsp;&nbsp; Display clip info only</b><b><br>
-        </b><b>-log&nbsp; [-l]&nbsp;&nbsp; Create log file</b><b><br>
-        </b><b>-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Monitor GPU usage</b><br>
-      </big></tt><br>
+    </b><font face="Fixedsys"><br>
+      Usage:&nbsp; AVSMeter script.avs [switches]<br>
+      Switches:<br>
+      &nbsp;-info
+      [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Display clip info only<br>
+      &nbsp;-log&nbsp;
+      [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Create log file<br>
+      &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+      Monitor GPU usage<br>
+      &nbsp;-range=first,last&nbsp;&nbsp;&nbsp; Specify frame range (See
+      also "FrameRange" INI setting below)<br>
+      &nbsp;-timeout=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+      Specify timeout (seconds) (See also "ReadTimeout" INI setting
+      below)<br>
+      &nbsp;-help
+      [-h]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Display command line usage<br>
+    </font><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
     the default settings.<br>
@@ -55,8 +68,8 @@
     <b><br>
       "CreateLog" (<font color="Red">0</font> or 1):</b><br>
     Determines if a log will be created or not.<br>
-    <i>Note:</i> The command line switch "-log" or "-l" overrides the
-    ("0") INI setting.<br>
+    <b><i>Note:</i></b> The command line switch "-log" or "-l" overrides
+    the ("0") INI setting.<br>
     <b><br>
       "PauseBeforeExit" (<font color="Red">0</font> or 1):</b><br>
     If set to "1", pauses the program at the end and returns to the
@@ -69,6 +82,8 @@
     frame 1500. The smallest supported interval depends on how many
     frames/second are processed. The script has to run for at least ~200
     ms, otherwise no data is captured.<br>
+    <b><i>Note:</i></b> The command line switch "-range" overrides the
+    INI setting.<br>
     <b><br>
       "InvokeDistributor" (0 or <font color="Red">1</font>):</b><br>
     For Avisynth MT users: If set to "1", adds the "Distributor" call
@@ -95,8 +110,8 @@
     to access the GPU sensors through a shared memory space. GPU-Z has
     to be running (the window can be minimized to the system tray)
     before running AVSMeter.<br>
-    <i>Note:</i> The command line switch "-gpu" overrides the ("0") INI
-    setting.<br>
+    <b><i>Note:</i></b> The command line switch "-gpu" overrides the
+    ("0") INI setting.<br>
     <br>
     <b>"ReadTimeout</b><b>" (10</b><b><b><b><font color="Red"></font> to
           3600</b></b>):</b><br>
@@ -108,6 +123,8 @@
     timeout to 120 seconds which is also the default. Once the
     configured time has expired, AVSMeter will terminate. Values from 10
     to 3600 seconds are allowed.<br>
+    <b><i>Note:</i></b> The command line switch "-timeout" overrides the
+    INI setting.<br>
     <br>
     <br>
   </body>

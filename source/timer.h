@@ -26,9 +26,7 @@ private:
 
 CTimer::CTimer()
 {
-	uiSTDTimer = 0;
 	uiLastSTDTimer = 0;
-	uiTimerWrapCompensation = 0;
 }
 
 CTimer::~CTimer()
@@ -108,33 +106,31 @@ string CTimer::StrFormat(const char *fmt, ...)
 {
 	if (!fmt)	return "";
 
-	#define MAX_LEN 2048
-	va_list args;
-	va_start(args, fmt);
+	unsigned int bufsize = 16384;
 	unsigned int length = 256;
 	char *buffer = NULL;
 	int result = -1;
 
+	va_list args;
+	va_start(args, fmt);
 	while (result == -1)
 	{
-		if (buffer)
-			delete [] buffer;
-
-		buffer = new char [length];
+		if (buffer)	delete [] buffer;
+		buffer = new char[length];
 		memset(buffer, ' ', sizeof(buffer));
 		result = _vsnprintf(buffer, length, fmt, args);
 		length *= 2;
-		if (length > MAX_LEN)
+		if (length >= bufsize)
 		{
 			delete [] buffer;
 			va_end(args);
 			return "";
 		}
 	}
+	va_end(args);
 
 	string str(buffer);
 	delete [] buffer;
-	va_end(args);
 
 	return str;
 }

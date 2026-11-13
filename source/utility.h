@@ -46,30 +46,30 @@ class CUtils
 {
 public:
 	CUtils();
-	virtual      ~CUtils();
-	BOOL         IsUserAdmin();
-	BOOL         FileExists(string s_file);
-	string       OSErrorMessage();
-	void         CursorUp(int iLines);
-	unsigned int GetConsoleWidth();
-	void SetRGB(WORD wAttributes, BOOL bSet);
-	void ResetRGB(BOOL bSet);
-	string CUtils::GetFileVersion(string s_file);
+	virtual        ~CUtils();
+	BOOL           Is64BitOS();
+	BOOL           FileExists(string s_file);
+	string         OSErrorMessage();
+	void           CursorUp(int iLines);
+	void           SetRGB(WORD wAttributes, BOOL bSet);
+	void           ResetRGB(BOOL bSet);
+	string         GetFileVersion(string s_file);
 
 	//string functions
-	void   StrTrimLeft(string &s_string);
-	void   StrTrimRight(string &s_string);
-	void   StrTrim(string &s_string);
-	void   StrToUC(string &s_string);
-	void   StrToLC(string &s_string);
-	string StrFormat(const char *fmt, ...);
-	string StrPad(string s_line, unsigned int ui_consolewidth);
-	string StrFormatFPS(double d_fps);
-	BOOL   IsNumeric(string s_string);
+	void           StrTrimLeft(string &s_string);
+	void           StrTrimRight(string &s_string);
+	void           StrTrim(string &s_string);
+	void           StrToUC(string &s_string);
+	void           StrToLC(string &s_string);
+	string         StrFormat(const char *fmt, ...);
+	string         StrPad(string s_line);
+	string         StrFormatFPS(double d_fps);
+	BOOL           IsNumeric(string s_string);
 
 private:
-	HANDLE hConsole;
-	WORD   wSaveAttributes;
+	HANDLE         hConsole;
+	WORD           wSaveAttributes;
+	int            iConsoleWidth;
 };
 
 CUtils::CUtils()
@@ -80,6 +80,7 @@ CUtils::CUtils()
 	CONSOLE_SCREEN_BUFFER_INFO csbi; 
 	GetConsoleScreenBufferInfo(hConsole, &csbi); 
 	wSaveAttributes = csbi.wAttributes;
+	iConsoleWidth = (int)csbi.dwSize.X;
 }
 
 CUtils::~CUtils()
@@ -99,15 +100,6 @@ void CUtils::CursorUp(int iLines)
 	::SetConsoleCursorPosition(hConsole, pos);
 
 	return;
-}
-
-
-unsigned int CUtils::GetConsoleWidth()
-{
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	::GetConsoleScreenBufferInfo(hConsole, &csbi); 
-
-	return (unsigned int)csbi.dwSize.X;
 }
 
 
@@ -190,41 +182,39 @@ string CUtils::StrFormat(const char *fmt, ...)
 {
 	if (!fmt)	return "";
 
-	#define MAX_LEN 2048
-	va_list args;
-	va_start(args, fmt);
+	unsigned int bufsize = 16384;
 	unsigned int length = 256;
 	char *buffer = NULL;
 	int result = -1;
 
+	va_list args;
+	va_start(args, fmt);
 	while (result == -1)
 	{
-		if (buffer)
-			delete [] buffer;
-
+		if (buffer)	delete [] buffer;
 		buffer = new char[length];
 		memset(buffer, ' ', sizeof(buffer));
 		result = _vsnprintf(buffer, length, fmt, args);
 		length *= 2;
-		if (length > MAX_LEN)
+		if (length >= bufsize)
 		{
 			delete [] buffer;
 			va_end(args);
 			return "";
 		}
 	}
+	va_end(args);
 
 	string str(buffer);
 	delete [] buffer;
-	va_end(args);
 
 	return str;
 }
 
 
-string CUtils::StrPad(string s_line, unsigned int ui_consolewidth)
+string CUtils::StrPad(string s_line)
 {
-	int iPadLen = (int)ui_consolewidth - (int)s_line.length();
+	int iPadLen = iConsoleWidth - (int)s_line.length();
 
 	if ((iPadLen <= 0) || (iPadLen > 1000))
 		return s_line;
@@ -273,7 +263,7 @@ string CUtils::GetFileVersion(string s_file)
 	BYTE* VersionInfoBuffer = new BYTE[dwSize];
 	if (!GetFileVersionInfo(szFilename, 0, dwSize, (VOID*)VersionInfoBuffer))
 	{
-		delete[] VersionInfoBuffer;
+		delete [] VersionInfoBuffer;
 		return sFileVersion;
 	}
 
@@ -281,12 +271,12 @@ string CUtils::GetFileVersion(string s_file)
 	VS_FIXEDFILEINFO* pFixedInfo = 0;
 	if (!VerQueryValue(VersionInfoBuffer, "\\", (LPVOID*)(&pFixedInfo), &uiLen))
 	{
-		delete[] VersionInfoBuffer;
+		delete [] VersionInfoBuffer;
 		return sFileVersion;
 	}
 
 	sFileVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
-	delete[] VersionInfoBuffer;
+	delete [] VersionInfoBuffer;
 
 	return sFileVersion;
 }
@@ -331,21 +321,21 @@ BOOL CUtils::IsNumeric(string s_string)
 }
 
 
-BOOL CUtils::IsUserAdmin()
+BOOL CUtils::Is64BitOS()
 {
-	BOOL bAdmin;
-	SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-	PSID AdministratorsGroup; 
-	bAdmin = AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup); 
-	if (bAdmin) 
-	{
-		if (!CheckTokenMembership(NULL, AdministratorsGroup, &bAdmin))
-			bAdmin = FALSE;
+	BOOL bIs64BitOS = FALSE;
+	typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL); 
+	LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle("kernel32"), "IsWow64Process");
 
-    FreeSid(AdministratorsGroup); 
+	if (NULL != fnIsWow64Process)
+	{
+		if (!fnIsWow64Process(GetCurrentProcess(), &bIs64BitOS))
+		{
+			
+		}
 	}
 
-	return(bAdmin);
+	return bIs64BitOS;
 }
 
 

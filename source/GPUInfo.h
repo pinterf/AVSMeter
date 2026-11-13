@@ -30,12 +30,17 @@ public:
 		string CardName;
 		string GPUName;
 		string MemSize;
+		string BusInterface;
+		string OpenCLVersion;
 		string DriverVersion;
 	} data;
 
-	BOOL ReadSensors();
-	BOOL ReadData();
+	BOOL MemInit();
+	void MemRelease();
+	void ReadSensors();
+	void ReadData();
 	BOOL bGPUZIsRunning;
+	BOOL bInitialized;
 	string sError;
 
 private:
@@ -67,6 +72,9 @@ private:
 		GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
 	} GPUZ_SH_MEM, *LPGPUZ_SH_MEM;
 
+	HANDLE hMapFile;
+	LPVOID pMapAddr;
+
 	#pragma pack(pop)
 };
 
@@ -75,9 +83,11 @@ CGPUInfo::CGPUInfo()
 	EnumWindows(EnumWindowsProc, NULL);
 	Sleep(100);
 	bGPUZIsRunning = bGPUZRunning;
+	bInitialized = FALSE;
 	sensors.GPULoad = 0;
 	dwLastTimeRun = GetTickCount();
 	sError = "";
+	pMapAddr = NULL;
 }
 
 CGPUInfo::~CGPUInfo()
@@ -85,12 +95,9 @@ CGPUInfo::~CGPUInfo()
 }
 
 
-BOOL CGPUInfo::ReadData()
+BOOL CGPUInfo::MemInit()
 {
 	sError = "";
-	HANDLE hMapFile;
-	LPVOID pMapAddr;
-	LPGPUZ_SH_MEM lpMem;
 
 	if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHMEM_NAME)) == 0)
 	{
@@ -107,7 +114,31 @@ BOOL CGPUInfo::ReadData()
 		return FALSE;
 	}
 
-	lpMem = (LPGPUZ_SH_MEM)pMapAddr;
+	bInitialized = TRUE;
+	ReadData();
+
+	return TRUE;
+}
+
+
+void CGPUInfo::MemRelease()
+{
+	if (!bInitialized)
+		return;
+
+	if (hMapFile)
+		CloseHandle(hMapFile);
+
+	pMapAddr = NULL;
+	hMapFile = NULL;
+
+	return;
+}
+
+
+void CGPUInfo::ReadData()
+{
+	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
 	for (int i = 0; i <128; i++)
 	{
@@ -129,47 +160,23 @@ BOOL CGPUInfo::ReadData()
 			data.MemSize = sValue;
 		if (sKey == "DriverVersion")
 			data.DriverVersion = sValue;
+		if (sKey == "OpenCL_Version")
+			data.OpenCLVersion = sValue;
+		if (sKey == "BusInterface")
+			data.BusInterface = sValue;
 	}
 
-	if (hMapFile)
-		CloseHandle(hMapFile);
-
-	lpMem = NULL;
-	pMapAddr = NULL;
-	hMapFile = NULL;
-
-	return true;
+	return;
 }
 
 
-BOOL CGPUInfo::ReadSensors()
+void CGPUInfo::ReadSensors()
 {
-	sError = "";
 	//Min. update interval 500ms
 	if ((::GetTickCount() - dwLastTimeRun) < 500)
-		return TRUE;
+		return;
 
-	HANDLE hMapFile;
-	LPVOID pMapAddr;
-	LPGPUZ_SH_MEM lpMem;
-
-	sensors.GPULoad = 0;
-	if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHMEM_NAME)) == 0)
-	{
-		sError = OSErrorMessage();
-		return FALSE;
-	}
-
-	if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
-	{
-		sError = OSErrorMessage();
-		if (hMapFile)
-			CloseHandle(hMapFile);
-
-		return FALSE;
-	}
-
-	lpMem = (LPGPUZ_SH_MEM)pMapAddr;
+	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
 	for (int i = 0; i <128; i++)
 	{
@@ -180,16 +187,9 @@ BOOL CGPUInfo::ReadSensors()
 		}
 	}
 
-	if (hMapFile)
-		CloseHandle(hMapFile);
-
-	lpMem = NULL;
-	pMapAddr = NULL;
-	hMapFile = NULL;
-
 	dwLastTimeRun = GetTickCount();
 
-	return TRUE;
+	return;
 }
 
 
