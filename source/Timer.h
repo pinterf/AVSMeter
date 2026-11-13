@@ -60,14 +60,18 @@ double CTimer::GetTimer()
 	LARGE_INTEGER liPerfCounter = {0,0};
 	LARGE_INTEGER liPerfFreq = {0,0};
 
-	DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x01);
+
+	DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 1);
 	Sleep(0);
 
 	::QueryPerformanceFrequency(&liPerfFreq);
 	::QueryPerformanceCounter(&liPerfCounter);
 
-	::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
-	Sleep(0);
+	if (dwpOldMask != 0)
+	{
+		::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
+		Sleep(0);
+	}
 
 	return (double)liPerfCounter.QuadPart / (double)liPerfFreq.QuadPart;
 }
@@ -117,3 +121,4 @@ string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 
 
 #endif //_TIMER_H
+

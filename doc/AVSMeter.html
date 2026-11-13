@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
     <meta content="en-us" http-equiv="Content-Language">
@@ -57,31 +57,36 @@
     <font face="Fixedsys"><big><br>
         Usage:&nbsp; AVSMeter script.avs [switches]<br>
         Switches<br>
-        &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-        Display extended Avisynth info<br>
+        &nbsp;-avsinfo [-ai]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Display
+        extended Avisynth info<br>
         &nbsp;-c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
         Specify custom plugin directory<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
+
         in combination with "-avsinfo"<br>
         <br>
-        &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;-avsdll [-ad]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Specify
+        avisynth.dll to be used<br>
+        &nbsp;-info&nbsp;&nbsp; [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
-        &nbsp;-log&nbsp; [-l]&nbsp; &nbsp;
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log fil</big></font><big><font
+        &nbsp;-log&nbsp;&nbsp;&nbsp; [-l]&nbsp; &nbsp;
+        &nbsp;&nbsp;&nbsp; Create log fil</big></font><big><font
         face="Courier New"><font face="Fixedsys"><big><small>e</small></big><br>
           &nbsp;-csv&nbsp; &nbsp; &nbsp; &nbsp;
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
           Display GPU/VPU usage (requires GPU-Z)<br>
           &nbsp;-range=first,last&nbsp;&nbsp; Set frame range<br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Set time limit (seconds)<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <b><big><font face="Courier New"><br>
@@ -99,6 +104,12 @@
     </b>In combination with "-avsinfo", this switch allows to select a
     custom plugin directory (other than the directory/directories
     referenced in the registry).<br>
+    <br>
+    <b><b>"-avsdll"</b><br>
+    </b>The user can specify the avisynth.dll to be used (a file open
+    dialog lets the user select it). Without this switch AVSMeter will
+    attempt to load avisynth.dll through the standard Windows search
+    hierarchy which is the default behaviour.<br>
     <b><br>
       "-log"<br>
     </b>Creates a log file with various details about the installed
@@ -179,8 +190,8 @@
     which means that all log files are stored in the script directory
     or, in case the "-avsinfo"<br>
     switch was used, the current (working) directory.<br>
-    <b><i>Note:</i></b> This setting is ignored if "LogUseFileSaveDialog" is
-    set to "1".<br>
+    <b><i>Note:</i></b> This setting is ignored if
+    "LogUseFileSaveDialog" is set to "1".<br>
     <br>
     <b><b>"LogFileDateTimeSuffix" (<font color="#ff0000">0</font> or 1):</b><br>
     </b>If set to "1", adds a date/time suffix to all .log and .csv

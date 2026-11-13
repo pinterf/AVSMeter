@@ -78,6 +78,7 @@ struct stPerfData
 	WORD          num_threads;
 };
 
+typedef IScriptEnvironment * __stdcall CREATE_ENV(int);
 
 static CUtils utils;
 static CTimer timer;
@@ -113,7 +114,7 @@ int main(int argc, char* argv[])
 		sAVSMVersion += " (x86)";
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2017, Groucho2004\n");
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2018, Groucho2004\n");
 
 	if (sINIRet != "")
 	{
@@ -134,6 +135,7 @@ int main(int argc, char* argv[])
 	unsigned int uiFrameInterval = 10;
 	string sErrorMsg = "";
 	BOOL bPrintAVSInfo = FALSE;
+	BOOL bCustomAVSDLLFromCL = FALSE;
 	Settings.sSystemDateTime = "";
 
 	if (Settings.bAllowOnlyOneInstance)
@@ -170,9 +172,15 @@ int main(int argc, char* argv[])
 		utils.StrToLC(sArgTest);
 		arg_len = sArgTest.length();
 
-		if (sArgTest == "-avsinfo")
+		if ((sArgTest == "-avsinfo") || (sArgTest == "-ai"))
 		{
 			bPrintAVSInfo = TRUE;
+			continue;
+		}
+
+		if ((sArgTest == "-avsdll") || (sArgTest == "-ad"))
+		{
+			bCustomAVSDLLFromCL = TRUE;
 			continue;
 		}
 
@@ -361,6 +369,43 @@ int main(int argc, char* argv[])
 		::SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	else
 		::SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
+
+	if (bCustomAVSDLLFromCL)
+	{
+		char szCustomAVSDLL[MAX_PATH + 1] = "";
+
+		OPENFILENAME ofn;
+		ofn.lStructSize       = sizeof(OPENFILENAME);
+		ofn.hwndOwner         = GetForegroundWindow();
+		ofn.hInstance         = NULL;
+		ofn.lpstrFilter       = "*.dll";
+		ofn.lpstrCustomFilter = NULL;
+		ofn.nMaxCustFilter    = 0;
+		ofn.nFilterIndex      = 1;
+		ofn.lpstrFile         = szCustomAVSDLL;
+		ofn.nMaxFile          = MAX_PATH;
+		ofn.lpstrFileTitle    = NULL;
+		ofn.nMaxFileTitle     = NULL;
+		ofn.lpstrInitialDir   = ".";
+		ofn.lpstrTitle        = "Select Avisynth DLL";
+		ofn.nFileOffset       = 0;
+		ofn.nFileExtension    = 0;
+		ofn.lpstrDefExt       = NULL;
+		ofn.lCustData         = 0;
+		ofn.lpfnHook          = NULL;
+		ofn.lpTemplateName    = NULL;
+		ofn.Flags             = OFN_HIDEREADONLY;
+			
+		if (GetOpenFileName(&ofn) == 0)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot open file or no avisynth.dll selected.\n");
+			PollKeyHit();
+			return -1;
+		}
+
+		Settings.sAVSDLL.assign(szCustomAVSDLL);
+	}
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
@@ -775,7 +820,7 @@ int main(int argc, char* argv[])
 	{
 		_set_se_translator(SE_Translator);
 
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
@@ -1164,7 +1209,7 @@ int main(int argc, char* argv[])
 		while ((uiFramesToProcess / uiFrameInterval) > 400000)
 			uiFrameInterval *= 10;
 
-		perfdata.reserve((uiFramesToProcess / uiFrameInterval) + 2);
+		perfdata.reserve((2 * uiFramesToProcess) / uiFrameInterval);
 
 		unsigned int uiFramesRead = 0;
 		BOOL bFirstScr = TRUE;
@@ -2314,7 +2359,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	{
 		_set_se_translator(SE_Translator);
 
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			s_error = "Failed to load CreateScriptEnvironment()";
@@ -2437,12 +2482,13 @@ void PrintUsage()
 {
 	PrintConsole(TRUE, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display extended Avisynth info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo [-ai]      Display extended Avisynth info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
  	PrintConsole(TRUE, COLOR_EMPHASIS, "                      in combination with \"-avsinfo\"\n\n");
 	
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info [-i]          Display clip info\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log  [-l]          Create log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll [-ad]       Specify avisynth.dll to be used\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Display clip info\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Display GPU/VPU usage (requires GPU-Z)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");

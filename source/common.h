@@ -54,7 +54,6 @@ using std::exception;
 
 const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
 
-
 static BOOL CompareNoCase(string first, string second)
 {
   size_t i = 0;

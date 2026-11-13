@@ -61,6 +61,7 @@ private:
 	BOOL                IsRuntimeInstalled(string s_version);
 	BOOL                Is64BitOS();
 	string              BrowseDirectory();
+	typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 
 
@@ -255,7 +256,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	{
 		_set_se_translator(SE_Translator);
 
-		IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 		if (!CreateEnvironment)
 		{
 			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
@@ -273,6 +274,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 				::FreeLibrary(hDLL);
 				return 0;
 			}
+
 			AVS_env = CreateEnvironment(iInterfaceVersion);
 		}
 
@@ -638,9 +640,9 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 		string sName = "";
 
 		DWORD dwName = 0;
+		s_Msg = "UNCATEGORIZED";
 		for (dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
-			s_Msg = "UNCATEGORIZED";
 			sName = "";
 			DWORD rvaName = prvaNames[dwName];
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
@@ -661,13 +663,16 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 			if (sName.find("avisynthplugininit") != string::npos)
 				s_Msg = "AVSCPP20";
 
-			if (sName.find("avisynth_c_plugin_init@4") != string::npos)
+			if (sName.find("avisynth_c_plugin_init@4") != string::npos) //32 bit implied
 			{
 				s_Msg = "AVSC25";
 				break;
 			}
 
-			if (sName.find("avisynth_c_plugin_init") != string::npos)
+			if ((sName.find("avisynth_c_plugin_init") != string::npos) && (b_Is64BitDLL))
+				s_Msg = "AVSC25";
+
+			if ((sName.find("avisynth_c_plugin_init") != string::npos) && (!b_Is64BitDLL))
 				s_Msg = "AVSC20";
 		}
 	}
@@ -726,7 +731,7 @@ void CAvisynthInfo::TestLoadPlugins()
 			{
 				_set_se_translator(SE_Translator);
 	
-				IScriptEnvironment *(__stdcall *CreateEnvironment)(int) = (IScriptEnvironment *(__stdcall *)(int))::GetProcAddress(hDLL, "CreateScriptEnvironment");
+				CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
 				if (!CreateEnvironment)
 				{
 					::FreeLibrary(hDLL);
