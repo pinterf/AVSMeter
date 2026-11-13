@@ -77,6 +77,7 @@ struct stPerfData
 	WORD          num_threads;
 };
 
+typedef IScriptEnvironment * __stdcall CREATE_ENV(int);
 
 static CUtils utils;
 static CTimer timer;
@@ -131,7 +132,7 @@ int main(int argc, char* argv[])
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
 	BOOL bOmitPreScan = FALSE;
-	BOOL bVerboseLog = FALSE;
+	BOOL bLogFunctions = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 1;
 	string sErrorMsg = "";
@@ -146,7 +147,7 @@ int main(int argc, char* argv[])
 	BOOL CLSwitches_info = FALSE;
 	BOOL CLSwitches_o = FALSE;
 	BOOL CLSwitches_c = FALSE;
-	BOOL CLSwitches_v = FALSE;
+	BOOL CLSwitches_lf = FALSE;
 
 	if (Settings.bAllowOnlyOneInstance)
 	{
@@ -208,10 +209,11 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		if (sArgTest == "-v")
+		if (sArgTest == "-lf")
 		{
-			CLSwitches_v = TRUE;
-			bVerboseLog = TRUE;
+			CLSwitches_lf = TRUE;
+			bLogFunctions = TRUE;
+			Settings.bCreateLog = TRUE;
 			continue;
 		}
 
@@ -448,9 +450,9 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 
-		if (CLSwitches_v)
+		if (CLSwitches_lf)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-v\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-lf\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -727,8 +729,25 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		//Plugin Dependencies
+		if (AvisynthInfo.vPluginDependencies.size() > 0)
+		{
+			if (AvisynthInfo.bIs64BitAVSDLL)
+				sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
+			else
+				sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
 
-		if (bVerboseLog)
+			sLogBuffer += sOutBuf;
+
+			for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
+			{
+				sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
+				sLogBuffer += sOutBuf;
+			}
+		}
+
+
+		if (bLogFunctions)
 		{
 			//Internal Functions
 			if (AvisynthInfo.vInternalFunctions.size() > 0)
@@ -756,24 +775,6 @@ int main(int argc, char* argv[])
 				{
 					sFunction = AvisynthInfo.vPluginFunctions[PFunc];
 					sOutBuf = utils.StrFormat("    %s\n", sFunction.c_str());
-					sLogBuffer += sOutBuf;
-				}
-			}
-
-
-			//Plugin Dependencies
-			if (AvisynthInfo.vPluginDependencies.size() > 0)
-			{
-				if (AvisynthInfo.bIs64BitAVSDLL)
-					sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
-				else
-					sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
-
-				sLogBuffer += sOutBuf;
-
-				for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
-				{
-					sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
 					sLogBuffer += sOutBuf;
 				}
 			}
@@ -923,7 +924,16 @@ int main(int argc, char* argv[])
 	{
 		_set_se_translator(SE_Translator);
 
-		AVS_env = CreateScriptEnvironment(AvisynthInfo.iInterfaceVersion);
+		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
+			PollKeys();
+			return -1;
+		}
+
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+
 		if (!AVS_env)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
@@ -1352,7 +1362,7 @@ int main(int argc, char* argv[])
 		double dLastIntervalTime = dStartTime;
 
 		unsigned int uiCursorOffset = 0;
-		SetErrorMode(nPrevErrorMode);
+		
 		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
@@ -1768,6 +1778,8 @@ int main(int argc, char* argv[])
 			return -1;
 		}
 	}
+
+	SetErrorMode(nPrevErrorMode);
 
 	PollKeys();
 
@@ -2455,7 +2467,16 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	{
 		_set_se_translator(SE_Translator);
 
-		AVS_env = CreateScriptEnvironment(AvisynthInfo.iInterfaceVersion);
+		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
+			PollKeys();
+			return -1;
+		}
+
+		AVS_env = CreateEnvironment(AvisynthInfo.iInterfaceVersion);
+
 		if (!AVS_env)
 		{
 			s_error = "Could not create IScriptenvironment";
@@ -2591,7 +2612,7 @@ void PrintUsage()
  	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -v                  Add functions/dependencies to the log file\n\n\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the log file\n\n\n\n");
 
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");

@@ -1,3 +1,7 @@
+v2.8.6
+- Minor fixes/cosmetics
+- Documentation updates/corrections
+
 v2.8.5
 - Fixed a long standing exception handling bug
 

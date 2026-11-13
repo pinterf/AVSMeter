@@ -19,8 +19,6 @@
 #if !defined(_TIMER_H)
 #define _TIMER_H
 
-#define MM_RESOLUTION 1
-
 #include "common.h"
 
 class CTimer
@@ -31,26 +29,12 @@ public:
 	double           GetTimer();
 	double           GetSTDTimer();
 	unsigned __int64 GetSTDTimerMS();
-	double           GetMMTimer();
-	unsigned __int64 GetMMTimerMS();
 	BOOL             TestPerfCounter();
 	string           FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
-
-private:
-	BOOL bMMTimerUsable;
-	unsigned int uiTimerRes;
 };
 
 CTimer::CTimer()
 {
-	bMMTimerUsable = TRUE;
-	TIMECAPS tc;
-	if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) != TIMERR_NOERROR) 
-		bMMTimerUsable = FALSE;
-
-	uiTimerRes = tc.wPeriodMin;
-	if (uiTimerRes > MM_RESOLUTION)
-		bMMTimerUsable = FALSE;
 }
 
 CTimer::~CTimer()
@@ -101,28 +85,6 @@ unsigned __int64 CTimer::GetSTDTimerMS()
 
 	return (uiSTDTimer + uiTimerWrapComp);
 }
-
-
-double CTimer::GetMMTimer()
-{
-	return ((double)GetMMTimerMS() / 1000.0);
-}
-
-
-unsigned __int64 CTimer::GetMMTimerMS()
-{
-	static unsigned __int64 uiLastMMTimer;
-
-	timeBeginPeriod(uiTimerRes);
-	unsigned __int64 uiMMTimer = (unsigned __int64)timeGetTime();
-	timeEndPeriod(uiTimerRes);
-
-	unsigned __int64 uiTimerWrapComp = (uiMMTimer < uiLastMMTimer) ? 4294967296 : 0;
-	uiLastMMTimer = uiMMTimer;
-
-	return (uiMMTimer + uiTimerWrapComp);
-}
-
 
 
 string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)

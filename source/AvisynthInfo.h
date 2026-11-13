@@ -63,6 +63,7 @@ private:
 	__int64             FileSize(string s_file);
 	BOOL                Is64BitOS();
 	string              BrowseDirectory();
+	typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 
 
@@ -208,7 +209,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 
 	if (!bAVSLinkage)
 	{
-		s_ErrorMsg = "Avisynth version is too old.\nUpdate to Avisynth 2.6 or Avisynth+";
+		s_ErrorMsg = utils.StrFormat("Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+", utils.GetWOW64FilePath(sDLLPath).c_str(), utils.GetFileVersion(sDLLPath).c_str());
 		return FALSE;
 	}
 
@@ -257,10 +258,17 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	{
 		_set_se_translator(SE_Translator);
 
-		iInterfaceVersion = 8;
+		CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+		if (!CreateEnvironment)
+		{
+			s_ErrorMsg = "Failed to load CreateScriptEnvironment()";
+			::FreeLibrary(hDLL);
+			return FALSE;
+		}
+
+		iInterfaceVersion = 6;
 		while (!AVS_env)
 		{
-			iInterfaceVersion--;
 			if (iInterfaceVersion < 5)
 			{
 				s_ErrorMsg = "Cannot create IScriptenvironment";
@@ -268,8 +276,10 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 				return 0;
 			}
 
-			AVS_env = CreateScriptEnvironment(iInterfaceVersion);
+			AVS_env = CreateEnvironment(iInterfaceVersion);
+			iInterfaceVersion--;
 		}
+
 
 		AVS_linkage = AVS_env->GetAVSLinkage();
 		AVSValue foo;
@@ -316,7 +326,6 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		{
 			sInternalFunctions = "";
 		}
-
 
 		string sDLLFunctions = "";
 		if (!b_CustomPluginDir)
@@ -748,7 +757,15 @@ void CAvisynthInfo::TestLoadPlugins()
 			{
 				_set_se_translator(SE_Translator);
 	
-				AVS_env = CreateScriptEnvironment(iInterfaceVersion);
+				CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+				if (!CreateEnvironment)
+				{
+					::FreeLibrary(hDLL);
+					return;
+				}
+
+				AVS_env = CreateEnvironment(iInterfaceVersion);
+
 				if (!AVS_env)
 				{
 					::FreeLibrary(hDLL);

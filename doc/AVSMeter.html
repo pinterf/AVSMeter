@@ -64,6 +64,7 @@
 
 
 
+
         line usage 1 (analyse a script):&nbsp; AVSMeter script.avs
         [switches]</font></font><font face="Fixedsys"><big><b><font
             face="Lucida Console" size="+1" color="#333399"><br>
@@ -77,6 +78,7 @@
         [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file<br>
         &nbsp;
         -csv&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
 
 
@@ -102,6 +104,7 @@
 
 
 
+
         Display GPU/VPU usage (requires GPU-Z)<br>
         &nbsp; -range=first,last&nbsp;&nbsp; Set frame range<br>
         &nbsp; -timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -110,6 +113,7 @@
         -priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set
         process priority (1:low, 2:normal, 3:high)<br>
       </big></font> <font face="Fixedsys"><big><font face="Fixedsys"><big>&nbsp;
+
 
 
 
@@ -140,34 +144,35 @@
 
 
 
+
         Specify custom plugin directory<br>
         &nbsp; -log&nbsp;&nbsp;&nbsp;
         [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file</big></font><br>
-    <font face="Fixedsys"><big><font face="Fixedsys"><big>&nbsp; -v
-            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Add
-            functions/dependencies to the log file<br>
+    <font face="Fixedsys"><big><font face="Fixedsys"><big>&nbsp;
+            -lf&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Add internal/external
+            functions to the log file<br>
           </big></font></big><big>&nbsp;</big></font><font
       face="Fixedsys"><br>
       <br>
     </font><b>"avsinfo"<br>
     </b>Displays extended info about the installed Avisynth version and
     the plugin sub-system. If a custom avisynth.dll is specified in the
-    ini file, info about that file will be displayed. The "-avsinfo"
-    switch can be combined with "-log" in order to save the info to a
+    ini file, info about that file will be displayed. The "avsinfo"
+    command can be combined with "-log" in order to save the info to a
     log file. The log file contains additional info about OS/hardware, a
     list of DLL dependencies for avisynth.dll and all auto-load plugins
-    and a list of internal/external Avisynth functions.<br>
+    and optionally ("-lf") a list of internal/external Avisynth
+    functions.<br>
     <br>
     <b><b>"-c"</b><br>
-    </b>In combination with "-avsinfo", this switch allows to select a
+    </b>In combination with "avsinfo", this switch allows to select a
     custom plugin directory (other than the directory/directories
     referenced in the registry).<br>
     <br>
-    <b><b><b><b>"-v"</b><br>
-        </b></b></b>In combination with "-avsinfo", this switch adds a
-    list of internal/external functions and DLL dependencies to the log
-    file.<b><b><br>
+    <b><b><b><b>"-lf"</b><br>
+        </b></b></b>In combination with "avsinfo" and "-log", this
+    switch adds a list of internal/external functions to the log file.<b><b><br>
         <br>
         "-avsdll"</b><br>
     </b>The user can specify the avisynth.dll to be used (a file open
