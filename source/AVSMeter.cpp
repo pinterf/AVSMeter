@@ -33,9 +33,9 @@
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
-#define REFRESH_INTERVAL              0.25  //seconds
-#define MIN_TIME_PER_FRAMEINTERVAL   10.00  //milliseconds
-#define MIN_RUNTIME                 500     //milliseconds
+#define REFRESH_INTERVAL               0.20   //seconds
+#define MIN_TIME_PER_FRAMEINTERVAL    20.00   //milliseconds
+#define MIN_RUNTIME                  500      //milliseconds
 
 struct stSettings
 {

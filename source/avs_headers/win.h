@@ -49,6 +49,6 @@
 #include <windows.h>
 
 // Provision for UTF-8 max 4 bytes per code point
-#define AVS_MAX_PATH MAX_PATH*16
+#define AVS_MAX_PATH MAX_PATH*4
 
 #endif // AVSCORE_WIN_H

@@ -1,8 +1,12 @@
+v3.0.8.0
+- Updated libcpuid (Intel Whiskey Lake-U CPUs, AMD Ryzen Cezanne)
+- Updated AVS header files
+
 v3.0.7.0
 - Updated libcpuid (new AMD and Intel CPUs)
 
 - The user can specify a custom avisynth.dll in the INI file.
-  This feture was removed some time ago, now it's back
+  This feature was removed some time ago, now it's back
 
 - Info about used command line switches is added to the log files
 
