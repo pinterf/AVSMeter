@@ -1,3 +1,8 @@
+v2.9.0
+- Added Veselin Georgiev's libcpuid (again) for better detection of some CPU features (such as number of physical/logical cores of contemporary CPUs)
+- Minor other fixes
+- Refactoring
+
 v2.8.9
 - Updated documentation
 - Updated dates (2018 -> 2019)

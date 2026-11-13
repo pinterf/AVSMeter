@@ -16,14 +16,9 @@
 */
 
 
-#define PRODUCTNAME_STR "AVSMeter\0"
-#define VERSION_NUM      2,8,9,0
-#define VERSION_STR     "2.8.9\0"
-#define COPYRIGHT_STR   "Copyright (c) 2012-2019, Groucho2004\0"
-#define COMMENTS_STR    "AVSMeter - Avisynth Script Testing\0"
-
 #include <winres.h>
-#define IDI_MAINFRAME 101
+#include "res.h"
+
 IDI_MAINFRAME ICON DISCARDABLE "AVSMeter.ico"
 
 VS_VERSION_INFO VERSIONINFO
@@ -49,3 +44,4 @@ BEGIN
 		VALUE "Translation", 0x409, 1200
 	END
 END
+

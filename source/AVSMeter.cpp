@@ -24,6 +24,7 @@
 #include "ProcessInfo.h"
 #include "GPUInfo.h"
 #include "Timer.h"
+#include "res.h"
 
 
 #define COLOR_DEFAULT           0
@@ -102,17 +103,15 @@ int main(int argc, char* argv[])
 	string sINIRet = ParseINIFile();
 
 	int iRet = 0;
-	string sAVSMVersion = utils.GetFileVersion("");
-	if (sAVSMVersion.length() > 5)
-		sAVSMVersion = sAVSMVersion.substr(0, 5);
+
+	string sAVSMVersion = VERSION_STR;
 
 	if (PROCESS_64)
 		sAVSMVersion += " (x64)";
 	else
 		sAVSMVersion += " (x86)";
 
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2019, Groucho2004\n");
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s - %s\n", sAVSMVersion.c_str(), COPYRIGHT_STR);
 
 	if (sINIRet != "")
 	{
@@ -491,6 +490,8 @@ int main(int argc, char* argv[])
 	else
 		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, FALSE, sErrorMsg);
 
+	sys.GetCPUID();
+
 	if (!bRet)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
@@ -534,18 +535,17 @@ int main(int argc, char* argv[])
 		sLogBuffer += sOutBuf;
 
 		sLogBuffer += "\n[OS/Hardware info]\n";
-		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
+		sOutBuf = utils.StrFormat("Operating system:           %s\n\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (sys.GetCPUInfo())
+		if (sys.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU brand string:           %s\n", sys.CPUBrandString.c_str());
+			sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-
-			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
+			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
-			if (sys.CPUFeatures.find("*") != std::string::npos)
-				sLogBuffer += "                            (* CPU feature not supported by the operating system)\n";
+			sOutBuf = utils.StrFormat("                            %u physical cores / %u logical cores\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
+			sLogBuffer += sOutBuf;
 		}
 
 		if (Settings.bGPUInfo)
@@ -706,23 +706,6 @@ int main(int argc, char* argv[])
 				sOutBuf += sLineSep + "\n";
 				sLogBuffer += sOutBuf;
 				PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
-			}
-		}
-
-		//Plugin Dependencies
-		if (AvisynthInfo.vPluginDependencies.size() > 0)
-		{
-			if (AvisynthInfo.bIs64BitAVSDLL)
-				sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
-			else
-				sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
-
-			sLogBuffer += sOutBuf;
-
-			for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
-			{
-				sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
-				sLogBuffer += sOutBuf;
 			}
 		}
 
@@ -972,18 +955,18 @@ int main(int argc, char* argv[])
 		}
 
 		sLogBuffer += "\n[OS/Hardware info]\n";
-		sOutBuf = utils.StrFormat("Operating system:           %s\n", sys.GetOSVersion().c_str());
+		sOutBuf = utils.StrFormat("Operating system:           %s\n\n", sys.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (sys.GetCPUInfo())
-		{
-			sOutBuf = utils.StrFormat("CPU brand string:           %s\n", sys.CPUBrandString.c_str());
-			sLogBuffer += sOutBuf;
 
-			sOutBuf = utils.StrFormat("CPU features:               %s\n", sys.CPUFeatures.c_str());
+		if (sys.bCPUIDSuccess)
+		{
+			sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			if (sys.CPUFeatures.find("*") != std::string::npos)
-				sLogBuffer += "                            (* CPU feature not supported by the operating system)\n";
+			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
+			sLogBuffer += sOutBuf;
+			sOutBuf = utils.StrFormat("                            %u physical cores / %u logical cores\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
+			sLogBuffer += sOutBuf;
 		}
 
 		if (Settings.bGPUInfo)
@@ -1288,11 +1271,8 @@ int main(int argc, char* argv[])
 			AVS_env->ThrowError("Invalid frame range specified:\n\"%s\"\n", Settings.sFrameRange.c_str());
 		}
 
-		while ((uiFramesToProcess / uiFrameInterval) > 100000)
+		while ((uiFramesToProcess / uiFrameInterval) > 500000)
 			uiFrameInterval *= 10;
-
-		while ((uiFrameInterval * 10) > uiFramesToProcess)
-			uiFrameInterval /= 10;
 
 		perfdata.reserve((2 * uiFramesToProcess) / uiFrameInterval);
 
@@ -2553,6 +2533,7 @@ void PrintUsage()
  	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Add video adapter info to the log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the log file\n\n\n\n");
 
 
