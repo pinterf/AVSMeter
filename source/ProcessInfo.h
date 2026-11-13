@@ -87,6 +87,7 @@ void CProcessInfo::CloseProcess()
 
 void CProcessInfo::Update()
 {
+	//Min. update interval 100ms
 	if ((::GetTickCount() - dwLastTimeRun) < 100)
 		return;
 
@@ -148,13 +149,10 @@ void CProcessInfo::GetCPUUsage()
 
 inline unsigned __int64 CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
 {
-	LARGE_INTEGER a, b;
-	a.LowPart = ftA.dwLowDateTime;
-	a.HighPart = ftA.dwHighDateTime;
-	b.LowPart = ftB.dwLowDateTime;
-	b.HighPart = ftB.dwHighDateTime;
+	unsigned __int64 a = (((unsigned __int64)ftA.dwHighDateTime) << 32) + (unsigned __int64)ftA.dwLowDateTime;
+	unsigned __int64 b = (((unsigned __int64)ftB.dwHighDateTime) << 32) + (unsigned __int64)ftB.dwLowDateTime;
 
-	return (unsigned __int64)(a.QuadPart - b.QuadPart);
+	return (a - b);
 }
 
 

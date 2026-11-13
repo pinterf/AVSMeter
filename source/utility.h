@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 
+#define AVSDLL_SUCCESS 0x00
 #define AVSDLL_INCOMPATIBLE 0x01
 #define CANNOT_LOAD_AVSDLL 0x02
 #define NO_AVS_LINKAGE 0x03
@@ -17,15 +18,25 @@ class CUtils
 {
 public:
 	CUtils();
-	virtual ~CUtils();
-	double GetTimer();
-	BOOL TestTimer();
-	BOOL FileExists(string cs_file);
-	BYTE CheckAvisynth();
-	void CursorUp(int iLines);
+	virtual      ~CUtils();
+	double       GetTimer();
+	BOOL         TestTimer();
+	BOOL         FileExists(string s_file);
+	BYTE         CheckAvisynth();
+	void         CursorUp(int iLines);
 	unsigned int GetConsoleWidth();
-	BOOL GetProductVersion(string &s_version);
-	HANDLE hConsole;
+	HANDLE       hConsole;
+
+	//string functions
+	void   StrTrimLeft(string &s_string);
+	void   StrTrimRight(string &s_string);
+	void   StrTrim(string &s_string);
+	void   StrToUC(string &s_string);
+	void   StrToLC(string &s_string);
+	string StrFormat(const char *fmt, ...);
+	string StrFormatTime(unsigned int ui_milliseconds);
+	string StrPad(string s_line, unsigned int ui_consolewidth);
+	string StrFormatFPS(double d_fps);
 };
 
 CUtils::CUtils()
@@ -98,10 +109,10 @@ BOOL CUtils::TestTimer()
 }
 
 
-BOOL CUtils::FileExists(string cs_file)
+BOOL CUtils::FileExists(string s_file)
 {
 	DWORD dwAttrib;
-	dwAttrib = ::GetFileAttributes(cs_file.c_str());
+	dwAttrib = ::GetFileAttributes(s_file.c_str());
 	if (dwAttrib == 0xFFFFFFFF)
 		return FALSE;
 
@@ -114,7 +125,7 @@ BOOL CUtils::FileExists(string cs_file)
 
 BYTE CUtils::CheckAvisynth()
 {
-	BYTE bRet = 0;
+	BYTE bRet = AVSDLL_SUCCESS;
 
 	try
 	{
@@ -131,20 +142,19 @@ BYTE CUtils::CheckAvisynth()
 		string sName = "";
 		int iPos = 0;
 
-		BYTE bTestLinkage = NO_AVS_LINKAGE;
-		for (DWORD i = 0; i < pExp->NumberOfNames; ++i)
+		bRet = NO_AVS_LINKAGE;
+		for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
 		{
-			DWORD rvaName = prvaNames[i];
+			DWORD rvaName = prvaNames[dwName];
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-			iPos = (int)sName.find("AVS_Linkage") + (int)sName.find("AVS_linkage");
+			StrToLC(sName);
+			iPos = (int)sName.find("avs_linkage");
 			if (iPos >= 0)
 			{
-				bTestLinkage = 0;
+				bRet = AVSDLL_SUCCESS;
 				break;
 			}
 		}
-
-		bRet = bTestLinkage;
 
 		UnMapAndLoad(&li);
 	}
@@ -157,39 +167,123 @@ BYTE CUtils::CheckAvisynth()
 }
 
 
-BOOL CUtils::GetProductVersion(string &s_version)
+void CUtils::StrTrimLeft(string &s_string)
 {
-	BOOL bRet = FALSE;
-	char szFilename[MAX_PATH + 1] = {0};
+	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
 
-	if (GetModuleFileName(NULL, szFilename, MAX_PATH) == 0)
-		return bRet;
+	return;
+}
 
-	DWORD dummy;
-	DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
-	if (dwSize == 0)
-		return bRet;
 
-	void* pVersion = malloc(dwSize);
-	if (pVersion == NULL)
-		return bRet;
+void CUtils::StrTrimRight(string &s_string)
+{
+	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
 
-	if (!GetFileVersionInfo(szFilename, NULL, dwSize, pVersion))
+	return;
+}
+
+
+void CUtils::StrTrim(string &s_string)
+{
+	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
+	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
+
+	return;
+}
+
+
+void CUtils::StrToUC(string &s_string)
+{
+	for (unsigned int i = 0; i < s_string.length(); i++)
+		s_string[i] = toupper(s_string[i]);
+
+	return;
+}
+
+
+void CUtils::StrToLC(string &s_string)
+{
+	for (unsigned int i = 0; i < s_string.length(); i++)
+		s_string[i] = tolower(s_string[i]);
+
+	return;
+}
+
+
+string CUtils::StrFormat(const char *fmt, ...)
+{
+	if (!fmt)	return "";
+
+	#define MAX_LEN 2048
+	va_list args;
+	va_start(args, fmt);
+	unsigned int length = 256;
+	char *buffer = NULL;
+	int result = -1;
+
+	while (result == -1)
 	{
-		free(pVersion);
-		return bRet;
+		if (buffer)
+			delete [] buffer;
+
+		buffer = new char [length];
+		memset(buffer, ' ', sizeof(buffer));
+		result = _vsnprintf(buffer, length, fmt, args);
+		length *= 2;
+		if (length > MAX_LEN)
+		{
+			delete [] buffer;
+			va_end(args);
+			return "";
+		}
 	}
 
-	LPVOID pvProductVersion = NULL;
-	unsigned int iProductVersionLen = 0;
+	string str(buffer);
+	delete [] buffer;
+	va_end(args);
 
-	if (!VerQueryValue(pVersion, "\\StringFileInfo\\080904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
-		return bRet;
+	return str;
+}
 
-	s_version = (char*)pvProductVersion;
-	bRet = TRUE;
 
-	return bRet;
+string CUtils::StrPad(string s_line, unsigned int ui_consolewidth)
+{
+	int iPadLen = (int)ui_consolewidth - (int)s_line.length();
+
+	if ((iPadLen <= 0) || (iPadLen > 1000))
+		return s_line;
+
+	string s_padding((iPadLen - 1), ' ');
+
+	return (s_line + s_padding);
+}
+
+
+string CUtils::StrFormatTime(unsigned int ui_milliseconds)
+{
+	unsigned int hours = ui_milliseconds / 3600000;
+	unsigned int minutes = (ui_milliseconds / 60000) % 60;
+	unsigned int seconds = (ui_milliseconds / 1000) % 60;
+	unsigned int milliseconds = ui_milliseconds % 1000;
+
+	return StrFormat("%03d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+}
+
+
+string CUtils::StrFormatFPS(double d_fps)
+{
+	string sRet = "";
+
+	if (d_fps < 9.999)
+		sRet = StrFormat("%.3f", d_fps);
+	else if (d_fps < 99.99)
+		sRet = StrFormat("%.2f", d_fps);
+	else if (d_fps < 999.9)
+		sRet = StrFormat("%.1f", d_fps);
+	else
+		sRet = StrFormat("%u", (unsigned int)(d_fps + 0.5));
+
+	return sRet;
 }
 
 

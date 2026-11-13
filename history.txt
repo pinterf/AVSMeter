@@ -1,0 +1,144 @@
+v1.7.5
+- Refactoring
+- New (undocumented) INI setting: "AllowOnlyOneInstance". When set to "1" (default), only one
+  instance of AVSMeter can run at the same time.
+- Added simple documentation to the distribution package
+
+v1.7.4
+- Some improvements in exception handling
+- Regression: The changes to the initial speed evaluation introduced other problems, reverted to
+  previous behaviour.
+- More robust command line processing
+- Cosmetics
+
+v1.7.3
+- Modified the initial speed test that determines the measurement interval. With some scripts,
+  particularly with Avisynth MT, there are extreme time differences from one frame to the next,
+  most likely due to caching. In order to determine the suitable interval, these differences
+  have to be taken into account.
+- Added 64-Bit build for Avisynth+ 64 Bit.
+- Added "Current FPS" to the console display. It shows the speed for each frame interval.
+
+v1.7.2
+- Fixed a bug in the INI parser
+- Added Version resource
+- Refactoring
+
+v1.7.1
+- Reduced the minimum script running time required to collect performance data
+- Minor tweaks and fixes
+
+v1.7.0
+- Wrote some handy string helper functions in order to remove the 3rd party (CStdString) dependency.
+- Added detection routine for the 2.6 version that checks if avisynth.dll exports "AVS_Linkage".
+- Reorganisation of utility classes/functions.
+
+v1.6.2 / v1.5.7
+- When an invalid frame range setting is specified in AVSMeter.ini, the program
+  will display a warning message for 2 seconds and then continue with the default
+  number of frames (which means processing all frames).
+
+v1.6.1
+- Dynamic loading of avisynth.dll
+- Added progressive/interlaced info (through Avisynth API)
+- Minor error handling improvements
+
+v1.6.0
+- Dropped Avisynth 2.5 support.
+
+v1.5.6:
+- Minor fixes
+
+v1.5.5:
+- Fixed a nasty bug where the program would crash when the script doesn't return a video clip
+- Added an (undocumented) INI setting "LogEstimatedTime". When set to "1", this also displays/logs the
+  estimated time in case the process was interrupted by the user
+
+v1.5.4:
+- Improved error handling
+- Reduced internal memory usage
+- Simplified the switches, it's now just "-i" for info and "-l" for log
+- Added number of active threads to the performance data
+
+v1.5.3:
+- Better error handling in some rare scenarios
+- Added switch "-i" (or "--info") which only displays/logs the clip info
+- For consistency, the log switch is now "-l" (or "--log")
+
+v1.5.2:
+- For scripts with a frame time < 20ms (50 fps), the measurement interval is now 1 frame (previously 10 frames)
+  Note: The smallest measurement interval for CPU and memory usage remains at ~100 ms
+- Fixed potentially inaccurate timer readings from QueryPerformanceCounter() on multi-core CPUs
+- Various minor bugs fixed
+- Cosmetics
+
+v1.5.1:
+- Minor bug fixes
+- Refactoring
+- Optimizations
+
+v1.5.0:
+- Different implementation for the initial speed test (determination of measurement interval)
+- Tamed the over-zealous auto-inlining from the Intel compiler
+
+v1.4.9:
+- Measurement interval for the performance data is now dynamic depending on the speed of the script
+- Various fixes
+
+v1.4.8:
+- Create the log file irrespective of the "-log" switch or "CreateLog" INI setting if Avisynth
+  throws an error (syntactic errors excluded) and causes the program to terminate.
+
+v1.47:
+- Various optimizations and fixes
+
+v1.46:
+- Added "InvokeDistributor" to the INI settings, might be useful for Avisynth MT users.
+- Minor fixes
+
+v1.45:
+- More efficient code for string and file handling
+- Minor cosmetic changes
+
+v1.44:
+- bug fixes
+- more accurate memory usage reporting
+
+v1.43:
+- Various optimizations
+- Minor bug fixes
+
+v1.42:
+- Fixed a couple of display bugs
+
+v1.41:
+- Added INI setting "FrameRange"
+
+v1.40:
+  New features:
+- Display thread count, CPU and memory usage
+- Improved console display and log file format.
+- AVISynth 2.6 colour spaces are reported correctly
+
+  Fixed:
+- IScriptEnvironment wasn't released in some cases.
+  Thanks to IanB for suggesting a workaround ("env->~IScriptEnvironment()")
+
+v1.34:
+- Added support to pause program execution.
+
+v1.33:
+- Added ini file support.
+
+v1.32:
+- added time/frame to the performance data
+- cosmetics
+
+v1.31:
+- Added "performance data", a list with fps numbers for each frame interval
+
+v1.30:
+- Added log file functionality
+
+v1.22:
+- Fixed poorly formatted output when using Avisynth MT versions.
