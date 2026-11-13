@@ -1,3 +1,10 @@
+v2.0.9
+- Added ini setting "CreateCSV". This setting creates a .csv file (along with the .log file)
+  containing the performance data formatted as comma-separated values for direct import
+  in Excel or a similar spread sheet program (OpenOffice, LibreOffice).
+- Added a slight delay between reading the last frame and calling "DeleteScriptEnvironment()"
+  to avoid sync issues with some plugins.
+
 v2.0.8
 - Added "DisplayFPS" and "DisplayTPF" ini file settings. The user can now choose between having
   FPS or/and TPF (Time/Frame in milliseconds) printed to the console.

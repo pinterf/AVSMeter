@@ -37,6 +37,7 @@ public:
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
 	BOOL      bCreateLog;
+	BOOL      bCreateCSV;
 	BOOL      bPauseBeforeExit;
 	__int64   iStartFrame;
 	__int64   iStopFrame;
@@ -59,6 +60,7 @@ struct PerformanceData
 	unsigned int  frame_low;
 	unsigned int  frame_high;
 	double        fps;
+	double        fps_avg;
 	WORD          cpu_usage;
 	WORD          gpu_usage;
 	WORD          vpu_usage;
@@ -75,6 +77,7 @@ CSettings Settings;
 
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror);
 string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP);
+string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP);
 string ParseINIFile();
 void PrintUsage();
 void Pause();
@@ -698,6 +701,7 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
+			Sleep(200);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -771,6 +775,7 @@ int main(int argc, char* argv[])
 						AVS_clip = 0;
 						AVS_main = 0;
 						AVS_temp = 0;
+						Sleep(200);
 						AVS_env->DeleteScriptEnvironment();
 						AVS_env = 0;
 			
@@ -814,6 +819,7 @@ int main(int argc, char* argv[])
 			perfdata[x].frame_low = 0;
 			perfdata[x].frame_high = 0;
 			perfdata[x].fps = 0.0;
+			perfdata[x].fps_avg = 0.0;
 			perfdata[x].cpu_usage = 0;
 			perfdata[x].gpu_usage = 0;
 			perfdata[x].vpu_usage = 0;
@@ -912,6 +918,7 @@ int main(int argc, char* argv[])
 			perfdata[uiPDIndex].frame_low = (uiCurrentFrame + 1) - uiFrameInterval;
 			perfdata[uiPDIndex].frame_high = uiCurrentFrame;
 			perfdata[uiPDIndex].fps = dFPSCurrent;
+			perfdata[uiPDIndex].fps_avg = dFPSAverage;
 			perfdata[uiPDIndex].cpu_usage = processinfo.wCPUUsage;
 
 			if (Settings.bMonitorGPULoad)
@@ -1053,7 +1060,7 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-
+		Sleep(200);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 
@@ -1220,6 +1227,17 @@ int main(int argc, char* argv[])
 			Pause();
 			return -1;
 		}
+
+		if (Settings.bCreateCSV)
+		{
+			string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiPDIndex, uiFrameInterval, gpuinfo.data.NVVP);
+			if (cr != "")
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
+				Pause();
+				return -1;
+			}
+		}
 	}
 
 	delete [] perfdata;
@@ -1254,6 +1272,7 @@ string ParseINIFile()
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
 	Settings.bCreateLog = FALSE;
+	Settings.bCreateCSV = FALSE;
 	Settings.bPauseBeforeExit = FALSE;
 	Settings.iStartFrame = 0;
 	Settings.iStopFrame = -1;
@@ -1317,6 +1336,7 @@ string ParseINIFile()
 		hINIFile << "DisplayFPS=1\n";
 		hINIFile << "DisplayTPF=0\n";
 		hINIFile << "CreateLog=0\n";
+		hINIFile << "CreateCSV=0\n";
 		hINIFile << "PauseBeforeExit=0\n";
 		hINIFile << "FrameRange=0,-1\n";
 		hINIFile << "InvokeDistributor=1\n";
@@ -1371,6 +1391,12 @@ string ParseINIFile()
 		{
 			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
 				Settings.bCreateLog = TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 9) == "createcsv")
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "1")
+				Settings.bCreateCSV = TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 15) == "pausebeforeexit")
@@ -1596,6 +1622,69 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 }
 
 
+string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, PerformanceData * cs_pdata, unsigned int ui_index, unsigned int ui_frameinterval, BOOL bNVVP)
+{
+	string sRet = "";
+	string sCurrentLine = "";
+
+	string sCSVFile = "";
+	size_t ilen = s_avsfile.length();
+
+	if (ilen > 4)
+		sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
+	else
+		sCSVFile = s_avsfile + ".csv";
+
+	ofstream hCSVFile(sCSVFile.c_str());
+	if (!hCSVFile.is_open())
+	{
+		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sCSVFile.c_str());
+		return sRet;
+	}
+
+	string sCSV = "";
+
+	if (ui_index > 0)
+	{
+		if (Settings.bMonitorGPULoad)
+		{
+			if (bNVVP)
+				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),CPU(%),GPU(%),VPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
+			else
+				sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),CPU(%),GPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
+		}
+		else
+			sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),CPU(%),Threads,PhysMEM(MB),VirtMEM(MB)\n";
+
+		hCSVFile << sCSV;
+
+		string stemp = "";
+		if (ui_index > 0)
+		{
+			for (unsigned int i = 0; i < ui_index; i++)
+			{
+				if (Settings.bMonitorGPULoad)
+				{
+					if (bNVVP)
+						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u,%u", cs_pdata[i].frame_high + 1, cs_pdata[i].fps, cs_pdata[i].fps_avg, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].vpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+					else
+						stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u,%u", cs_pdata[i].frame_high + 1, cs_pdata[i].fps, cs_pdata[i].fps_avg, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].gpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+				}
+				else
+					stemp = utils.StrFormat("%u,%.3f,%.3f,%.6f,%u,%u,%u,%u", cs_pdata[i].frame_high + 1, cs_pdata[i].fps, cs_pdata[i].fps_avg, 1000.0 / cs_pdata[i].fps, cs_pdata[i].cpu_usage, cs_pdata[i].num_threads, cs_pdata[i].phys_mem, cs_pdata[i].virt_mem);
+
+				hCSVFile << stemp + "\n";
+			}
+		}
+	}
+
+	hCSVFile.flush();
+	hCSVFile.close();
+
+	return sRet;
+}
+
+
 void Pause()
 {
 	if (Settings.bPauseBeforeExit)
@@ -1723,6 +1812,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
+		Sleep(200);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}

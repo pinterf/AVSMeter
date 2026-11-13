@@ -109,6 +109,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		{
 		}
 
+		Sleep(200);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -328,6 +329,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			bIsMTVersion = TRUE;
 
 		foo = 0;
+		Sleep(200);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -377,12 +379,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[0] = "PluginDir+    (HKCU, x86):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[0] = "PluginDir+    (HKCU, x86):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	
@@ -393,12 +397,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[1] = "PluginDir+    (HKLM, x86):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[1] = "PluginDir+    (HKLM, x86):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	
@@ -409,12 +415,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[2] = "PluginDir2_5  (HKCU, x86):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[2] = "PluginDir2_5  (HKCU, x86):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	
@@ -425,12 +433,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[3] = "PluginDir2_5  (HKLM, x86):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[3] = "PluginDir2_5  (HKLM, x86):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	}	
@@ -443,12 +453,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[4] = "PluginDir+    (HKCU, x64):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[4] = "PluginDir+    (HKCU, x64):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	
@@ -459,12 +471,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[5] = "PluginDir+    (HKLM, x64):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[5] = "PluginDir+    (HKLM, x64):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	
@@ -476,12 +490,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[6] = "PluginDir2_5  (HKCU, x64):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[6] = "PluginDir2_5  (HKCU, x64):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	
@@ -492,12 +508,14 @@ void CAvisynthInfo::EnumPluginDirs()
 			char szPlugDir[2050] = "";
 			DWORD dwType = REG_SZ;
 			DWORD dwBytes = 2048;
-			RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes);
-			string sTemp(szPlugDir);
-			StrTrim(sTemp);
-			if (sTemp != "")
-				saPluginDirs[7] = "PluginDir2_5  (HKLM, x64):             " + sTemp;
-	
+			if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
+			{
+				string sTemp(szPlugDir);
+				StrTrim(sTemp);
+				if (sTemp != "")
+					saPluginDirs[7] = "PluginDir2_5  (HKLM, x64):             " + sTemp;
+			}
+
 			RegCloseKey(hKeyResult);
 		}
 	}
