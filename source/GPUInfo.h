@@ -24,10 +24,6 @@
 #define SHMEM_NAME "GPUZShMem"
 #define MAX_RECORDS 128
 
-static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam);
-static BOOL bGPUZRunning = FALSE;
-static string GPUZ_Version = "Unknown";
-
 class CGPUInfo
 {
 public:
@@ -60,18 +56,14 @@ public:
 		BOOL   DedicatedMem;
 	} data;
 
-	BOOL MemInit();
+	void Initialize();
 	void MemRelease();
 	void ReadSensors();
 	void ReadData();
-	BOOL bGPUZIsRunning;
 	BOOL bInitialized;
 	string sError;
 
 private:
-	void StrToUC(string &s_string);
-	BOOL IsValidVersionNumber(string s_string);
-
 	#pragma pack(push, 1)
 		typedef struct GPUZ_RECORD
 		{
@@ -103,25 +95,5 @@ private:
 };
 
 
-static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
-{
-	char szAppTitle[64];
-	GetWindowText(hwnd, szAppTitle, sizeof(szAppTitle));
-	string sAppTitle(szAppTitle);
-
-	for (unsigned int i = 0; i < sAppTitle.length(); i++)
-		sAppTitle[i] = tolower(sAppTitle[i]);
-
-	int iPos = (int)sAppTitle.find("gpu-z");
-
-	if (iPos >= 0)
-	{
-		bGPUZRunning = TRUE;
-		GPUZ_Version = sAppTitle.substr(sAppTitle.length() - 5);
-	}
-
-	return TRUE;
-}
-
-
 #endif //_GPUINFO_H
+

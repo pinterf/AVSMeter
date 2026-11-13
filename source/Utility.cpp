@@ -149,8 +149,7 @@ void CUtils::StrTrim(string &s_string)
 
 void CUtils::StrToUC(string &s_string)
 {
-	for (unsigned int i = 0; i < s_string.length(); i++)
-		s_string[i] = toupper(s_string[i]);
+	transform(s_string.begin(), s_string.end(), s_string.begin(), ::toupper);
 
 	return;
 }
@@ -158,8 +157,7 @@ void CUtils::StrToUC(string &s_string)
 
 void CUtils::StrToLC(string &s_string)
 {
-	for (unsigned int i = 0; i < s_string.length(); i++)
-		s_string[i] = tolower(s_string[i]);
+	transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
 
 	return;
 }

@@ -470,7 +470,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir+    (HKCU, x86):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir+   (HKCU, x86):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -497,7 +497,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir+    (HKLM, x86):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir+   (HKLM, x86):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -524,7 +524,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir2_5  (HKCU, x86):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir2_5 (HKCU, x86):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -551,7 +551,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir2_5  (HKLM, x86):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir2_5 (HKLM, x86):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -580,7 +580,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir+    (HKCU, x64):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir+   (HKCU, x64):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -607,7 +607,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir+    (HKLM, x64):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir+   (HKLM, x64):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -634,7 +634,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir2_5  (HKCU, x64):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir2_5 (HKCU, x64):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -661,7 +661,7 @@ void CAvisynthInfo::EnumPluginDirs()
 				{
 					if (mDuplicates.find(sTempLower) == mDuplicates.end())
 					{
-						vPluginDirs.push_back("PluginDir2_5  (HKLM, x64):\t" + sTemp);
+						vPluginDirs.push_back("PluginDir2_5 (HKLM, x64):\t" + sTemp);
 						mDuplicates.insert(sTempLower);
 					}
 				}
@@ -859,8 +859,7 @@ void CAvisynthInfo::StrTrim(string &s_string)
 
 void CAvisynthInfo::StrToLC(string &s_string)
 {
-	for (unsigned int i = 0; i < s_string.length(); i++)
-		s_string[i] = tolower(s_string[i]);
+	transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
 
 	return;
 }
@@ -1386,7 +1385,7 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 		{
 			char szValue[2048] = "";
 			DWORD dwType = REG_SZ;
-			DWORD dwBytes = 2050;
+			dwBytes = 2050;
 			if (RegQueryValueEx(hKeyResult, "ProductName", NULL, &dwType, (LPBYTE)szValue, &dwBytes) == 0)
 			{
 				string sValue(szValue);

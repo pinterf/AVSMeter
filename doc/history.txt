@@ -1,3 +1,8 @@
+v2.4.9
+- Improved the error checking for the GPU-Z memory interface which fixes a rare issue with GPU-Z communication
+- Updated Avisynth headers
+- Removed some unnecessary command line validations
+
 v2.4.8
 - Fixed a regression from 2.4.7 - some helpful hints in the error report were suppressed
 

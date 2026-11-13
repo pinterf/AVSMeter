@@ -424,51 +424,12 @@ int main(int argc, char* argv[])
 	CGPUInfo gpuinfo;
 	if (Settings.bMonitorGPULoad)
 	{
-		if (!gpuinfo.bGPUZIsRunning)
+		gpuinfo.Initialize();
+		if (!gpuinfo.bInitialized)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to collect GPU info, GPU-Z must be running.\n\n");
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "Continue without GPU info? [y/n]");
-
-			for (;;)
-			{
-				Sleep(100);
-				if (_kbhit())
-				{
-					int iKey = _getch();
-					if ((iKey == 0x59) || (iKey == 0x79)) //y
-					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						Settings.bMonitorGPULoad = FALSE;
-						break;
-					}
-					else if ((iKey == 0x4E) || (iKey == 0x6E)) //n
-					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
-						Pause();
-						return -1;
-					}
-					else
-						continue;
-				}
-			}
-		}
-		else
-		{
-			if (!gpuinfo.MemInit())
-			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory:\n%s", gpuinfo.sError.c_str());
-				Pause();
-				return -1;
-			}
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
+			Pause();
+			return -1;
 		}
 	}
 
@@ -500,7 +461,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU instructions sets:      %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
+			sOutBuf = utils.StrFormat("CPU instruction sets:       %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.cpudata.CPURealClock > 100)
 			{
@@ -516,13 +477,18 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("Video card:                 %s", gpuinfo.data.CardName.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("GPU name:                   %s", gpuinfo.data.GPUName.c_str());
-			sLogBuffer += sOutBuf + "\n";
+
 			if (gpuinfo.data.VPEngineName != "")
 			{
-				sOutBuf = utils.StrFormat("NVIDIA VPU version:         %s", gpuinfo.data.VPEngineName.c_str());
+				sOutBuf = utils.StrFormat("GPU / VPU version:          %s / %s", gpuinfo.data.GPUName.c_str(), gpuinfo.data.VPEngineName.c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
+			else
+			{
+				sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
+				sLogBuffer += sOutBuf + "\n";
+			}
+
 			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
@@ -576,7 +542,7 @@ int main(int argc, char* argv[])
 			if (sPluginDir != "")
 			{
 				size_t spos = sPluginDir.find(":\t");
-				sPluginDir = sPluginDir.substr(0, spos + 1) + "  " + sPluginDir.substr(spos + 2);
+				sPluginDir = sPluginDir.substr(0, spos + 1) + "   " + sPluginDir.substr(spos + 2);
 
 				sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
 				sLogBuffer += sOutBuf;
@@ -904,7 +870,7 @@ int main(int argc, char* argv[])
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU instructions sets:      %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
+			sOutBuf = utils.StrFormat("CPU instruction sets:       %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
 			sLogBuffer += sOutBuf;
 			if (sys.cpudata.CPURealClock > 100)
 			{
@@ -919,13 +885,18 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("Video card:                 %s", gpuinfo.data.CardName.c_str());
 			sLogBuffer += sOutBuf + "\n";
-			sOutBuf = utils.StrFormat("GPU name:                   %s", gpuinfo.data.GPUName.c_str());
-			sLogBuffer += sOutBuf + "\n";
+
 			if (gpuinfo.data.VPEngineName != "")
 			{
-				sOutBuf = utils.StrFormat("NVIDIA VPU version:         %s", gpuinfo.data.VPEngineName.c_str());
+				sOutBuf = utils.StrFormat("GPU / VPU version:          %s / %s", gpuinfo.data.GPUName.c_str(), gpuinfo.data.VPEngineName.c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
+			else
+			{
+				sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
+				sLogBuffer += sOutBuf + "\n";
+			}
+
 			sOutBuf = utils.StrFormat("Video memory size:          %s", gpuinfo.data.MemSize.c_str());
 			sLogBuffer += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
@@ -971,7 +942,7 @@ int main(int argc, char* argv[])
 			if (sTemp != "")
 			{
 				size_t spos = sTemp.find(":\t");
-				sTemp = sTemp.substr(0, spos + 1) + "  " + sTemp.substr(spos + 2);
+				sTemp = sTemp.substr(0, spos + 1) + "   " + sTemp.substr(spos + 2);
 
 				sOutBuf = utils.StrFormat("%s", sTemp.c_str());
 				sLogBuffer += sOutBuf + "\n";
@@ -1105,6 +1076,8 @@ int main(int argc, char* argv[])
 				case VideoInfo::CS_YUVA444PS:   sOutBuf = " YUVA444PS"; break;
 				case VideoInfo::CS_YUVA422PS:   sOutBuf = " YUVA422PS"; break;
 				case VideoInfo::CS_YUVA420PS:   sOutBuf = " YUVA420PS"; break;
+				case VideoInfo::CS_RAW32:       sOutBuf = "     RAW32"; break;
+				case VideoInfo::CS_YUV9:        sOutBuf = "      YUV9"; break;
 				default:                        sOutBuf = "   Unknown";
 			}
 		}
@@ -1220,68 +1193,7 @@ int main(int argc, char* argv[])
 		else
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\rInvalid frame range specified:\n");
-			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r\"%s\"\n\n", Settings.sFrameRange.c_str());
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rProceed with default (%u,%u)? [y/n]", uiFirstFrame, uiLastFrame);
-
-			for (;;)
-			{
-				Sleep(100);
-				if (_kbhit())
-				{
-					int iKey = _getch();
-					if ((iKey == 0x59) || (iKey == 0x79)) //y
-					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Reading frame(s)...").c_str());
-						break;
-					}
-					else if ((iKey == 0x4E) || (iKey == 0x6E)) //n
-					{
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						utils.CursorUp(1);
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
-
-						AVS_clip = 0;
-						AVS_main = 0;
-						AVS_temp = 0;
-						Sleep(100);
-						AVS_env->DeleteScriptEnvironment();
-						AVS_env = 0;
-
-						if (Settings.bCreateLog)
-						{
-							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, FALSE, bRuntimeTooShort);
-							if (sLogRet != "")
-								PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, sLogRet.c_str());
-						}
-
-						AVS_linkage = 0;
-						::FreeLibrary(hDLL);
-
-						Pause();
-						return 0;
-					}
-					else
-						continue;
-				}
-			}
-
-			uiFirstFrame = 0;
-			uiLastFrame = uiFrames - 1;
-			uiFramesToProcess = uiFrames;
+			AVS_env->ThrowError("Invalid frame range specified:\n\"%s\"\n", Settings.sFrameRange.c_str());
 		}
 
 		while ((uiFramesToProcess / uiFrameInterval) > 400000)
@@ -2656,24 +2568,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		if (dAverageFrameTime >  0.400) uiFrameInterval =   50;
 		if (dAverageFrameTime >  1.000) uiFrameInterval =   20;
 		if (dAverageFrameTime >  2.000) uiFrameInterval =   10;
-		if (dAverageFrameTime >  4.000) uiFrameInterval =    5;
-		if (dAverageFrameTime > 10.000) uiFrameInterval =    2;
 		if (dAverageFrameTime > 20.000) uiFrameInterval =    1;
-
-		/*
-		if (dAverageFrameTime >  0.010) uiFrameInterval = 5000;
-		if (dAverageFrameTime >  0.025) uiFrameInterval = 2000;
-		if (dAverageFrameTime >  0.050) uiFrameInterval = 1000;
-		if (dAverageFrameTime >  0.100) uiFrameInterval =  500;
-		if (dAverageFrameTime >  0.250) uiFrameInterval =  200;
-		if (dAverageFrameTime >  0.500) uiFrameInterval =  100;
-		if (dAverageFrameTime >  1.000) uiFrameInterval =   50;
-		if (dAverageFrameTime >  2.500) uiFrameInterval =   20;
-		if (dAverageFrameTime >  5.000) uiFrameInterval =   10;
-		if (dAverageFrameTime > 10.000) uiFrameInterval =    5;
-		if (dAverageFrameTime > 25.000) uiFrameInterval =    2;
-		if (dAverageFrameTime > 50.000) uiFrameInterval =    1;
-		*/
 	}
 	catch (AvisynthError err)
 	{

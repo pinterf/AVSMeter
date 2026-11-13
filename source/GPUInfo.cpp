@@ -22,9 +22,6 @@
 
 CGPUInfo::CGPUInfo()
 {
-	EnumWindows(EnumWindowsProc, NULL);
-	Sleep(100);
-	bGPUZIsRunning = bGPUZRunning;
 	bInitialized = FALSE;
 	sensors.GPULoad = 0;
 	sError = "";
@@ -74,29 +71,45 @@ CGPUInfo::~CGPUInfo()
 }
 
 
-BOOL CGPUInfo::MemInit()
+void CGPUInfo::Initialize()
 {
 	sError = "";
-
+	string sTemp = "";
+	bInitialized = FALSE;
 	if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHMEM_NAME)) == 0)
 	{
 		sError = SysErrorMessage();
-		return FALSE;
+		DWORD dwLastError = GetLastError();
+		if (sError == "")
+			sError = "Error initializing GPU-Z memory interface";
+		else
+		{
+			if (dwLastError == ERROR_FILE_NOT_FOUND)
+				sError += "\nMake sure that GPU-Z is running.\n";
+		}
+
+		return;
 	}
+
+	Sleep(100);
 
 	if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
 	{
 		sError = SysErrorMessage();
+		if (sError == "")
+			sError = "Error initializing GPU-Z memory interface";
+
 		if (hMapFile)
 			CloseHandle(hMapFile);
 
-		return FALSE;
+		return;
 	}
 
+	Sleep(100);
 	bInitialized = TRUE;
 	ReadData();
 
-	return TRUE;
+	return;
 }
 
 
@@ -126,11 +139,6 @@ void CGPUInfo::ReadData()
 	data.DedicatedMem = FALSE;
 	data.DynamicMem = FALSE;
 
-	if (IsValidVersionNumber(GPUZ_Version))
-		data.GPUZVersion = GPUZ_Version;
-	else
-		data.GPUZVersion = "Unknown";
-
 	for (int i = 0; i < MAX_RECORDS; i++)
 	{
 		char DefChar = ' ';
@@ -144,7 +152,7 @@ void CGPUInfo::ReadData()
 		sKey.erase(0, sKey.find_first_not_of(" \t\n\r"));
 		sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
 		sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
-		StrToUC(sKey);
+		transform(sKey.begin(), sKey.end(), sKey.begin(), ::toupper);
 
 		if (sKey == "")
 			continue;
@@ -226,45 +234,6 @@ void CGPUInfo::ReadSensors()
 			sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);	
 		}
 	}
-
-	return;
-}
-
-
-BOOL CGPUInfo::IsValidVersionNumber(string s_string)
-{
-	if (s_string == "")
-		return FALSE;
-
-	for (unsigned int ipos = 0; ipos < s_string.length(); ipos++)
-	{
-		switch (s_string[ipos])
-		{
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-			case '.':
-				continue;
-			default:
-				return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-
-void CGPUInfo::StrToUC(string &s_string)
-{
-	for (unsigned int i = 0; i < s_string.length(); i++)
-		s_string[i] = toupper(s_string[i]);
 
 	return;
 }
