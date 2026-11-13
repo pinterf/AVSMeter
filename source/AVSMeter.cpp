@@ -30,7 +30,6 @@
 #define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
-#define COLOR_WARNING           FG_GREY | BG_BLACK
 
 #define REFRESH_INTERVAL              0.333333 //seconds
 #define MIN_TIME_PER_FRAMEINTERVAL   20.0      //milliseconds
@@ -92,7 +91,7 @@ string       CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL
 string       ParseINIFile();
 BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
-void         PollKeyHit();
+void         PollKeys();
 void         PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 string       Pad(string s_line);
 
@@ -119,7 +118,7 @@ int main(int argc, char* argv[])
 	if (sINIRet != "")
 	{
 		PrintConsole(TRUE, COLOR_ERROR, sINIRet.c_str());
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
@@ -131,6 +130,7 @@ int main(int argc, char* argv[])
 	string sGPUInfo = "";
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
+	BOOL bOmitPreScan = FALSE;
 	string sAVSError = "";
 	unsigned int uiFrameInterval = 10;
 	string sErrorMsg = "";
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
 		if (GetLastError() == ERROR_ALREADY_EXISTS)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nOne instance of AVSMeter is already running\n");
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 	}
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 	if (argc < 2)
 	{
 		PrintUsage();
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
@@ -172,13 +172,13 @@ int main(int argc, char* argv[])
 		utils.StrToLC(sArgTest);
 		arg_len = sArgTest.length();
 
-		if ((sArgTest == "-avsinfo") || (sArgTest == "-ai"))
+		if (sArgTest == "avsinfo")
 		{
 			bPrintAVSInfo = TRUE;
 			continue;
 		}
 
-		if ((sArgTest == "-avsdll") || (sArgTest == "-ad"))
+		if (sArgTest == "-avsdll")
 		{
 			bCustomAVSDLLFromCL = TRUE;
 			continue;
@@ -187,6 +187,12 @@ int main(int argc, char* argv[])
 		if (sArgTest == "-c")
 		{
 			Settings.bSpecifyCustomPluginDir = TRUE;
+			continue;
+		}
+
+		if (sArgTest == "-o")
+		{
+			bOmitPreScan = TRUE;
 			continue;
 		}
 
@@ -223,7 +229,7 @@ int main(int argc, char* argv[])
 			if (sTemp.length() < 3)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				PollKeyHit();
+				PollKeys();
 				return -1;
 			}
 
@@ -231,7 +237,7 @@ int main(int argc, char* argv[])
 			if ((spos < 1) || (spos > 27))
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				PollKeyHit();
+				PollKeys();
 				return -1;
 			}
 
@@ -245,7 +251,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter format: \"%s\"\n", sArg.c_str());
-				PollKeyHit();
+				PollKeys();
 				return -1;
 			}
 			continue;
@@ -260,14 +266,14 @@ int main(int argc, char* argv[])
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-					PollKeyHit();
+					PollKeys();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1, 2 or 3\n", sArg.c_str());
-				PollKeyHit();
+				PollKeys();
 				return -1;
 			}
 
@@ -283,14 +289,14 @@ int main(int argc, char* argv[])
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-					PollKeyHit();
+					PollKeys();
 					return -1;
 				}
 			}
 			else
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
-				PollKeyHit();
+				PollKeys();
 				return -1;
 			}
 
@@ -309,7 +315,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sArg.c_str());
-						PollKeyHit();
+						PollKeys();
 						return -1;
 					}
 					else
@@ -331,7 +337,7 @@ int main(int argc, char* argv[])
 					if (!utils.FileExists(sAVSFile))
 					{
 						PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
-						PollKeyHit();
+						PollKeys();
 						return -1;
 					}
 					else
@@ -341,7 +347,7 @@ int main(int argc, char* argv[])
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
@@ -351,13 +357,13 @@ int main(int argc, char* argv[])
 		if (bInfoOnly)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n\"-avsinfo\" and \"-info\" are mutually exclusive\n");
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 		if (sAVSFile != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nSpecifying a script together with \"-avsinfo\" is pointless\n");
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 	}
@@ -400,7 +406,7 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot open file or no avisynth.dll selected.\n");
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 
@@ -419,7 +425,7 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sErrorMsg.c_str());
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
@@ -437,7 +443,7 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 	}
@@ -446,7 +452,7 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
@@ -591,7 +597,7 @@ int main(int argc, char* argv[])
 		{
 			string sPluginError = "";
 			string sLineSep(utils.GetConsoleWidth() - 2, '_');
-			sOutBuf = "\n\n\n[Plugin errors]\n";
+			sOutBuf = "\n\n\n[Plugin errors/warnings]\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
 			sOutBuf = sLineSep + "\n";
@@ -607,29 +613,6 @@ int main(int argc, char* argv[])
 				PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
 			}
 		}
-
-		//Plugin warnings
-		if (AvisynthInfo.vPluginWarnings.size() > 0)
-		{
-			string sPluginWarning = "";
-			string sLineSep(utils.GetConsoleWidth() - 2, '_');
-			sOutBuf = "\n\n\n[Plugin warnings]\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
-			sOutBuf = sLineSep + "\n";
-			sLogBuffer += sOutBuf;
-			PrintConsole(TRUE, COLOR_WARNING, sOutBuf.c_str());
-
-			for (unsigned int err = 0; err < AvisynthInfo.vPluginWarnings.size(); err++)
-			{
-				sPluginWarning = AvisynthInfo.vPluginWarnings[err];
-				sOutBuf = utils.StrFormat("\n%s\n", sPluginWarning.c_str());
-				sOutBuf += sLineSep + "\n";
-				sLogBuffer += sOutBuf;
-				PrintConsole(TRUE, COLOR_WARNING, utils.StrAnsiToOEM(sOutBuf).c_str());
-			}
-		}
-
 
 		//Internal Functions
 		if (AvisynthInfo.vInternalFunctions.size() > 0)
@@ -773,14 +756,14 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		PollKeyHit();
+		PollKeys();
 		return 0;
 	}
 
 	if (sAVSFile == "")
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nNo script file specified\n");
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
@@ -788,13 +771,18 @@ int main(int argc, char* argv[])
 	if (!bInfoOnly)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
-		uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
-		if (sErrorMsg != "")
+
+		uiFrameInterval = 1;
+		if (!bOmitPreScan)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
-			PollKeyHit();
-			return -1;
+			uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
+			if (sErrorMsg != "")
+			{
+				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "%s\n", sErrorMsg.c_str());
+				PollKeys();
+				return -1;
+			}
 		}
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
@@ -809,13 +797,12 @@ int main(int argc, char* argv[])
 	if (!hDLL)
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
-		PollKeyHit();
+		PollKeys();
 		return -1;
 	}
 
 
 	IScriptEnvironment *AVS_env = 0;
-
 	try
 	{
 		_set_se_translator(SE_Translator);
@@ -824,7 +811,7 @@ int main(int argc, char* argv[])
 		if (!CreateEnvironment)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nFailed to load CreateScriptEnvironment()\n");
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 
@@ -832,7 +819,7 @@ int main(int argc, char* argv[])
 		if (!AVS_env)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCould not create IScriptenvironment\n");
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 
@@ -1175,7 +1162,7 @@ int main(int argc, char* argv[])
 			AVS_linkage = 0;
 			::FreeLibrary(hDLL);
 
-			PollKeyHit();
+			PollKeys();
 			return 0;
 		}
 
@@ -1657,7 +1644,7 @@ int main(int argc, char* argv[])
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 	}
@@ -1668,12 +1655,12 @@ int main(int argc, char* argv[])
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
-			PollKeyHit();
+			PollKeys();
 			return -1;
 		}
 	}
 
-	PollKeyHit();
+	PollKeys();
 
 	return iRet;
 }
@@ -2086,6 +2073,9 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	sLog = "\n[Script]\n" + sAVSBuffer + "\n\n";
 	hLogFile << sLog;
 
+	if (s_avserror != "")
+		hLogFile << "\n[Errors]\n" + s_avserror + "\n\n";
+
 	if (Settings.bGPUInfo)
 		hLogFile << s_gpuinfo;
 
@@ -2125,9 +2115,6 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 			hLogFile << stemp2 + "\n";
 		}
 	}
-
-	if (s_avserror != "")
-		hLogFile << "\n\n[Errors]\n" + s_avserror + "\n";
 
 	hLogFile.flush();
 	hLogFile.close();
@@ -2274,7 +2261,7 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 }
 
 
-void PollKeyHit()
+void PollKeys()
 {
 	if (Settings.bPauseBeforeExit)
 	{
@@ -2480,20 +2467,29 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 
 void PrintUsage()
 {
-	PrintConsole(TRUE, COLOR_EMPHASIS, "\nUsage:  AVSMeter script.avs [switches]\n\n");
+	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 1:  AVSMeter script.avs [switches]\n\n");
+
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo [-ai]      Display extended Avisynth info\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
- 	PrintConsole(TRUE, COLOR_EMPHASIS, "                      in combination with \"-avsinfo\"\n\n");
 	
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll [-ad]       Specify avisynth.dll to be used\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll            Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Display clip info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Display GPU/VPU usage (requires GPU-Z)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n\n\n");
+
+	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 2:  AVSMeter avsinfo [switches]\n\n");
+
+	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
+
+ 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n\n\n\n");
+
+
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  settings read the documentation (AVSMeter.html) included\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  in the distribution package.\n");

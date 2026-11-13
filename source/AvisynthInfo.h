@@ -39,7 +39,6 @@ public:
 	vector  <string> vPlugins;
 	vector  <string> vPluginDependencies;
 	vector  <string> vPluginErrors;
-	vector  <string> vPluginWarnings;
 	string  sDLLPath;
 	string  sFileVersion;
 	string  sProductVersion;
@@ -388,6 +387,11 @@ void CAvisynthInfo::EnumPluginDirs(BOOL b_CustomPluginDir)
 			vPluginDirs.push_back("Custom plugin directory :\t" + sCustomPlugDir);
 			return;
 		}
+		else
+		{
+			vPluginDirs.push_back("Custom plugin directory :\tInvalid directory specified");
+			return;
+		}
 	}
 
 	vPluginDirs.empty();
@@ -487,7 +491,7 @@ void CAvisynthInfo::EnumPluginDirs(BOOL b_CustomPluginDir)
 	}
 
 	if (vPluginDirs.size() < 1)
-		vPluginWarnings.push_back("No plugin directory references found in the registry.\nPlugin auto-loading disabled.");
+		vPluginErrors.push_back("No plugin directory references found in the registry.\nPlugin auto-loading disabled.");
 
 	return;
 }

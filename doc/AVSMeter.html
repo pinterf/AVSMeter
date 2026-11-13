@@ -52,46 +52,77 @@
     <b> <img alt="" src="avsmeter.png" width="780" height="607"><br>
       <br>
       <br>
-      <img src="avsinfo.png" alt="" width="780" height="767"><br>
-    </b><br>
-    <font face="Fixedsys"><big><br>
-        Usage:&nbsp; AVSMeter script.avs [switches]<br>
-        Switches<br>
-        &nbsp;-avsinfo [-ai]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Display
-        extended Avisynth info<br>
-        &nbsp;-c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <img src="avsinfo.png" alt="" width="780" height="735"><br>
+      <br>
+    </b><font face="Fixedsys"><big><br>
+        <br>
+      </big></font><font face="Verdana" color="#3333ff"><font size="+1">Command
+
+
+        line usage 1 (analyse a script):&nbsp; AVSMeter script.avs
+        [switches]</font></font><font face="Fixedsys"><big><b><font
+            face="Lucida Console" size="+1" color="#333399"><br>
+          </font></b><br>
+        Switches:<br>
+        &nbsp; -avsdll [-ad]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Specify
+        avisynth.dll to be used<br>
+        &nbsp; -info&nbsp;&nbsp;
+        [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Display clip info<br>
+        &nbsp; -log&nbsp;&nbsp;&nbsp;
+        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file<br>
+        &nbsp;
+        -csv&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
+
+        Create csv file<br>
+        &nbsp;
+        -gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
+
+        Display GPU/VPU usage (requires GPU-Z)<br>
+        &nbsp; -range=first,last&nbsp;&nbsp; Set frame range<br>
+        &nbsp; -timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Set time limit (seconds)<br>
+        &nbsp;
+        -priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set
+        process priority (1:low, 2:normal, 3:high)</big></font><br>
+    <font face="Fixedsys"><big><font face="Fixedsys"><big>&nbsp; -o
+            &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Omit script
+            pre-scanning</big></font><br>
+        <br>
+        <br>
+      </big></font><font face="Fixedsys" size="+1" color="#3333ff"><font
+        face="Verdana">Command line usage 2 (display extended Avisynth
+        info):&nbsp; AVSMeter avsinfo [switches]</font></font><font
+      face="Fixedsys"><big><font face="Verdana" size="+1"
+          color="#3333ff"><br>
+        </font><br>
+        Switches:<br>
+        &nbsp; -avsdll [-ad]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Specify
+        avisynth.dll to be used<br>
+        &nbsp;
+        -c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
 
 
         Specify custom plugin directory<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-
-
-        in combination with "-avsinfo"<br>
-        <br>
-        &nbsp;-avsdll [-ad]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Specify
-        avisynth.dll to be used<br>
-        &nbsp;-info&nbsp;&nbsp; [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;
-        Display clip info<br>
-        &nbsp;-log&nbsp;&nbsp;&nbsp; [-l]&nbsp; &nbsp;
-        &nbsp;&nbsp;&nbsp; Create log fil</big></font><big><font
-        face="Courier New"><font face="Fixedsys"><big><small>e</small></big><br>
-          &nbsp;-csv&nbsp; &nbsp; &nbsp; &nbsp;
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file<br>
-          &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-
-          Display GPU/VPU usage (requires GPU-Z)<br>
-          &nbsp;-range=first,last&nbsp;&nbsp; Set frame range<br>
-          &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          Set time limit (seconds)<br>
-          &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-
-          Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
-    <b><big><font face="Courier New"><br>
-        </font></big></b><b><br>
-      "-avsinfo"<br>
+        &nbsp; -log&nbsp;&nbsp;&nbsp;
+        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file</big><big><br>
+      </big></font><font face="Fixedsys"><br>
+      <br>
+    </font><b>"avsinfo"<br>
     </b>Displays extended info about the installed Avisynth version and
     the plugin sub-system. If a custom avisynth.dll is specified in the
     ini file, info about that file will be displayed. The "-avsinfo"
@@ -99,6 +130,7 @@
     log file. The log file contains additional info about OS/hardware, a
     list of DLL dependencies for avisynth.dll and all auto-load plugins
     and a list of internal/external Avisynth functions.<br>
+    <br>
     <br>
     <b><b>"-c"</b><br>
     </b>In combination with "-avsinfo", this switch allows to select a
@@ -144,7 +176,23 @@
     </b>Specify a time limit (in seconds) after which the program stops
     reading frames and terminates.<br>
     <br>
+    <b><b>"-o"</b></b><br>
+    AVSMeter runs a quick test on a few frames at the start in order to
+    measure the frames/second that Avisynth returns for a given script.
+    The result is used to determine a suitable interval for measuring
+    CPU/GPU/memory usage and minimizing the overhead of these
+    measurements.<br>
+    When <b>"-o"</b> is used, that test will be omitted. This can be
+    useful if, for example, AVSMeter is used with a script that writes a
+    sequence of images where the speed test is irrelevant.<br>
+    <font color="#3333ff"> For normal operation, e.g. testing the speed
+      of a script, this switch should not be used, otherwise the
+      accuracy of the FPS/TPF measurements will be reduced, particularly
+      for fast scripts.</font><br>
     <b><u><br>
+        <br>
+        <br>
+        <br>
       </u></b><b><u><big>INI file settings</big></u></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with

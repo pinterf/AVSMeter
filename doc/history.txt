@@ -1,5 +1,10 @@
+v2.7.9
+- Reorganised command line usage (See documentation for details).
+- Added switch "-o" which disables the script pre-scan (See documentation for details).
+- Cosmetics
+
 v2.7.8
-- Regression from 2.7.7: Supress duplicates in plugin enumeration
+- Regression from 2.7.7: Suppress duplicates in plugin enumeration
 
 v2.7.7
 - Added switch to specify a avisynth.dll other than the one automatically loaded
@@ -23,7 +28,7 @@ v2.7.3
 - Fixed a bug in the plugin enumeration
 
 v2.7.2
-- Added new switch "-c". This allows in combination with "-avsinfo" to specify a custom plugin directory.
+- Added new switch "-c". This allows specifying a custom plugin directory in combination with "-avsinfo".
 - "Save as..." dialog for all log/csv files when using "-log" and/or "-csv" switches
 - Updated AVS+ headers
 - Cosmetics
