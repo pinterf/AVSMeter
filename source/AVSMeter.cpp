@@ -1,10 +1,9 @@
-// AVSMeter by Groucho2004
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-#define AVSM_VERSION "1.7.6"
+#define AVSM_VERSION "1.7.7"
 
 #include <windows.h>
 #include <conio.h>
@@ -218,7 +217,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "\r%s\r", utils.StrPad("Analysing script, please wait...", uiConsoleWidth).c_str());
 		uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
 		fprintf(stderr, "\r%s", utils.StrPad("", uiConsoleWidth).c_str());
-		if (uiFrameInterval == 0)
+		if ((uiFrameInterval == 0) || (sAVSError != ""))
 		{
 			fprintf(stderr, "\n%s\n", sAVSError.c_str());
 			Pause();
@@ -395,7 +394,7 @@ int main(int argc, char* argv[])
 
 		sLogBuffer += sConsoleOut + "\n";
 
-		sConsoleOut = "Audio samples/sec: ";
+		sConsoleOut = "Audio sample rate: ";
 		sLogBuffer += sConsoleOut;
 		if (AVS_vidinfo.SamplesPerSecond())
 			sConsoleOut = utils.StrFormat("%19d", AVS_vidinfo.SamplesPerSecond());
@@ -446,7 +445,7 @@ int main(int argc, char* argv[])
 		if (settings.iStopFrame == -1)
 			settings.iStopFrame = (int)uiFrames - 1;
 
-		if ((settings.iStartFrame >= 0) && (settings.iStartFrame < settings.iStopFrame) && (settings.iStopFrame < (int)uiFrames))
+		if ((settings.iStartFrame >= 0) && (settings.iStartFrame <= settings.iStopFrame) && (settings.iStopFrame < (int)uiFrames))
 		{
 			uiFirstFrame = (unsigned int)settings.iStartFrame;
 			uiLastFrame = (unsigned int)settings.iStopFrame;
@@ -662,10 +661,10 @@ int main(int argc, char* argv[])
 					utils.CursorUp(1);
 				}
 			}
-			else
-				fprintf(stderr, "\r%s", utils.StrPad("", uiConsoleWidth).c_str());
 
-			sLogBuffer += "Insufficient data\n";
+			sConsoleOut = "Insufficient data for measurements";
+			fprintf(stderr, "\r%s\n", utils.StrPad(sConsoleOut, uiConsoleWidth).c_str());
+			sLogBuffer += sConsoleOut;
 		}
 	}
 	catch(AvisynthError err)

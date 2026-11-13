@@ -533,8 +533,11 @@ public:
 class VideoFrame {
   volatile long refcount;
   VideoFrameBuffer* const vfb;
-  const int offset, pitch, row_size, height, offsetU, offsetV, pitchUV;  // U&V offsets are from top of picture.
-  const int row_sizeUV, heightUV;
+
+  // Due to technical reasons these members are not const, but should be treated as such.
+  // That means do not modify them once the class has been constructed.
+  int offset, pitch, row_size, height, offsetU, offsetV, pitchUV;  // U&V offsets are from top of picture.
+  int row_sizeUV, heightUV;
 
   friend class PVideoFrame;
   void AddRef();
@@ -572,7 +575,7 @@ public:
 #endif
 }; // end class VideoFrame
 
-enum {
+enum CachePolicyHint {
   // Old 2.5 poorly defined cache hints.
   // Reserve values used by 2.5 API
   // Do not use in new filters
@@ -633,6 +636,25 @@ enum {
     CACHE_ACCESS_RAND=261, // Filter is access order agnostic.
     CACHE_ACCESS_SEQ0=262, // Filter prefers sequential access (low cost)
     CACHE_ACCESS_SEQ1=263, // Filter needs sequential access (high cost)
+
+  CACHE_AVSPLUS_CONSTANTS = 500,    // Smaller values are reserved for classic Avisynth
+
+  CACHE_DONT_CACHE_ME,              // Filters that don't need caching (eg. trim, cache etc.) should return 1 to this request
+  CACHE_SET_MIN_CAPACITY,
+  CACHE_SET_MAX_CAPACITY,
+  CACHE_GET_MIN_CAPACITY,
+  CACHE_GET_MAX_CAPACITY,
+  CACHE_GET_SIZE,
+  CACHE_GET_REQUESTED_CAP,
+  CACHE_GET_CAPACITY,
+  CACHE_GET_MTMODE,
+
+  CACHE_IS_CACHE_REQ,
+  CACHE_IS_CACHE_ANS,
+  CACHE_IS_MTGUARD_REQ,
+  CACHE_IS_MTGUARD_ANS,
+
+  CACHE_USER_CONSTANTS = 1000       // Smaller values are reserved for the core
 
 };
 
@@ -981,6 +1003,48 @@ public:
 }; // end class IScriptEnvironment
 
 
+enum MtMode
+{
+  MT_INVALID = 0,
+  MT_NICE_FILTER = 1,
+  MT_MULTI_INSTANCE = 2,
+  MT_SERIALIZED = 3,
+  MT_MODE_COUNT = 4
+};
+
+class IJobCompletion
+{
+public:
+
+  virtual __stdcall ~IJobCompletion() {}
+  virtual void __stdcall Wait() = 0;
+  virtual AVSValue __stdcall Get(size_t i) = 0;
+  virtual size_t __stdcall Size() const = 0;
+  virtual size_t __stdcall Capacity() const = 0;
+  virtual void __stdcall Reset() = 0;
+  virtual void __stdcall Destroy() = 0;
+};
+
+class IScriptEnvironment2;
+class Prefetcher;
+typedef AVSValue (*ThreadWorkerFuncPtr)(IScriptEnvironment2* env, void* data);
+
+enum AvsEnvProperty
+{
+  AEP_PHYSICAL_CPUS = 1,
+  AEP_LOGICAL_CPUS = 2,
+  AEP_THREADPOOL_THREADS = 3,
+  AEP_FILTERCHAIN_THREADS = 4,
+  AEP_THREAD_ID = 5,
+  AEP_VERSION = 6
+};
+
+enum AvsAllocType
+{
+  AVS_NORMAL_ALLOC  = 1,
+  AVS_POOLED_ALLOC  = 2
+};
+
 /* -----------------------------------------------------------------------------
    Note to plugin authors: The interface in IScriptEnvironment2 is 
       preliminary / under construction / only for testing / non-final etc.!
@@ -993,16 +1057,19 @@ class IScriptEnvironment2 : public IScriptEnvironment{
 public:
   virtual __stdcall ~IScriptEnvironment2() {}
 
+  // Generic system to ask for various properties
+  virtual size_t  __stdcall GetProperty(AvsEnvProperty prop) = 0;
+
   // Returns TRUE and the requested variable. If the method fails, returns FALSE and does not touch 'val'.
-  virtual bool  __stdcall GetVar(const char* name, AVSValue *val) = 0;
+  virtual bool  __stdcall GetVar(const char* name, AVSValue *val) const = 0;
 
   // Return the value of the requested variable.
   // If the variable was not found or had the wrong type,
   // return the supplied default value.
-  virtual bool __stdcall GetVar(const char* name, bool def) = 0;
-  virtual int  __stdcall GetVar(const char* name, int def) = 0;
-  virtual double  __stdcall GetVar(const char* name, double def) = 0;
-  virtual const char*  __stdcall GetVar(const char* name, const char* def) = 0;
+  virtual bool __stdcall GetVar(const char* name, bool def) const = 0;
+  virtual int  __stdcall GetVar(const char* name, int def) const = 0;
+  virtual double  __stdcall GetVar(const char* name, double def) const = 0;
+  virtual const char*  __stdcall GetVar(const char* name, const char* def) const = 0;
 
   // Plugin functions
   virtual bool __stdcall LoadPlugin(const char* filePath, bool throwOnError, AVSValue *result) = 0;
@@ -1010,18 +1077,33 @@ public:
   virtual void __stdcall ClearAutoloadDirs() = 0;
   virtual void __stdcall AutoloadPlugins() = 0;
   virtual void __stdcall AddFunction(const char* name, const char* params, ApplyFunc apply, void* user_data, const char *exportVar) = 0;
+  virtual bool __stdcall InternalFunctionExists(const char* name) = 0;
 
-  // The following group of functions are ONLY to be called
-  // by the avisynth server dll.
-  virtual int __stdcall IncrImportDepth() = 0;
-  virtual int __stdcall DecrImportDepth() = 0;
+  // Threading
+  virtual void __stdcall SetFilterMTMode(const char* filter, MtMode mode, bool force) = 0; // If filter is "", sets the default MT mode
+  virtual MtMode __stdcall GetFilterMTMode(const char* filter, bool* is_forced) const = 0; // If filter is "", gets the default MT mode
+  virtual IJobCompletion* __stdcall NewCompletion(size_t capacity) = 0;
+  virtual void __stdcall ParallelJob(ThreadWorkerFuncPtr jobFunc, void* jobData, IJobCompletion* completion) = 0;
 
   // This version of Invoke will return false instead of throwing NotFound().
-  virtual bool __stdcall Invoke(AVSValue *result, const char* name, const AVSValue args, const char* const* arg_names=0) = 0;
+  virtual bool __stdcall Invoke(AVSValue *result, const char* name, const AVSValue& args, const char* const* arg_names=0) = 0;
+
+  // Support functions
+  virtual void* __stdcall Allocate(size_t nBytes, size_t alignment, AvsAllocType type) = 0;
+  virtual void __stdcall Free(void* ptr) = 0;
+
+  // Strictly for Avisynth core only.
+  // Neither host applications nor plugins should use
+  // these interfaces.
+  virtual int __stdcall IncrImportDepth() = 0;
+  virtual int __stdcall DecrImportDepth() = 0;
+  virtual void __stdcall AdjustMemoryConsumption(size_t amount, bool minus) = 0;
+  virtual void __stdcall SetPrefetcher(Prefetcher *p) = 0;
 
   // These lines are needed so that we can overload the older functions from IScriptEnvironment.
   using IScriptEnvironment::Invoke;
   using IScriptEnvironment::AddFunction;
+  using IScriptEnvironment::GetVar;
 
 }; // end class IScriptEnvironment2
 

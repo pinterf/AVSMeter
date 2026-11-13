@@ -1,3 +1,7 @@
+v1.7.7
+- Fixed a bug that would terminate AVSMeter if the number of frames returned from a script is 1
+- Updated avisynth.h for AVS+ interface to the latest version from Git
+
 v1.7.6
 - Added audio info to the log file
 
