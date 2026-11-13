@@ -54,6 +54,7 @@ using std::getline;
 using std::remove;
 using std::exception;
 
+#define DSE_DELAY 100
 const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
 const HWND ConsoleHWND = GetConsoleWindow();
 

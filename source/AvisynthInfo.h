@@ -118,7 +118,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	sProductVersion = "";
 	sVersionString = "Unknown Avisynth Version";
 	BOOL bAVSLinkage = FALSE;
-	BOOL bRet = TRUE;
+	BOOL bSuccess = TRUE;
 	s_ErrorMsg = "";
 
 	LOADED_IMAGE li;
@@ -188,12 +188,12 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	}
 	catch (exception& ex)
 	{
-		bRet = FALSE;
+		bSuccess = FALSE;
 		s_ErrorMsg = ex.what();
 	}
 	catch (...)
 	{
-		bRet = FALSE;
+		bSuccess = FALSE;
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
@@ -203,7 +203,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 
 	UnMapAndLoad(&li);
 
-	if (!bRet)
+	if (!bSuccess)
 		return FALSE;
 
 	if (!bAVSLinkage)
@@ -335,24 +335,24 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		}
 
 		foo = 0;
-		Sleep(100);
+		Sleep(DSE_DELAY);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
 	}
 	catch (AvisynthError err)
 	{
-		bRet = FALSE;
+		bSuccess = FALSE;
 		s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
 	}
 	catch (exception& ex)
 	{
-		bRet = FALSE;
+		bSuccess = FALSE;
 		s_ErrorMsg = ex.what();
 	}
 	catch (...)
 	{
-		bRet = FALSE;
+		bSuccess = FALSE;
 		s_ErrorMsg = utils.SysErrorMessage();
 		if (s_ErrorMsg != "")
 			s_ErrorMsg = "Cannot load avisynth.dll:\n" + s_ErrorMsg;
@@ -362,11 +362,14 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 
 	::FreeLibrary(hDLL);
 
+	if (!bSuccess)
+		return FALSE;
+
 	EnumPluginDirs(b_CustomPluginDir);
 	EnumPluginDLLs();
 	TestLoadPlugins();
 
-	return bRet;
+	return bSuccess;
 }
 
 
@@ -837,7 +840,7 @@ void CAvisynthInfo::TestLoadPlugins()
 
 		if (((uiPlugin % 40) == 0) && (AVS_env != 0))
 		{
-			Sleep(100);
+			Sleep(DSE_DELAY);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 			AVS_linkage = 0;
@@ -846,7 +849,7 @@ void CAvisynthInfo::TestLoadPlugins()
 
 	if (AVS_env != 0)
 	{
-		Sleep(100);
+		Sleep(DSE_DELAY);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;

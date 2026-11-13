@@ -1,3 +1,6 @@
+v2.8.5
+- Fixed a long standing exception handling bug
+
 v2.8.4
 - Regression from v2.8.3: Revert to "MapAndLoad" WinAPI function
 - Added switch "-v". In combination with "avsinfo", this switch adds a list of internal/external functions and DLL dependencies to the log file.

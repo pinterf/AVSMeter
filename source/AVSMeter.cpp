@@ -1257,7 +1257,7 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
-			Sleep(100);
+			Sleep(DSE_DELAY);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -1685,7 +1685,7 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(100);
+		Sleep(DSE_DELAY);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
@@ -2536,7 +2536,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(100);
+		Sleep(DSE_DELAY);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 		AVS_linkage = 0;
