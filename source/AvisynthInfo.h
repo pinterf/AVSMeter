@@ -32,7 +32,7 @@ public:
 	CAvisynthInfo();
 	virtual ~CAvisynthInfo();
 
-	BOOL    GetInfo(string s_AVSDLL, BOOL b_SpecifyCustomPluginDir, string &s_ErrorMsg, BOOL b_ExtPlugCheck);
+	BOOL    GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck);
 	int     iInterfaceVersion;
 	vector  <string> vPluginDirs;
 	vector  <string> vInternalFunctions;
@@ -55,9 +55,8 @@ public:
 private:
 	CUtils              utils;
 	string              sAVSDLL;
-	//set                 <string> stFunctionDuplicates;
 	BOOL                IsGruntFunc(string s_function);
-  void                EnumPluginDirs(BOOL b_CustomPluginDir);
+  void                EnumPluginDirs();
 	void                EnumPluginDLLs();
 	void                AddScriptFunctions(string s_avsi_file);
 	void                CheckFunctionDuplicates();
@@ -68,7 +67,6 @@ private:
 	BOOL                IsRuntimeInstalled(string s_version);
 	__int64             FileSize(string s_file);
 	BOOL                Is64BitOS();
-	string              BrowseDirectory();
 	typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 
@@ -82,39 +80,7 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-string CAvisynthInfo::BrowseDirectory()
-{
-	BROWSEINFO		bi;
-	LPITEMIDLIST	pidlBrowse;
-	char					szFullDir [MAX_PATH + 1];
-	string				sDir = "INVALID";
-
-	bi.hwndOwner      = NULL;
-	bi.pidlRoot       = NULL;
-	bi.pszDisplayName = NULL;
-	bi.lpszTitle      = "Specify custom plugin directory:";
-	bi.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON;
-	bi.lpfn           =	NULL;
-	bi.lParam         = NULL;
-	bi.iImage         = 0;
-
-	pidlBrowse = SHBrowseForFolder (&bi);	
-	if (pidlBrowse != NULL)
-	{
-		if (SHGetPathFromIDList(pidlBrowse, szFullDir))
-		{
-			sDir = utils.StrFormat("%s", szFullDir);
-			utils.StrTrim(sDir);
-			if ((!utils.DirectoryExists(sDir)) || (sDir.length() < 4))
-				sDir = "INVALID";
-		}
-	}
-
-	return sDir;
-}
-
-
-BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_ErrorMsg, BOOL b_ExtPlugCheck)
+BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, BOOL b_ExtPlugCheck)
 {
 	sDLLPath = "";
 	bIs64BitAVSDLL = FALSE;
@@ -131,13 +97,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	LOADED_IMAGE li;
 	BOOL bLoaded;
 
-	//Make a local copy
-	sAVSDLL = s_AVSDLL;
-
-	if (sAVSDLL == "")
-		bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
-	else
-		bLoaded = MapAndLoad((LPSTR)sAVSDLL.c_str(), NULL, &li,	TRUE,	TRUE);
+	bLoaded = MapAndLoad("avisynth", NULL, &li,	TRUE,	TRUE);
 
 	if (!bLoaded)
 	{
@@ -342,19 +302,16 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 		}
 
 		string sDLLFunctions = "";
-		if (!b_CustomPluginDir)
+		try
 		{
-			try
-			{
-				foo = AVS_env->GetVar("$PluginFunctions$");
-				sDLLFunctions = foo.AsString();
-				utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", TRUE);
-				sort(vPluginFunctions.begin(), vPluginFunctions.end(), CompareNoCase);
-			}
-			catch(...)
-			{
-				sDLLFunctions = "";
-			}
+			foo = AVS_env->GetVar("$PluginFunctions$");
+			sDLLFunctions = foo.AsString();
+			utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", TRUE);
+			sort(vPluginFunctions.begin(), vPluginFunctions.end(), CompareNoCase);
+		}
+		catch(...)
+		{
+			sDLLFunctions = "";
 		}
 
 		foo = 0;
@@ -402,7 +359,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 	}
 
 
-	EnumPluginDirs(b_CustomPluginDir);
+	EnumPluginDirs();
 
 	if (b_ExtPlugCheck)
 	{
@@ -414,25 +371,8 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, BOOL b_CustomPluginDir, string &s_E
 }
 
 
-void CAvisynthInfo::EnumPluginDirs(BOOL b_CustomPluginDir)
+void CAvisynthInfo::EnumPluginDirs()
 {
-	vPluginDirs.empty();
-
-	if (b_CustomPluginDir)
-	{
-		string sCustomPlugDir = BrowseDirectory();
-		if (sCustomPlugDir != "INVALID")
-		{
-			vPluginDirs.push_back("Custom plugin directory :\t" + sCustomPlugDir);
-			return;
-		}
-		else
-		{
-			vPluginDirs.push_back("Custom plugin directory :\tInvalid directory specified");
-			return;
-		}
-	}
-
 	vPluginDirs.empty();
 
 	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER

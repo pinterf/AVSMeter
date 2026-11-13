@@ -1,3 +1,8 @@
+v3.0.4.0
+- "avsinfo" is now a switch ("-avsinfo")
+- Removed custom avisynth.dll dialog selection from the command line
+- Removed custom plugin directory dialog selection from the command line
+
 v3.0.3.0
 - Fixed a rounding error bug
 

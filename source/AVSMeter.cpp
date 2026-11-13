@@ -40,7 +40,6 @@
 struct stSettings
 {
 	string    sLogDirectory;
-	string    sAVSDLL;
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
 	BOOL      bCreateLog;
@@ -59,8 +58,6 @@ struct stSettings
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
 	BOOL      bLogFileDateTimeSuffix;
-	BOOL      bSpecifyCustomPluginDir;
-	BOOL      bLogUseFileSaveDialog;
 	BOOL      bDisableFFTWDLLWarning;
 	size_t    nLoadPluginInterval;
 } Settings;
@@ -104,7 +101,6 @@ int main(int argc, char* argv[])
 
 	//defaults
 	Settings.sLogDirectory = "";
-	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
 	Settings.bCreateLog = FALSE;
@@ -121,7 +117,6 @@ int main(int argc, char* argv[])
 	Settings.iTimeLimit = -1;
 	Settings.bLogEstimatedTime = FALSE;
 	Settings.bAutoCompleteExtension = FALSE;
-	Settings.bLogUseFileSaveDialog = FALSE;
 	Settings.bDisableFFTWDLLWarning = FALSE;
 	Settings.nLoadPluginInterval = 40;
 
@@ -163,7 +158,6 @@ int main(int argc, char* argv[])
 	unsigned int uiLogFrameInterval = 1;
 	string sErrorMsg = "";
 	BOOL bModeAVSInfo = FALSE;
-	BOOL bCustomAVSDLLFromCL = FALSE;
 
 	Settings.sSystemDateTime = "";
 
@@ -210,23 +204,9 @@ int main(int argc, char* argv[])
 		utils.StrToLC(sArgTest);
 		arg_len = sArgTest.length();
 
-		if (sArgTest == "avsinfo")
+		if (sArgTest == "-avsinfo")
 		{
 			bModeAVSInfo = TRUE;
-			continue;
-		}
-
-		if (sArgTest == "-avsdll")
-		{
-			bCustomAVSDLLFromCL = TRUE;
-			continue;
-		}
-
-
-		if (sArgTest == "-c")
-		{
-			CLSwitches_c = TRUE;
-			Settings.bSpecifyCustomPluginDir = TRUE;
 			continue;
 		}
 
@@ -397,7 +377,7 @@ int main(int argc, char* argv[])
 	{
 		if (CLSwitches_info)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-info [-i]\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-info [-i]\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -405,7 +385,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_highpriority)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-hp\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-hp\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -413,7 +393,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_timelimit)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-timelimit\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-timelimit\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -421,7 +401,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_range)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-range\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-range\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -429,7 +409,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_csv)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-csv\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-csv\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -437,7 +417,7 @@ int main(int argc, char* argv[])
 
 		if (CLSwitches_o)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'avsinfo\': \"-o\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in combination with \'-avsinfo\': \"-o\"\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -453,17 +433,9 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		if (CLSwitches_c)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-c\"\n");
-			PrintUsage();
-			PollKeys();
-			return -1;
-		}
-
 		if (CLSwitches_lf)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid switch in this context: \"-lf\"\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Switch \'-lf\' must be used in combination with \'avsinfo\'\n");
 			PrintUsage();
 			PollKeys();
 			return -1;
@@ -474,51 +446,10 @@ int main(int argc, char* argv[])
 	if (bHighPriority)
 		::SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-
-	if (bCustomAVSDLLFromCL)
-	{
-		char szCustomAVSDLL[MAX_PATH + 1] = "";
-
-		OPENFILENAME ofn;
-		ofn.lStructSize       = sizeof(OPENFILENAME);
-		ofn.hwndOwner         = ConsoleHWND;
-		ofn.hInstance         = NULL;
-		ofn.lpstrFilter       = "*.dll";
-		ofn.lpstrCustomFilter = NULL;
-		ofn.nMaxCustFilter    = 0;
-		ofn.nFilterIndex      = 1;
-		ofn.lpstrFile         = szCustomAVSDLL;
-		ofn.nMaxFile          = MAX_PATH;
-		ofn.lpstrFileTitle    = NULL;
-		ofn.nMaxFileTitle     = NULL;
-		ofn.lpstrInitialDir   = ".";
-		ofn.lpstrTitle        = "Select Avisynth DLL";
-		ofn.nFileOffset       = 0;
-		ofn.nFileExtension    = 0;
-		ofn.lpstrDefExt       = NULL;
-		ofn.lCustData         = 0;
-		ofn.lpfnHook          = NULL;
-		ofn.lpTemplateName    = NULL;
-		ofn.Flags             = OFN_HIDEREADONLY | OFN_EXPLORER;
-			
-		if (GetOpenFileName(&ofn) == 0)
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot open file or no avisynth.dll selected.\n");
-			PollKeys();
-			return -1;
-		}
-
-		Settings.sAVSDLL.assign(szCustomAVSDLL);
-	}
-
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
 	BOOL bRet = FALSE;
-	if (bModeAVSInfo)
-		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, Settings.bSpecifyCustomPluginDir, sErrorMsg, TRUE);
-	else
-		bRet = AvisynthInfo.GetInfo(Settings.sAVSDLL, FALSE, sErrorMsg, FALSE);
+	bRet = AvisynthInfo.GetInfo(sErrorMsg, TRUE);
 
 	sys.GetCPUID();
 
@@ -812,93 +743,44 @@ int main(int argc, char* argv[])
 
 		if (Settings.bCreateLog)
 		{
-			if (Settings.bLogUseFileSaveDialog)
+			if (Settings.sSystemDateTime == "")
+				Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
+
+ 			string sAVSInfoFile = "";
+			char szPath[MAX_PATH + 1];
+			if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
 			{
-				char szAVSInfoFile[MAX_PATH + 1] = "";
-
-				if (PROCESS_64)
-					sprintf(szAVSInfoFile, "avsinfo_x64.log");
-				else
-					sprintf(szAVSInfoFile, "avsinfo_x86.log");
-
-				OPENFILENAME ofn;
-				ofn.lStructSize       = sizeof(OPENFILENAME);
-				ofn.hwndOwner         = ConsoleHWND;
-				ofn.hInstance         = NULL;
-				ofn.lpstrFilter       = "*.log";
-				ofn.lpstrCustomFilter = NULL;
-				ofn.nMaxCustFilter    = 0;
-				ofn.nFilterIndex      = 1;
-				ofn.lpstrFile         = szAVSInfoFile;
-				ofn.nMaxFile          = MAX_PATH;
-				ofn.lpstrFileTitle    = NULL;
-				ofn.nMaxFileTitle     = NULL;
-				ofn.lpstrInitialDir   = NULL;
-				ofn.lpstrTitle        = "Save log file as...";
-				ofn.nFileOffset       = 0;
-				ofn.nFileExtension    = 0;
-				ofn.lpstrDefExt       = NULL;
-				ofn.lCustData         = 0;
-				ofn.lpfnHook          = NULL;
-				ofn.lpTemplateName    = NULL;
-				ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
-			
-				if (GetSaveFileName(&ofn) == 0)
+				if (Settings.sLogDirectory == "")
 				{
-					MessageBox(GetConsoleWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
-				}
-				else
-				{
-					ofstream hAVSInfoFile(szAVSInfoFile);
-					if (hAVSInfoFile.is_open())
-				  {
-						hAVSInfoFile << sLogBuffer;
-						hAVSInfoFile.flush();
-						hAVSInfoFile.close();
-					}
-				}
-			}
-			else
-			{
-				if (Settings.sSystemDateTime == "")
-					Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
-
-	 			string sAVSInfoFile = "";
-				char szPath[MAX_PATH + 1];
-				if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
-				{
-					if (Settings.sLogDirectory == "")
+					if (Settings.bLogFileDateTimeSuffix)
 					{
-						if (Settings.bLogFileDateTimeSuffix)
-						{
-							if (PROCESS_64)
-								sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", szPath, Settings.sSystemDateTime.c_str());
-							else
-								sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", szPath, Settings.sSystemDateTime.c_str());
-						}
+						if (PROCESS_64)
+							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", szPath, Settings.sSystemDateTime.c_str());
 						else
-						{
-							if (PROCESS_64)
-								sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", szPath);
-							else
-								sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", szPath);
-						}
+							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", szPath, Settings.sSystemDateTime.c_str());
 					}
 					else
 					{
-						if (Settings.bLogFileDateTimeSuffix)
-							sAVSInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemDateTime.c_str());
+						if (PROCESS_64)
+							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", szPath);
 						else
-							sAVSInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
+							sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", szPath);
 					}
+				}
+				else
+				{
+					if (Settings.bLogFileDateTimeSuffix)
+						sAVSInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemDateTime.c_str());
+					else
+						sAVSInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
+				}
 
-					ofstream hAVSInfoFile(sAVSInfoFile.c_str());
-					if (hAVSInfoFile.is_open())
-				  {
-						hAVSInfoFile << sLogBuffer;
-						hAVSInfoFile.flush();
-						hAVSInfoFile.close();
-					}
+				ofstream hAVSInfoFile(sAVSInfoFile.c_str());
+				if (hAVSInfoFile.is_open())
+			  {
+					hAVSInfoFile << sLogBuffer;
+					hAVSInfoFile.flush();
+					hAVSInfoFile.close();
 				}
 			}
 		}
@@ -932,10 +814,7 @@ int main(int argc, char* argv[])
 	}
 
 	HINSTANCE hDLL;
-	if (Settings.sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
+	hDLL = ::LoadLibrary("avisynth");
 
 	if (!hDLL)
 	{
@@ -1914,17 +1793,6 @@ string ParseINIFile()
 			}
 			continue;
 		}
-		if (sCurrentLine.substr(0, 6) == "avsdll")
-		{
-			Settings.sAVSDLL = sOrgLine.substr(7);
-			utils.StrTrim(Settings.sAVSDLL);
-			if ((!utils.FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
-			{
-				sRet = utils.StrFormat("\nThe file specified in AVSMeter.ini does not exist:\nAVSDLL=%s\n", Settings.sAVSDLL.c_str());
-				return sRet;
-			}
-			continue;
-		}
 
 		if (sCurrentLine.substr(0, 18) == "loadplugininterval")
 		{
@@ -1992,9 +1860,6 @@ string ParseINIFile()
 			if (sCurrentLine.substr(0, 21) == "autocompleteextension")
 				Settings.bAutoCompleteExtension = (iBoolValue == 0) ? FALSE : TRUE;
 
-			if (sCurrentLine.substr(0, 20) == "logusefilesavedialog")
-				Settings.bLogUseFileSaveDialog = (iBoolValue == 0) ? FALSE : TRUE;
-
 			if (sCurrentLine.substr(0, 21) == "disablefftwdllwarning")
 				Settings.bDisableFFTWDLLWarning = (iBoolValue == 0) ? FALSE : TRUE;
 		}
@@ -2035,9 +1900,6 @@ BOOL WriteINIFile(string &s_inifile)
 	sSettings += utils.StrFormat("CreateCSV=%u\n", Settings.bCreateCSV);
 	sSettings += utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
 	sSettings += utils.StrFormat("LogFileDateTimeSuffix=%u\n", Settings.bLogFileDateTimeSuffix);
-	sSettings += utils.StrFormat("LogUseFileSaveDialog=%u\n\n", Settings.bLogUseFileSaveDialog);
-
-	sSettings += utils.StrFormat("AVSDLL=%s\n\n", Settings.sAVSDLL.c_str());
 
 	sSettings += utils.StrFormat("AllowOnlyOneInstance=%u\n", Settings.bAllowOnlyOneInstance);
 	sSettings += utils.StrFormat("ConUseSTDOUT=%u\n", Settings.bConUseStdOut);
@@ -2082,93 +1944,42 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	size_t ilen = s_avsfile.length();
 	ofstream hLogFile;
 
-	if (Settings.bLogUseFileSaveDialog)
+	Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
+	if (ilen > 4)
 	{
-		sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
-
-		for (ilen = (sLogFile.length() - 1); ilen > 0; ilen--)
-		{
-			if (sLogFile[ilen] == '\\')
-				break;
-		}
-
-		sLogFile = sLogFile.substr(ilen + 1);
-		char szLogFile[MAX_PATH + 1] = "";
-		sprintf(szLogFile, sLogFile.c_str());
-
-		OPENFILENAME ofn;
-		ofn.lStructSize       = sizeof(OPENFILENAME);
-		ofn.hwndOwner         = ConsoleHWND;
-		ofn.hInstance         = NULL;
-		ofn.lpstrFilter       = "*.log";
-		ofn.lpstrCustomFilter = NULL;
-		ofn.nMaxCustFilter    = 0;
-		ofn.nFilterIndex      = 1;
-		ofn.lpstrFile         = szLogFile;
-		ofn.nMaxFile          = MAX_PATH;
-		ofn.lpstrFileTitle    = NULL;
-		ofn.nMaxFileTitle     = NULL;
-		ofn.lpstrInitialDir   = ".";
-		ofn.lpstrTitle        = "Save log file as...";
-		ofn.nFileOffset       = 0;
-		ofn.nFileExtension    = 0;
-		ofn.lpstrDefExt       = NULL;
-		ofn.lCustData         = 0;
-		ofn.lpfnHook          = NULL;
-		ofn.lpTemplateName    = NULL;
-		ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
-
-		if (GetSaveFileName(&ofn) == 0)
-		{
-			MessageBox(GetConsoleWindow(), "\rLog file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
-			return "";
-		}
-
-		hLogFile.open(szLogFile);
-		if (!hLogFile.is_open())
-		{
-			sRet = utils.StrFormat("\nCannot create \"%s\"\n", szLogFile);
-			return sRet;
-		}
+		if (Settings.bLogFileDateTimeSuffix)
+			sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].log";
+		else
+			sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
 	}
 	else
 	{
-		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
-		if (ilen > 4)
-		{
-			if (Settings.bLogFileDateTimeSuffix)
-				sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].log";
-			else
-				sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
-		}
+		if (Settings.bLogFileDateTimeSuffix)
+			sLogFile = s_avsfile + " [" + Settings.sSystemDateTime + "].log";
 		else
-		{
-			if (Settings.bLogFileDateTimeSuffix)
-				sLogFile = s_avsfile + " [" + Settings.sSystemDateTime + "].log";
-			else
-				sLogFile = s_avsfile + ".log";
-		}
+			sLogFile = s_avsfile + ".log";
+	}
 
-		if (Settings.sLogDirectory != "")
+	if (Settings.sLogDirectory != "")
+	{
+		size_t sLen = sLogFile.length();
+		for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
 		{
-			size_t sLen = sLogFile.length();
-			for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
+			if (sLogFile[nPos] == '\\')
 			{
-				if (sLogFile[nPos] == '\\')
-				{
-					sLogFile = Settings.sLogDirectory + "\\" + sLogFile.substr(nPos + 1);
-					break;
-				}
+				sLogFile = Settings.sLogDirectory + "\\" + sLogFile.substr(nPos + 1);
+				break;
 			}
 		}
-
-		hLogFile.open(sLogFile.c_str());
-		if (!hLogFile.is_open())
-		{
-			sRet = utils.StrFormat("\nCannot create \"%s\"\n", sLogFile.c_str());
-			return sRet;
-		}
 	}
+
+	hLogFile.open(sLogFile.c_str());
+	if (!hLogFile.is_open())
+	{
+		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sLogFile.c_str());
+		return sRet;
+	}
+
 
 	string sLog = "";
 
@@ -2235,92 +2046,40 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, BOOL bNVVP
 	size_t ilen = s_avsfile.length();
 	ofstream hCSVFile;
 
-	if (Settings.bLogUseFileSaveDialog)
+	Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
+	if (ilen > 4)
 	{
-		sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
-
-		for (ilen = (sCSVFile.length() - 1); ilen > 0; ilen--)
-		{
-			if (sCSVFile[ilen] == '\\')
-				break;
-		}
-
-		sCSVFile = sCSVFile.substr(ilen + 1);
-		char szCSVFile[MAX_PATH + 1] = "";
-		sprintf(szCSVFile, sCSVFile.c_str());
-
-		OPENFILENAME ofn;
-		ofn.lStructSize       = sizeof(OPENFILENAME);
-		ofn.hwndOwner         = ConsoleHWND;
-		ofn.hInstance         = NULL;
-		ofn.lpstrFilter       = "*.csv";
-		ofn.lpstrCustomFilter = NULL;
-		ofn.nMaxCustFilter    = 0;
-		ofn.nFilterIndex      = 1;
-		ofn.lpstrFile         = szCSVFile;
-		ofn.nMaxFile          = MAX_PATH;
-		ofn.lpstrFileTitle    = NULL;
-		ofn.nMaxFileTitle     = NULL;
-		ofn.lpstrInitialDir   = ".";
-		ofn.lpstrTitle        = "Save CSV file as...";
-		ofn.nFileOffset       = 0;
-		ofn.nFileExtension    = 0;
-		ofn.lpstrDefExt       = NULL;
-		ofn.lCustData         = 0;
-		ofn.lpfnHook          = NULL;
-		ofn.lpTemplateName    = NULL;
-		ofn.Flags             = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
-			
-		if (GetSaveFileName(&ofn) == 0)
-		{
-			MessageBox(GetConsoleWindow(), "\rCSV file not saved\r", "AVSMeter", MB_ICONEXCLAMATION);
-			return "";
-		}
-
-		hCSVFile.open(szCSVFile);
-		if (!hCSVFile.is_open())
-		{
-			sRet = utils.StrFormat("\nCannot create \"%s\"\n", szCSVFile);
-			return sRet;
-		}
+		if (Settings.bLogFileDateTimeSuffix)
+			sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].csv";
+		else
+			sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
 	}
 	else
 	{
-		Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
-		if (ilen > 4)
-		{
-			if (Settings.bLogFileDateTimeSuffix)
-				sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemDateTime + "].csv";
-			else
-				sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
-		}
+		if (Settings.bLogFileDateTimeSuffix)
+			sCSVFile = s_avsfile + " [" + Settings.sSystemDateTime + "].csv";
 		else
-		{
-			if (Settings.bLogFileDateTimeSuffix)
-				sCSVFile = s_avsfile + " [" + Settings.sSystemDateTime + "].csv";
-			else
-				sCSVFile = s_avsfile + ".csv";
-		}
+			sCSVFile = s_avsfile + ".csv";
+	}
 
-		if (Settings.sLogDirectory != "")
+	if (Settings.sLogDirectory != "")
+	{
+		size_t sLen = sCSVFile.length();
+		for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
 		{
-			size_t sLen = sCSVFile.length();
-			for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
+			if (sCSVFile[nPos] == '\\')
 			{
-				if (sCSVFile[nPos] == '\\')
-				{
-					sCSVFile = Settings.sLogDirectory + "\\" + sCSVFile.substr(nPos + 1);
-					break;
-				}
+				sCSVFile = Settings.sLogDirectory + "\\" + sCSVFile.substr(nPos + 1);
+				break;
 			}
 		}
+	}
 
-		hCSVFile.open(sCSVFile.c_str());
-		if (!hCSVFile.is_open())
-		{
-			sRet = utils.StrFormat("\nCannot create \"%s\"\n", sCSVFile.c_str());
-			return sRet;
-		}
+	hCSVFile.open(sCSVFile.c_str());
+	if (!hCSVFile.is_open())
+	{
+		sRet = utils.StrFormat("\nCannot create \"%s\"\n", sCSVFile.c_str());
+		return sRet;
 	}
 
 	string sCSV = "";
@@ -2442,10 +2201,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 	unsigned int uiFrameInterval = 10;
 
 	HINSTANCE hDLL;
-	if (Settings.sAVSDLL == "")
-		hDLL = ::LoadLibrary("avisynth");
-	else
-		hDLL = ::LoadLibrary(Settings.sAVSDLL.c_str());
+	hDLL = ::LoadLibrary("avisynth");
 
 	if (!hDLL)
 	{
@@ -2588,11 +2344,11 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 
 void PrintUsage()
 {
-	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 1:  AVSMeter script.avs [switches]\n\n");
+	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage:  AVSMeter script.avs [switches]\n\n");
 
 	PrintConsole(TRUE, BG_BLACK | FG_HGREEN, "Switches:\n");
-	
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
+
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsinfo            Display extended Avisynth info\n");	
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Display clip info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
@@ -2600,18 +2356,10 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -hp                 Set process priority to high\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n\n\n");
-
-
-	PrintConsole(TRUE, BG_BLACK | FG_HYELLOW, "\nUsage 2:  AVSMeter avsinfo [switches]\n\n");
-
-	PrintConsole(TRUE, BG_BLACK | FG_HGREEN, "Switches:\n");
-
- 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -c                  Specify custom plugin directory\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -o                  Omit script pre-scanning\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Add video adapter info to the log file\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the log file\n\n\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -lf                 Add internal/external functions to the avsinfo*.log file\n\n\n\n");
 
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");

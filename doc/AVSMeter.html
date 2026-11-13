@@ -49,118 +49,75 @@
       </li>
     </ul>
     <br>
-    <b> <img alt="" src="avsmeter.png" width="812" height="511"><br>
+    <b> <img alt="" src="avsmeter.png" width="764" height="895"><br>
       <br>
       <br>
-      <img src="avsinfo.png" alt="" width="812" height="679"><br>
+      <img src="avsinfo.png" alt="" width="764" height="895"><br>
       <br>
       <br>
-    </b><font color="#3366ff" size="+1">Command line usage 1 (analyse a
-      script):&nbsp; AVSMeter script.avs [switches]<br>
+    </b><font color="#3366ff" size="+1">Command line usage:<br>
     </font><b><br>
-      <tt>Switches:</tt><tt><br>
-      </tt><tt>&nbsp;
-        -avsdll&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    </b><font face="Courier New" size="+1">AVSMeter script.avs
+      [switches] <b>or</b> </font><font face="Courier New"><font
+        size="+1">AVSMeter -avsinfo [switches]</font><br>
+      <br>
+      Switches:</font><b><font face="Courier New"><br>
+        &nbsp;
+        -avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Specify avisynth.dll to be used</tt><tt><br>
-      </tt><tt>&nbsp; -info&nbsp;&nbsp;
-        [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Display clip info</tt><tt><br>
-      </tt><tt>&nbsp; -log&nbsp;&nbsp;&nbsp;
-        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file</tt><tt><br>
-      </tt><tt>&nbsp;
+        Display extended Avisynth info<br>
+        &nbsp; -info&nbsp;&nbsp;
+        [-i]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Display clip info<br>
+        &nbsp; -log&nbsp;&nbsp;&nbsp;
+        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file<br>
+        &nbsp;
         -csv&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Create csv file</tt><tt><br>
-      </tt><tt>&nbsp;
+        Create csv file<br>
+        &nbsp;
         -gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Display GPU/VPU usage (requires GPU-Z)</tt><tt><br>
-      </tt><tt>&nbsp; -range=first,last&nbsp;&nbsp; Set frame range</tt><tt><br>
-      </tt><tt>&nbsp;
-        -timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Set time
-        limit (seconds)</tt><tt><br>
-      </tt><tt>&nbsp;
+        Display GPU/VPU usage (requires GPU-Z)<br>
+        &nbsp; -range=first,last&nbsp;&nbsp; Set frame range<br>
+        &nbsp; -timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Set time limit (seconds)<br>
+        &nbsp;
         -hp&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Set process priority to high</tt><tt><br>
-      </tt><tt>&nbsp;
+        Set process priority to high<br>
+        &nbsp;
         -o&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Omit script pre-scanning</tt><tt><br>
-      </tt><tt><br>
-      </tt><br>
-    </b><font color="#3366ff" size="+1">Command line usage 2 (display
-      extended Avisynth info):&nbsp; AVSMeter avsinfo [switches]</font><b><br>
-      <br>
-      <tt>Switches:</tt><tt><br>
-      </tt><tt>&nbsp;
-        -avsdll&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-
-
-
-
-
-        Specify avisynth.dll to be used</tt><tt><br>
-      </tt><tt>&nbsp;
-        -c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-
-
-
-
-
-        Specify custom plugin directory</tt><tt><br>
-      </tt><tt>&nbsp; -log&nbsp;&nbsp;&nbsp;
-        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file</tt><tt><br>
-      </tt><tt>&nbsp;
+        Omit script pre-scanning<br>
+        &nbsp; -log&nbsp;&nbsp;&nbsp;
+        [-l]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create log file<br>
+        &nbsp;
         -gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Add video adapter info to the log file</tt><tt><br>
-      </tt><tt>&nbsp;
+        Add video adapter info to the log file<br>
+        &nbsp;
         -lf&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
 
-
-
-
-        Add internal/external functions to the log file</tt><br>
+        Add internal/external functions to the avsinfo*.log file</font><font
+        face="Courier New"><br>
+      </font></b><b><font size="+3"><br>
+      </font><br>
       <br>
-      <br>
-      <br>
-      <br>
-    </b><font face="Fixedsys"> </font><b>"avsinfo"<br>
+    </b><font face="Fixedsys"> </font><b>"-avsinfo"<br>
     </b>Displays extended info about the installed Avisynth version and
     the plugin sub-system. If a custom avisynth.dll is specified in the
     ini file, info about that file will be displayed. The "avsinfo"
@@ -170,22 +127,11 @@
     and optionally ("-lf") a list of internal/external Avisynth
     functions.<br>
     <br>
-    <b><b>"-c"</b><br>
-    </b>In combination with "avsinfo", this switch allows to select a
-    custom plugin directory (other than the directory/directories
-    referenced in the registry).<br>
-    <br>
     <b><b><b><b>"-lf"</b><br>
-        </b></b></b>In combination with "avsinfo" and "-log", this
-    switch adds a list of internal/external functions to the log file.<b><b><br>
+        </b></b></b>In combination with "avsinfo", this switch adds a
+    list of internal/external functions to the log file.<b><b><br>
         <br>
-        "-avsdll"</b><br>
-    </b>The user can specify the avisynth.dll to be used (a file open
-    dialog lets the user select it). Without this switch AVSMeter will
-    attempt to load avisynth.dll through the standard Windows search
-    hierarchy which is the default behaviour.<br>
-    <b><br>
-      "-log"<br>
+      </b></b><b>"-log"<br>
     </b>Creates a log file with various details about the installed
     Avisynth version, clip info, runtime results, a copy of the script
     and a performance data table with the measured details about each
@@ -270,23 +216,8 @@
     <b><b>"LogFileDateTimeSuffix" (<font color="#ff0000">0</font> or 1):</b><br>
     </b>If set to "1", adds a date/time suffix to all .log and .csv
     files.<b><br>
-    </b><b><i>Note:</i></b> This setting is ignored if
-    "LogUseFileSaveDialog" is set to "1".<b><br>
-      <br>
-      "LogUseFileSaveDialog" (</b><b><b><font color="#ff0000">0</font>
-        or 1):</b><br>
-    </b>If set to "1", AVSMeter prompts with a file save dialog so the
-    user can choose where to save .log/.csv files.<br>
-    <b><br>
-    </b><b>"AVSDLL"</b><br>
-    The user can specify the avisynth.dll to be used. This has to be a
-    fully qualified path, for example
-    "AVSDLL=d:\apps\avisynth\avisynth.dll" (without the quotes). The <font
-      color="#ff0000"><b>default is an empty string</b> </font>which
-    means that AVSMeter will attempt to load avisynth.dll through the
-    standard Windows search hierarchy.<br>
-    <br>
-    <b><b>"</b></b><b><b><b>DisableFFTWDLLWarning</b>" (<font
+    </b><b><br>
+    </b><b><b>"</b></b><b><b><b>DisableFFTWDLLWarning</b>" (<font
           color="#ff0000">0</font> or 1):</b><br>
     </b>If set to "1", warnings about missing FFTW DLLs
     ("libfftw3f-3.dll" / "fftw3.dll") will be <span>suppressed.</span><span></span><br>
