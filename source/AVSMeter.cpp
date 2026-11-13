@@ -1,5 +1,5 @@
 /*
-	This file is part of AVSMeter, Copyright(C) Groucho2004.
+	This file is part of AVSMeter by Groucho2004.
 
 	AVSMeter is free software. You can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -33,7 +33,7 @@
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
-#define REFRESH_INTERVAL              0.35  //seconds
+#define REFRESH_INTERVAL              0.25  //seconds
 #define MIN_TIME_PER_FRAMEINTERVAL   10.00  //milliseconds
 #define MIN_RUNTIME                 500     //milliseconds
 
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
 	else
 		sAVSMVersion += " (x86)";
 
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s - %s\n", sAVSMVersion.c_str(), COPYRIGHT_STR);
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s, %s\n", sAVSMVersion.c_str(), COPYLEFT_STR);
 
 	if (sINIRet != "")
 	{
@@ -568,7 +568,7 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
+			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets1.c_str());
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("                            %u physical cores / %u logical cores\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
@@ -753,6 +753,24 @@ int main(int argc, char* argv[])
 					sLogBuffer += sOutBuf;
 					PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 				}
+			}
+		}
+
+
+		//Plugin Dependencies
+		if (AvisynthInfo.vPluginDependencies.size() > 0)
+		{
+			if (AvisynthInfo.bIs64BitAVSDLL)
+				sOutBuf = "\n\n\n[DLL dependencies (x64)]\n";
+			else
+				sOutBuf = "\n\n\n[DLL dependencies (x86)]\n";
+
+			sLogBuffer += sOutBuf;
+
+			for (unsigned int PDep = 0; PDep < AvisynthInfo.vPluginDependencies.size(); PDep++)
+			{
+				sOutBuf = utils.StrFormat("%s\n", AvisynthInfo.vPluginDependencies[PDep].c_str());
+				sLogBuffer += sOutBuf;
 			}
 		}
 
@@ -1010,7 +1028,7 @@ int main(int argc, char* argv[])
 		{
 			sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
+			sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets1.c_str());
 			sLogBuffer += sOutBuf;
 			sOutBuf = utils.StrFormat("                            %u physical cores / %u logical cores\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
@@ -2360,9 +2378,9 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 
 string Pad(string s_line)
 {
-	int iPadLen = utils.GetConsoleWidth() - (int)s_line.length() - 1;
-	if (iPadLen > 0)
-		s_line.append(iPadLen, ' ');
+	int iPadLen = utils.GetConsoleWidth() - (int)s_line.length();
+	if ((iPadLen > 0) && (iPadLen <= 1000))
+		s_line.append(iPadLen - 1, ' ');
 
 	return s_line;
 }
@@ -2448,16 +2466,16 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		unsigned __int64 D0 = 0;
 		while ((TDelta < 5.0) && (uiFrame < uiTotalFrames))
 		{
-			if (_kbhit())
-			{
-				if (_getch() == 0x1B) //ESC
-					AVS_env->ThrowError("\'ESC\' pressed, cancelled.");
-			}
-
-			if ((timer.GetSTDTimerMS() - D0) >= 150)
+			if ((timer.GetSTDTimerMS() - D0) >= 100)
 			{
 				PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rPre-scanning script (F%u / T%.2lf)\r", uiFrame, TDelta);
 				D0 = timer.GetSTDTimerMS();
+
+				if (_kbhit())
+				{
+					if (_getch() == 0x1B) //ESC
+						AVS_env->ThrowError("\'ESC\' pressed, cancelled.");
+				}
 			}
 
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
@@ -2468,6 +2486,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 		double dAverageFrameTime = 0.0;
 		if (TDelta >= ((double)MIN_RUNTIME / 1000.0))
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //convert to milliseconds
+
 
 		uiFrameInterval = 1000;
 		if (dAverageFrameTime > (MIN_TIME_PER_FRAMEINTERVAL /  500.0)) uiFrameInterval =  500;
