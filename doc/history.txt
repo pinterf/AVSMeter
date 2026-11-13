@@ -1,3 +1,6 @@
+v3.0.3.0
+- Fixed a rounding error bug
+
 v3.0.2.0
 - Cosmetics
 - Suppress report of duplicate functions from the GrunT plugin

@@ -1408,7 +1408,7 @@ int main(int argc, char* argv[])
 
 			++uiIntervalCounter;
 
-			if (Settings.bGPUInfo)
+			if ((Settings.bGPUInfo) && (uiIntervalCounter > 0))
 			{
 				gpuinfo.ReadSensors();
 				if (gpuinfo.sensors.ReadError)
@@ -1431,7 +1431,8 @@ int main(int argc, char* argv[])
 
 			dCPUUsageCur = processinfo.dCPUUsage;
 			dCPUUsageAcc += dCPUUsageCur;
-			dCPUUsageAvg = dCPUUsageAcc / (double)uiIntervalCounter;
+			if (uiIntervalCounter > 0)
+				dCPUUsageAvg = dCPUUsageAcc / (double)uiIntervalCounter;
 
 			dwMemCurrentMB = processinfo.dwMemMB;
 
