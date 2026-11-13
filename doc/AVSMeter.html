@@ -57,12 +57,14 @@
 
 
 
+
           Monitor GPU/VPU usage<font color="#ff0000"><sup>2</sup></font><br>
           &nbsp;-range=first,last&nbsp;&nbsp; Specify frame range<font
             color="#ff0000"><sup>3</sup></font><br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Specify time (sec) after which the process will exit<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
 
 
@@ -97,6 +99,13 @@
     the default settings.<br>
     Supported settings for the INI file (default values in <b><font
         color="Red">red</font></b>):<br>
+    <br>
+    <b><b>"DisplayFPS" </b></b><b><b><b>(0 or <font color="Red">1</font>)</b>:</b><br>
+    </b> If set to "1", frames/second is printed to the console.<br>
+    <b><b><b><br>
+          "DisplayTPF" (<font color="Red">0</font> or 1):</b></b><br>
+    </b>If set to "1", time/frame (in milliseconds) is printed to the
+    console.<br>
     <b><br>
       "CreateLog" (<font color="Red">0</font> or 1):</b><br>
     Determines if a log will be created or not.<br>

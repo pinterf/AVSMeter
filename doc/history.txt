@@ -1,6 +1,13 @@
+v2.0.8
+- Added "DisplayFPS" and "DisplayTPF" ini file settings. The user can now choose between having
+  FPS or/and TPF (Time/Frame in milliseconds) printed to the console.
+- Added AVISYNTH_INTERFACE_VERSION to the log file
+- Added INI setting "AutoCompleteExtension" which makes the feature added in v2.0.7 optional
+- Minor fixes
+
 v2.0.7
-- Regression from v2.0.4: Fixed broken plugin-autoload directory enumeration.
-- If .avs file extension is missing, it will silently be added.
+- Fixed broken plugin autoload directory enumeration.
+- If .avs file extension is missing, it will be added silently.
 
 v2.0.6
 - Added ini option "ConUseSTDOUT".

@@ -78,6 +78,7 @@ public:
 	string         StrFormat(const char *fmt, ...);
 	string         StrPad(string s_line);
 	string         StrFormatFPS(double d_fps);
+	string         StrFormatFrameTime(double d_frametime);
 	BOOL           IsNumeric(string s_string);
 
 private:
@@ -254,6 +255,26 @@ string CUtils::StrFormatFPS(double d_fps)
 
 	return sRet;
 }
+
+
+string CUtils::StrFormatFrameTime(double d_frametime)
+{
+	string sRet = "";
+
+	if (d_frametime < 1.0)
+		sRet = StrFormat("%.4f", d_frametime);
+	else if (d_frametime < 10.0)
+		sRet = StrFormat("%.3f", d_frametime);
+	else if (d_frametime < 100.0)
+		sRet = StrFormat("%.2f", d_frametime);
+	else if (d_frametime < 1000.0)
+		sRet = StrFormat("%.1f", d_frametime);
+	else
+		sRet = StrFormat("%u", (unsigned int)(d_frametime + 0.5));
+
+	return sRet;
+}
+
 
 
 string CUtils::GetFileVersion(string s_file)
