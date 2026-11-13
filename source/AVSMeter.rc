@@ -1,10 +1,27 @@
+/*
+	This file is part of AVSMeter, Copyright(C) Groucho2004.
+
+	AVSMeter is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	AVSMeter is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <winres.h>
 #define IDI_MAINFRAME 101
 IDI_MAINFRAME ICON DISCARDABLE "AVSMeter.ico"
 
 VS_VERSION_INFO VERSIONINFO
-	FILEVERSION      2,4,3,0
-	PRODUCTVERSION   2,4,3,0
+	FILEVERSION      2,4,4,0
+	PRODUCTVERSION   2,4,4,0
 	FILEOS           VOS_NT
 	FILETYPE         VFT_APP
 BEGIN
@@ -14,10 +31,10 @@ BEGIN
 		BEGIN
 			VALUE "Comments", "AVSMeter - Avisynth Script Testing\0"
 			VALUE "FileDescription", "AVSMeter\0"
-			VALUE "FileVersion", "2.4.3\0"
+			VALUE "FileVersion", "2.4.4\0"
 			VALUE "LegalCopyright", "Copyright (c) 2012-2016, Groucho2004\0"
 			VALUE "ProductName", "AVSMeter\0"
-			VALUE "ProductVersion", "2.4.3\0"
+			VALUE "ProductVersion", "2.4.4\0"
 		END
 	END
 	BLOCK "VarFileInfo"

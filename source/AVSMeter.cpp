@@ -85,8 +85,8 @@ CTimer timer;
 CSettings Settings;
 
 unsigned int CalculateFrameInterval(string &s_avsfile);
-string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP, BOOL bOmitPerfData);
-string       CreateCSVFile(string &s_avsfile, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, unsigned int ui_frameinterval, BOOL bNVVP);
+string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, BOOL bNVVP, BOOL bOmitPerfData);
+string       CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL bNVVP);
 string       ParseINIFile();
 BOOL         WriteINIFile(string &s_inifile);
 void         PrintUsage();
@@ -99,13 +99,7 @@ int main(int argc, char* argv[])
 	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 	Settings.sSystemTime = "";
 
-	string sRet = ParseINIFile();
-	if (sRet != "")
-	{
-		PrintConsole(TRUE, COLOR_ERROR, sRet.c_str());
-		Pause();
-		return -1;
-	}
+	string sINIRet = ParseINIFile();
 
 	int iRet = 0;
 	string sAVSMVersion = utils.GetFileVersion("");
@@ -120,6 +114,13 @@ int main(int argc, char* argv[])
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s", sAVSMVersion.c_str());
 	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, " - Copyright (c) 2012-2016, Groucho2004\n");
+
+	if (sINIRet != "")
+	{
+		PrintConsole(TRUE, COLOR_ERROR, sINIRet.c_str());
+		Pause();
+		return -1;
+	}
 
 	string sOutBuf = "";
 	string sCommandLine = "";
@@ -282,14 +283,14 @@ int main(int argc, char* argv[])
 				Settings.iTimeLimit = atoi(sTemp.c_str());
 				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
 				{
-					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1 and 999999\n", sArg.c_str());
+					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
 					Pause();
 					return -1;
 				}
 			}
 			else
 			{
-				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between 1 and 999999\n", sArg.c_str());
+				PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sArg.c_str());
 				Pause();
 				return -1;
 			}
@@ -493,9 +494,11 @@ int main(int argc, char* argv[])
 
 		if (sys.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU:                        %s\n                            %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
+			sOutBuf = utils.StrFormat("CPU (brand string):         %s\n", sys.cpudata.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
-			if (sys.cpudata.CPURealClock > 500)
+			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
+			sLogBuffer += sOutBuf;
+			if (sys.cpudata.CPURealClock > 100)
 			{
 				sOutBuf = utils.StrFormat("CPU clock (measured):       %u MHz\n", sys.cpudata.CPURealClock);
 				sLogBuffer += sOutBuf;
@@ -873,9 +876,11 @@ int main(int argc, char* argv[])
 
 		if (sys.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU:                        %s\n                            %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
+			sOutBuf = utils.StrFormat("CPU (brand string):         %s\n", sys.cpudata.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
-			if (sys.cpudata.CPURealClock > 500)
+			sOutBuf = utils.StrFormat("CPU (code name):            %s\n", sys.cpudata.CPUCodeName.c_str());
+			sLogBuffer += sOutBuf;
+			if (sys.cpudata.CPURealClock > 100)
 			{
 				sOutBuf = utils.StrFormat("CPU clock (measured):       %u MHz\n", sys.cpudata.CPURealClock);
 				sLogBuffer += sOutBuf;
@@ -883,7 +888,6 @@ int main(int argc, char* argv[])
 			sOutBuf = utils.StrFormat("CPU cores / Logical cores:  %u / %u\n", sys.cpudata.CPUCores, sys.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
-
 
 		if (Settings.bMonitorGPULoad)
 		{
@@ -1135,7 +1139,7 @@ int main(int argc, char* argv[])
 
 			if (Settings.bCreateLog)
 			{
-				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, uiFrameInterval, FALSE, bRuntimeTooShort);
+				string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, FALSE, bRuntimeTooShort);
 				if (sLogRet != "")
 					PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sLogRet.c_str());
 			}
@@ -1215,7 +1219,7 @@ int main(int argc, char* argv[])
 
 						if (Settings.bCreateLog)
 						{
-							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, uiFrameInterval, FALSE, bRuntimeTooShort);
+							string sLogRet = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, FALSE, bRuntimeTooShort);
 							if (sLogRet != "")
 								PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, sLogRet.c_str());
 						}
@@ -1709,7 +1713,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateLog)
 	{
-		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, uiFrameInterval, gpuinfo.data.NVVPU, bRuntimeTooShort);
+		string sr = CreateLogFile(sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, gpuinfo.data.NVVPU, bRuntimeTooShort);
 		if (sr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
@@ -1720,7 +1724,7 @@ int main(int argc, char* argv[])
 
 	if (Settings.bCreateCSV && !bRuntimeTooShort && (sAVSError == ""))
 	{
-		string cr = CreateCSVFile(sAVSFile, sGPUInfo, perfdata, uiFrameInterval, gpuinfo.data.NVVPU);
+		string cr = CreateCSVFile(sAVSFile, perfdata, gpuinfo.data.NVVPU);
 		if (cr != "")
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
@@ -1802,12 +1806,22 @@ string ParseINIFile()
 	string sOrgLine = "";
 	sCurrentLine = "";
 	size_t spos = 0;
+	int iBoolValue = 0;
 
 	while (getline(hINIFile, sCurrentLine))
 	{
 		utils.StrTrim(sCurrentLine);
 		sOrgLine = sCurrentLine;
 		utils.StrToLC(sCurrentLine);
+
+		iBoolValue = -1;
+		if (sCurrentLine.length() > 3)
+		{
+			if (sCurrentLine.substr(sCurrentLine.length() - 2) == "=0")
+				iBoolValue = 0;
+			if (sCurrentLine.substr(sCurrentLine.length() - 2) == "=1")
+				iBoolValue = 1;
+		}
 
 		if (sCurrentLine.substr(0, 12) == "logdirectory")
 		{
@@ -1834,82 +1848,143 @@ string ParseINIFile()
 
 		if (sCurrentLine.substr(0, 10) == "displayfps")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bDisplayFPS = FALSE;
-			else
-				Settings.bDisplayFPS = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bDisplayFPS = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 10) == "displaytpf")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bDisplayTPF = FALSE;
-			else
-				Settings.bDisplayTPF = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bDisplayTPF = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 22) == "displayefficiencyindex")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bDisplayEfficiencyIndex = FALSE;
-			else
-				Settings.bDisplayEfficiencyIndex = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bDisplayEfficiencyIndex = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 9) == "createlog")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bCreateLog = FALSE;
-			else
-				Settings.bCreateLog = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bCreateLog = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 9) == "createcsv")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bCreateCSV = FALSE;
-			else
-				Settings.bCreateCSV = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bCreateCSV = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 21) == "logfiledatetimesuffix")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bLogFileDateTimeSuffix = FALSE;
-			else
-				Settings.bLogFileDateTimeSuffix = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bLogFileDateTimeSuffix = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 15) == "pausebeforeexit")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bPauseBeforeExit = FALSE;
-			else
-				Settings.bPauseBeforeExit = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bPauseBeforeExit = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 17) == "invokedistributor")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bInvokeDistributor = FALSE;
-			else
-				Settings.bInvokeDistributor = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bInvokeDistributor = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 20) == "allowonlyoneinstance")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bAllowOnlyOneInstance = FALSE;
-			else
-				Settings.bAllowOnlyOneInstance = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bAllowOnlyOneInstance = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 14) == "monitorgpuload")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bMonitorGPULoad = FALSE;
-			else
-				Settings.bMonitorGPULoad = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bMonitorGPULoad = (iBoolValue == 0) ? FALSE : TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 8) == "usecolor")
+		{
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bUseColor = (iBoolValue == 0) ? FALSE : TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 12) == "conusestdout")
+		{
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bConUseStdOut = (iBoolValue == 0) ? FALSE : TRUE;
+
+		}
+
+		if (sCurrentLine.substr(0, 16) == "logestimatedtime")
+		{
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bLogEstimatedTime = (iBoolValue == 0) ? FALSE : TRUE;
+		}
+
+		if (sCurrentLine.substr(0, 21) == "autocompleteextension")
+		{
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bAutoCompleteExtension = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 
 		if (sCurrentLine.substr(0, 15) == "processpriority")
@@ -1919,7 +1994,15 @@ string ParseINIFile()
 			{
 				Settings.nProcessPriority = (BYTE)atol(sTemp.c_str());
 				if ((Settings.nProcessPriority < 1) || (Settings.nProcessPriority > 3))
-					Settings.nProcessPriority = 2;
+				{
+					sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
+					return sRet;
+				}				
+			}
+			else
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must \'1\', \'2\' or \'3\'\n", sOrgLine.c_str());
+				return sRet;
 			}
 		}
 
@@ -1929,25 +2012,20 @@ string ParseINIFile()
 			if (utils.IsNumeric(sTemp))
 			{
 				Settings.iTimeLimit = atoi(sTemp.c_str());
-				if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
-					Settings.iTimeLimit = -1;
+				if (Settings.iTimeLimit != -1)
+				{
+					if ((Settings.iTimeLimit < 1) || (Settings.iTimeLimit > 999999))
+					{
+						sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sOrgLine.c_str());
+						return sRet;
+					}
+				}
 			}
-		}
-
-		if (sCurrentLine.substr(0, 8) == "usecolor")
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bUseColor = FALSE;
 			else
-				Settings.bUseColor = TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 12) == "conusestdout")
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bConUseStdOut = FALSE;
-			else
-				Settings.bConUseStdOut = TRUE;
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nValue must be \'-1\' (no time limit) or between \'1\' and \'999999\'\n", sOrgLine.c_str());
+				return sRet;
+			}
 		}
 
 		if (sCurrentLine.substr(0, 10) == "framerange")
@@ -1974,26 +2052,12 @@ string ParseINIFile()
 
 		if (sCurrentLine.substr(0, 6) == "useutc")
 		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bUseUTC = FALSE;
-			else
-				Settings.bUseUTC = TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 16) == "logestimatedtime")
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bLogEstimatedTime = FALSE;
-			else
-				Settings.bLogEstimatedTime = TRUE;
-		}
-
-		if (sCurrentLine.substr(0, 21) == "autocompleteextension")
-		{
-			if (sCurrentLine.substr(sCurrentLine.length() - 1) == "0")
-				Settings.bAutoCompleteExtension = FALSE;
-			else
-				Settings.bAutoCompleteExtension = TRUE;
+			if (iBoolValue == -1)
+			{
+				sRet = utils.StrFormat("\nINI setting is invalid:\n\"%s\"\nThe value must be \'0\' or \'1\'\n", sOrgLine.c_str());
+				return sRet;
+			}
+			Settings.bUseUTC = (iBoolValue == 0) ? FALSE : TRUE;
 		}
 	}
 
@@ -2028,7 +2092,7 @@ BOOL WriteINIFile(string &s_inifile)
 
 	sComment = "# \"LogDirectory\"\n";
 	sComment += "# The user can specify a directory in which all log files are stored. This has to be a fully qualified\n";
-	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\\\" (without the quotes). The default is an empty string\n";
+	sComment += "# path, for example \"LogDirectory=c:\\LogFiles\" (without the quotes). The default is an empty string\n";
 	sComment += "# which means that all log files are stored in the script directory or, in case the \"-avsinfo\"\n";
 	sComment += "# switch was used, the current (working) directory.\n";
 	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
@@ -2036,7 +2100,7 @@ BOOL WriteINIFile(string &s_inifile)
 
 	sComment = "# \"AVSDLL\"\n";
 	sComment += "# The user can specify the avisynth.dll to be used. This has to be a fully qualified path, for example\n";
-	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\\\" (without the quotes). The default is an empty string which\n";
+	sComment += "# \"AVSDLL=d:\\apps\\avisynth\\avisynth.dll\" (without the quotes). The default is an empty string which\n";
 	sComment += "# means that AVSMeter will attempt to load avisynth.dll through the standard Windows search hierarchy.\n";
 	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
 	hINIFile << sComment << sCurrentLine << "\n\n";
@@ -2158,7 +2222,7 @@ BOOL WriteINIFile(string &s_inifile)
 }
 
 
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, unsigned int ui_frameinterval, BOOL bNVVP, BOOL bOmitPerfData)
+string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, string &s_avserror, BOOL bNVVP, BOOL bOmitPerfData)
 {
 	string sRet = "";
 	string sAVSBuffer = "";
@@ -2275,7 +2339,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 }
 
 
-string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, vector<CPerformanceData> &cs_pdata, unsigned int ui_frameinterval, BOOL bNVVP)
+string CreateCSVFile(string &s_avsfile, vector<CPerformanceData> &cs_pdata, BOOL bNVVP)
 {
 	string sRet = "";
 	string sCurrentLine = "";

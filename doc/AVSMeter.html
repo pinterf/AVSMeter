@@ -41,30 +41,22 @@
         average frames processed per second. Measuring how fast Avisynth
         can serve frames to a client application (x264, VirtualDub) and
         establishing CPU/GPU/memory usage helps with optimizing scripts
-        and tracking down crashes, slowdowns and bottlenecks.<br>
-        <br>
-      </li>
-      <li> Performing a thorough test of the Avisynth installation and
+        and tracking down crashes, slowdowns and bottlenecks.</li>
+      <li>Performing a thorough test of the Avisynth installation and
         associated plugins, checking if external dependencies are
         installed, etc.<br>
-        <br>
       </li>
-      <li>Running scripts in "simple mode" without gathering/displaying
-        any runtime/performance data. This is useful if AVSMeter is used
-        with a script where the performance info is irrelevant, for
-        example audio conversion or creating a video from an image
-        sequence.</li>
     </ul>
     <br>
-    <br>
-    <br>
-    <b> <img alt="" src="avsmeter.png" height="607" width="652"><br>
+    <b> <img alt="" src="avsmeter.png" height="575" width="652"><br>
       <br>
     </b><br>
     <font face="Fixedsys"><big>Usage:&nbsp; AVSMeter script.avs
         [switches]<br>
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -126,6 +118,8 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
 
 
 
@@ -264,6 +258,8 @@
 
 
 
+
+
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <big><font face="Courier New"><font face="Fixedsys">&nbsp;-simple
           [-s]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Simple mode
@@ -325,7 +321,7 @@
     "Simple mode" just runs the script without gathering any
     runtime/performance data. This is useful if AVSMeter is used with a
     script where the performance info is irrelevant, for example audio
-    conversion or creating a video from an image sequence.<br>
+    conversion.<br>
     <br>
     <b><font color="#3333ff"><big><b><i>Note:</i></b> If applicable,
           command line switches override INI settings.</big></font><br>

@@ -211,9 +211,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 		{
 			DWORD rvaName = prvaNames[dwName];
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-
-			for (unsigned int i = 0; i < sName.length(); i++)
-				sName[i] = tolower(sName[i]);
+			StrToLC(sName);
 
 			pos = sName.find("avs_linkage");
 			if (pos != std::string::npos)
@@ -980,9 +978,7 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 		{
 			DWORD rvaName = prvaNames[dwName];
 			sName = (char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL);
-
-			for (unsigned int i = 0; i < sName.length(); i++)
-				sName[i] = tolower(sName[i]);
+			StrToLC(sName);
 
 			pos = sName.find("avisynthplugininit3");
 			if (pos != std::string::npos)
@@ -1171,7 +1167,6 @@ void CAvisynthInfo::AVSCheckPlugins()
 
 void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint)
 {
-	BOOL bRet = TRUE;
 	HANDLE hFile = NULL;
 	HANDLE hFileMapping = NULL;
 	LPBYTE lpbaseAddress = NULL;
