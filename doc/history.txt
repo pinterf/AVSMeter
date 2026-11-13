@@ -1,3 +1,7 @@
+v2.0.7
+- Regression from v2.0.4: Fixed broken plugin-autoload directory enumeration.
+- If .avs file extension is missing, it will silently be added.
+
 v2.0.6
 - Added ini option "ConUseSTDOUT".
 

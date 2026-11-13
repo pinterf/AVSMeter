@@ -329,6 +329,25 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		if (sArgTest.length() > 0)
+		{
+			sTemp = sArg + ".avs";
+			LPTSTR lpPart;
+			char szOut[2050];
+			if (::GetFullPathName(sTemp.c_str(), 2048, szOut, &lpPart))
+			{
+				sAVSFile = szOut;
+				if (!utils.FileExists(sAVSFile))
+				{
+					PrintFmt(Settings.bConUseStdOut, COLOR_ERROR, "\nFile not found: \"%s\"\n", sTemp.c_str());
+					Pause();
+					return -1;
+				}
+				else
+					continue;
+			}
+		}
+
 		PrintFmt(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid argument: \"%s\"\n", sArg.c_str());
 		Pause();
 		return -1;
@@ -521,19 +540,12 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("Avisynth DLL location:                 %s", AvisynthInfo.sDLLPath.c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		unsigned int nDir = 0;
 		for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.NumPlugDirs; uiPlugDir++)
 		{
 			sTemp = AvisynthInfo.saPluginDirs[uiPlugDir];
 			if (sTemp != "")
 			{
-				++nDir;
-
-				if (uiPlugDir <= 3)
-					sOutBuf = utils.StrFormat("AutoLoadDir %u (x86):                   %s", nDir, AvisynthInfo.saPluginDirs[uiPlugDir].c_str());
-				else
-					sOutBuf = utils.StrFormat("AutoLoadDir %u (x64):                   %s", nDir, AvisynthInfo.saPluginDirs[uiPlugDir].c_str());
-
+				sOutBuf = utils.StrFormat("%s", AvisynthInfo.saPluginDirs[uiPlugDir].c_str());
 				sLogBuffer += sOutBuf + "\n";
 			}
 		}
