@@ -43,10 +43,10 @@ BOOL CTimer::TestTimer()
 		return FALSE;
 
 	double start = GetTimer();
-	::Sleep(1000);
+	::Sleep(500);
 	double dtesttime = GetTimer() - start;
 		
-	if ((dtesttime > 0.7) && (dtesttime < 1.3))
+	if ((dtesttime > 0.4) && (dtesttime < 0.6))
 		return TRUE;
 
 	return FALSE;

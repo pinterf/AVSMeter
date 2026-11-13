@@ -1,3 +1,8 @@
+v1.9.5
+- Improved and more elaborate exception handling (Win32 API)
+- Added GPU memory usage to the console display and log
+- Fixed a bug related to audio only clips
+
 v1.9.4
 - Added a stream buffer flush to the console text output. Buffered text output through stdout/stderr
   caused problems with console re-direction for folks who use AVSMeter in their GUIs.

@@ -23,6 +23,7 @@ public:
 	struct Sensors
 	{
 		WORD GPULoad;
+		DWORD MemoryUsed;
 	} sensors;
 
 	struct Data
@@ -30,7 +31,6 @@ public:
 		string CardName;
 		string GPUName;
 		string MemSize;
-		string BusInterface;
 		string OpenCLVersion;
 		string DriverVersion;
 	} data;
@@ -162,8 +162,6 @@ void CGPUInfo::ReadData()
 			data.DriverVersion = sValue;
 		if (sKey == "OpenCL_Version")
 			data.OpenCLVersion = sValue;
-		if (sKey == "BusInterface")
-			data.BusInterface = sValue;
 	}
 
 	return;
@@ -178,13 +176,21 @@ void CGPUInfo::ReadSensors()
 
 	LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
+	BYTE bDone = 0;
 	for (int i = 0; i <128; i++)
 	{
 		if (wcscmp(lpMem->sensors[i].name, L"GPU Load") == 0)
 		{
-			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);	
-			break;
+			sensors.GPULoad = (WORD)(lpMem->sensors[i].value + 0.5);
+			++bDone;
 		}
+		if (wcscmp(lpMem->sensors[i].name, L"Memory Used") == 0)
+		{
+			sensors.MemoryUsed = (DWORD)(lpMem->sensors[i].value + 0.5);	
+			++bDone;
+		}
+		if (bDone >= 2)
+			break;
 	}
 
 	dwLastTimeRun = GetTickCount();
@@ -196,7 +202,12 @@ void CGPUInfo::ReadSensors()
 string CGPUInfo::OSErrorMessage()
 {
 	LPVOID lpf;
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR)&lpf, 0, NULL);
+	DWORD dwLastError = GetLastError();
+
+	if (dwLastError == ERROR_SUCCESS)
+		return "";
+		
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR)&lpf, 0,	NULL);
 	
 	return (LPCTSTR)lpf;
 }

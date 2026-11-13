@@ -285,7 +285,12 @@ string CUtils::GetFileVersion(string s_file)
 string CUtils::OSErrorMessage()
 {
 	LPVOID lpf;
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR)&lpf, 0,	NULL);
+	DWORD dwLastError = GetLastError();
+
+	if (dwLastError == ERROR_SUCCESS)
+		return "";
+		
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),	(LPTSTR)&lpf, 0,	NULL);
 	
 	return (LPCTSTR)lpf;
 }

@@ -49,14 +49,14 @@ private:
 
 	DWORD dwLastTimeRun;
 	DWORD dwLastTimeRunThreadCount;
-	HANDLE hCurProcess;
+	HANDLE hProcess;
 	PROCESS_MEMORY_COUNTERS pmc;
 };
 
 
 CProcessInfo::CProcessInfo()
 {
-	hCurProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ::GetCurrentProcessId());
+	hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ::GetCurrentProcessId());
 
 	dwPhysicalMemMB = 0;
 	dwVirtualMemMB = 0;
@@ -81,8 +81,8 @@ CProcessInfo::~CProcessInfo()
 
 void CProcessInfo::CloseProcess()
 {
-	if (hCurProcess)
-		::CloseHandle(hCurProcess);
+	if (hProcess)
+		::CloseHandle(hProcess);
 
 	return;
 }
@@ -108,7 +108,7 @@ void CProcessInfo::Update()
 		dwLastTimeRunThreadCount = GetTickCount();
 	}
 
-	::GetProcessMemoryInfo(hCurProcess, &pmc, sizeof(pmc));
+	::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
 	dwPhysicalMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
 	dwVirtualMemMB = (DWORD)(((double)(pmc.PagefileUsage) / 1048576.0) + 0.5);
 
