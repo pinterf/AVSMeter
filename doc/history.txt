@@ -1,3 +1,7 @@
+v2.8.0
+- Fixed a display bug
+- Further reduced memory overhead
+
 v2.7.9
 - Reorganised command line usage (See documentation for details).
 - Added switch "-o" which disables the script pre-scan (See documentation for details).

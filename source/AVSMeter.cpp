@@ -772,7 +772,6 @@ int main(int argc, char* argv[])
 	{
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Loading script...").c_str());
 
-		uiFrameInterval = 1;
 		if (!bOmitPreScan)
 		{
 			uiFrameInterval = CalculateFrameInterval(sAVSFile, sErrorMsg);
@@ -784,6 +783,8 @@ int main(int argc, char* argv[])
 				return -1;
 			}
 		}
+		else
+			uiFrameInterval = 1;
 
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 	}
@@ -1193,7 +1194,7 @@ int main(int argc, char* argv[])
 			AVS_env->ThrowError("Invalid frame range specified:\n\"%s\"\n", Settings.sFrameRange.c_str());
 		}
 
-		while ((uiFramesToProcess / uiFrameInterval) > 400000)
+		while ((uiFramesToProcess / uiFrameInterval) > 100000)
 			uiFrameInterval *= 10;
 
 		perfdata.reserve((2 * uiFramesToProcess) / uiFrameInterval);
@@ -2471,7 +2472,7 @@ void PrintUsage()
 
 	PrintConsole(TRUE, COLOR_EMPHASIS, "Switches:\n");
 	
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll            Specify avisynth.dll to be used\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -avsdll             Specify avisynth.dll to be used\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -info   [-i]        Display clip info\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -log    [-l]        Create log file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -csv                Create csv file\n");
