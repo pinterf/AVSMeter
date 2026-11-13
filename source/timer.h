@@ -53,7 +53,7 @@ BOOL CTimer::TestTimer()
 	::Sleep(500);
 	double dtesttime = GetTimer() - start;
 		
-	if ((dtesttime > 0.3) && (dtesttime < 0.7))
+	if ((dtesttime > 0.4) && (dtesttime < 0.6))
 		return TRUE;
 
 	return FALSE;

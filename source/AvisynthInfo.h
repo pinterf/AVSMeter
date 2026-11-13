@@ -38,7 +38,6 @@ public:
 	string  sVersionNumber;
 	string  sVersionString;
 	string  sTimeStamp;
-	string  *ExternalFunctions;
 	BOOL    bIs64BitVersion;
 	BOOL    bLoadError;
 
@@ -50,13 +49,11 @@ private:
   void    EnumPluginDirs();
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
-	void    TokenizeFunctions(string &s_functions);
 };
 
 CAvisynthInfo::CAvisynthInfo()
 {
 	NumPlugDirs = NUM_PLUG_DIRS;
-	ExternalFunctions = 0;
 }
 
 CAvisynthInfo::~CAvisynthInfo()
@@ -213,24 +210,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 		}
 
 		sLinkerVersion = StrFormat("%u.%u", li.FileHeader->OptionalHeader.MajorLinkerVersion, li.FileHeader->OptionalHeader.MinorLinkerVersion);
-		if (sLinkerVersion.substr(0, 2) == "6.")
-			sLinkerVersion += " (VC6)";
-		if (sLinkerVersion.substr(0, 3) == "7.0")
-			sLinkerVersion += " (VS2002)";
-		if (sLinkerVersion.substr(0, 3) == "7.1")
-			sLinkerVersion += " (VS2003)";
-		if (sLinkerVersion.substr(0, 2) == "8.")
-			sLinkerVersion += " (VS2005)";
-		if (sLinkerVersion.substr(0, 2) == "9.")
-			sLinkerVersion += " (VS2008)";
-		if (sLinkerVersion.substr(0, 3) == "10.")
-			sLinkerVersion += " (VS2010)";
-		if (sLinkerVersion.substr(0, 3) == "11.")
-			sLinkerVersion += " (VS2012)";
-		if (sLinkerVersion.substr(0, 3) == "12.")
-			sLinkerVersion += " (VS2013)";
-		if (sLinkerVersion.substr(0, 3) == "14.")
-			sLinkerVersion += " (VS2015)";
 
 		DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 		PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
@@ -373,9 +352,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 		try
 		{
 			sVersionString = StrFormat("%s", AVS_env->Invoke("VersionString", AVSValue(&foo, 0)).AsString());
-			size_t spos = sVersionString.find("(ICL10)");
-			if ((spos > 1) && (spos < 0xFFFF))
-				sLinkerVersion = "6.0 (ICL 10.1)";
 		}
 		catch (IScriptEnvironment::NotFound)
 		{
@@ -384,32 +360,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg, string s_avsdll)
 
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
-
-		try
-		{
-			foo = AVS_env->Invoke("Version", 0);
-		}
-		catch (IScriptEnvironment::NotFound)
-		{
-		}
-
-		string sExternalFunctions = "";
-		size_t Elements = 0;
-		try
-		{
-			foo = AVS_env->GetVar("$PluginFunctions$");
-			sExternalFunctions = foo.AsString();
-			if (sExternalFunctions != "")
-			{
-				Elements = std::count(sExternalFunctions.begin(), sExternalFunctions.end(), ' ');
-				ExternalFunctions = new string[Elements + 1];
-				TokenizeFunctions(sExternalFunctions);
-			}
-		}
-		catch(...)
-		{
-			sExternalFunctions = "";
-		}
 
 		foo = 0;
 		Sleep(100);
@@ -719,69 +669,18 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 
 string CAvisynthInfo::GetTimeStamp(string s_file)
 {
-	HANDLE hFile;
-	FILETIME ftCreate, ftLastAccess, ftModified;
-
-	hFile = ::CreateFile(s_file.c_str(),	GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-					FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM,	NULL);
+	WIN32_FIND_DATA fd;
+	HANDLE hFile = FindFirstFile(s_file.c_str(), &fd); 
 
 	if (hFile == INVALID_HANDLE_VALUE)
-		return "???";
+		return "Cannot determine timestamp";
 
-	GetFileTime(hFile, &ftCreate, &ftLastAccess, &ftModified);
+	FindClose(hFile);
 
-	if (!::CloseHandle(hFile))
-		return "???";
-
-	FILETIME localTime;
-	FileTimeToLocalFileTime(&ftModified, &localTime);
 	SYSTEMTIME sysTime;
-	FileTimeToSystemTime(&localTime, &sysTime);
+	FileTimeToSystemTime(&fd.ftLastWriteTime, &sysTime);
 
-	string sMonth = "";
-	switch (sysTime.wMonth)
-	{
-		case 1:
-			sMonth = "January";
-			break;
-		case 2:
-			sMonth = "Febuary";
-			break;
-		case 3:
-			sMonth = "March";
-			break;
-		case 4:
-			sMonth = "April";
-			break;
-		case 5:
-			sMonth = "May";
-			break;
-		case 6:
-			sMonth = "June";
-			break;
-		case 7:
-			sMonth = "July";
-			break;
-		case 8:
-			sMonth = "August";
-			break;
-		case 9:
-			sMonth = "September";
-			break;
-		case 10:
-			sMonth = "October";
-			break;
-		case 11:
-			sMonth = "November";
-			break;
-		case 12:
-			sMonth = "December";
-			break;
-		default:
-			sMonth = "???";
-	}
-
-	return StrFormat("%s %u, %u, %02u:%02u:%02u", sMonth.c_str(), sysTime.wDay, sysTime.wYear, sysTime.wHour, sysTime.wMinute, sysTime.wSecond);
+	return StrFormat("%04u-%02u-%02u, %02u:%02u:%02u", sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond);
 }
 
 
@@ -823,38 +722,6 @@ void CAvisynthInfo::StrTrim(string &s_string)
 {
 	s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
 	s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
-
-	return;
-}
-
-
-void CAvisynthInfo::TokenizeFunctions(string &s_functions)
-{
-	StrTrim(s_functions);
-	size_t LastChar = s_functions.length() - 1;
-	int iNumFunctions = 0;
-	size_t curpos = 0;
-	size_t lastpos = 0;
-
-	string sFunction = "";
-	size_t Element = 0;
-	for (curpos = 0; curpos <= LastChar; curpos++)
-	{
-		if ((s_functions[curpos] == ' ') || (curpos == LastChar))
-		{
-			if (curpos == LastChar)
-				sFunction = s_functions.substr(lastpos + 1, (curpos - lastpos));
-			else if (lastpos == 0)
-				sFunction = s_functions.substr(lastpos, (curpos - lastpos));
-			else
-				sFunction = s_functions.substr(lastpos + 1, (curpos - lastpos - 1));
-
-			lastpos = curpos;
-			StrTrim(sFunction);
-			ExternalFunctions[Element] = sFunction;
-			++Element;
-		}
-	}
 
 	return;
 }

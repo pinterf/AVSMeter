@@ -23,13 +23,8 @@
 #include "timer.h"
 
 #define COLOR_DEFAULT           0
-
-//#define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
-//#define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
-
-#define COLOR_AVISYNTH_VERSION  FG_HRED | BG_BLACK
-#define COLOR_AVSM_VERSION      FG_HGREEN | BG_BLACK
-
+#define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
+#define COLOR_AVISYNTH_VERSION  FG_HGREEN | BG_BLACK
 #define COLOR_EMPHASIS          FG_WHITE | BG_BLACK
 #define COLOR_ERROR             FG_HCYAN | BG_BLACK
 
@@ -435,8 +430,8 @@ int main(int argc, char* argv[])
 	{
 		if (!gpuinfo.bGPUZIsRunning)
 		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\n");
-			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "Continue without GPU monitoring? [y/n]");
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nIn order to measure GPU usage, GPU-Z must be running.\n\n");
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "Continue without GPU monitoring? [y/n]");
 
 			for (;;)
 			{
@@ -450,6 +445,8 @@ int main(int argc, char* argv[])
 						utils.CursorUp(1);
 						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
 						Settings.bMonitorGPULoad = FALSE;
 						break;
 					}
@@ -459,6 +456,7 @@ int main(int argc, char* argv[])
 						utils.CursorUp(1);
 						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
 						Pause();
 						return -1;
 					}
@@ -808,8 +806,8 @@ int main(int argc, char* argv[])
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\rInvalid frame range specified:\n");
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r\"%s\"\n", Settings.sFrameRange.c_str());
-			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\rProceed with default (%u,%u)? [y/n]", uiFirstFrame, uiLastFrame);
+			PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r\"%s\"\n\n", Settings.sFrameRange.c_str());
+			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rProceed with default (%u,%u)? [y/n]", uiFirstFrame, uiLastFrame);
 
 			for (;;)
 			{
@@ -819,6 +817,8 @@ int main(int argc, char* argv[])
 					int iKey = _getch();
 					if ((iKey == 0x59) || (iKey == 0x79)) //y
 					{
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						utils.CursorUp(1);
 						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 						utils.CursorUp(1);
 						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
@@ -834,7 +834,11 @@ int main(int argc, char* argv[])
 						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
 						utils.CursorUp(1);
 						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
-						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
+						utils.CursorUp(1);
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
+						PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad("").c_str());
+
 						AVS_clip = 0;
 						AVS_main = 0;
 						AVS_temp = 0;
@@ -1228,8 +1232,8 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			sOutBuf = "Insufficient data for measurements";
-			PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", utils.StrPad(sOutBuf).c_str());
+			sOutBuf = "The specified frame range is too short for accurate measurements.";
+			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf;
 		}
 	}
@@ -1832,46 +1836,50 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		if (!AVS_vidinfo.HasVideo())
 			AVS_env->ThrowError("Script did not return a video clip:\n(%s)", s_avsfile.c_str());
 
-		unsigned int uif = 0;
+		unsigned int uiFrame = 0;
 		double TDelta = 0.0;
 
 		double T0 = timer.GetSTDTimer();
 		for (;;)
 		{
-			PVideoFrame src_frame = AVS_clip->GetFrame(uif, AVS_env);
-			++uif;
-
+			PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
+			++uiFrame;
 			TDelta = timer.GetSTDTimer() - T0;
-			if ((TDelta >= 5.0) || (uif == uiTotalFrames))
+			if ((TDelta >= 5.0) || (uiFrame == uiTotalFrames))
 				break;
 		}
 
-		uiFrameInterval = 10000;
 		double dAverageFrameTime = 0.0;
-		if (TDelta > 0.2)
-			dAverageFrameTime = (1000.0 * TDelta) / (double)uif; //ms
+		if (TDelta > 0.5)
+			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //ms
+		else
+			s_avserror = "Script runtime is too short for accurate measurements";
 
-		if (dAverageFrameTime >  0.002)
+		uiFrameInterval = 50000;
+		if (dAverageFrameTime >   0.001)
+			uiFrameInterval = 20000;
+		if (dAverageFrameTime >   0.002)
+			uiFrameInterval = 10000;
+		if (dAverageFrameTime >   0.004)
 			uiFrameInterval = 5000;
-		if (dAverageFrameTime >  0.005)
+		if (dAverageFrameTime >   0.010)
 			uiFrameInterval = 2000;
-		if (dAverageFrameTime >  0.010)
+		if (dAverageFrameTime >   0.020)
 			uiFrameInterval = 1000;
-		if (dAverageFrameTime >  0.020)
+		if (dAverageFrameTime >   0.040)
 			uiFrameInterval = 500;
-		if (dAverageFrameTime >  0.050)
+		if (dAverageFrameTime >   0.100)
 			uiFrameInterval = 200;
-		if (dAverageFrameTime >  0.100)
+		if (dAverageFrameTime >   0.200)
 			uiFrameInterval = 100;
-		if (dAverageFrameTime >  0.200)
+		if (dAverageFrameTime >   0.400)
 			uiFrameInterval = 50;
-		if (dAverageFrameTime >  0.500)
+		if (dAverageFrameTime >   1.000)
 			uiFrameInterval = 20;
-		if (dAverageFrameTime >  1.000)
+		if (dAverageFrameTime >   2.000)
 			uiFrameInterval = 10;
-		if (dAverageFrameTime > 10.000)
+		if (dAverageFrameTime >  20.000)
 			uiFrameInterval = 1;
-
 
 		AVS_clip = 0;
 		AVS_main = 0;
