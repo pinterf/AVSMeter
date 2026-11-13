@@ -1,3 +1,7 @@
+v3.0.1.0
+- Updated GPU-Z interface (some sensor names changed in v2.32.0)
+- AVSMeter 32 bit and 64 bit now have each an .ini file (AVSMeter.ini / AVSMeter64.ini)
+
 v3.0.0.4
 - Updated libcpuid
 

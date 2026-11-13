@@ -235,6 +235,11 @@ void CGPUInfo::ReadSensors()
 		if (wcslen(lpMem->sensors[i].name) < 2)
 			continue;
 
+		if (_wcsicmp(lpMem->sensors[i].name, L"Board Power Draw") == 0)
+		{
+			sensors.PowerConsumption = (double)(lpMem->sensors[i].value + 0.5);
+			continue;
+		}
 		if (_wcsicmp(lpMem->sensors[i].name, L"Power Consumption (W)") == 0)
 		{
 			sensors.PowerConsumption = (double)(lpMem->sensors[i].value + 0.5);
@@ -274,3 +279,4 @@ void CGPUInfo::ReadSensors()
 
 
 #endif //_GPUINFO_H
+

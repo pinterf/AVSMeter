@@ -1861,7 +1861,11 @@ string ParseINIFile()
 				break;
 		}
 		sProgramPath = sProgramPath.substr(0, i);
-		sINIFile = sProgramPath + "\\AVSMeter.ini";
+
+		if (PROCESS_64)
+			sINIFile = sProgramPath + "\\AVSMeter64.ini";
+		else
+			sINIFile = sProgramPath + "\\AVSMeter.ini";
 	}
 
 	string sCurrentLine = "";
