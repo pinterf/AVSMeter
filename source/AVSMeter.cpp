@@ -34,6 +34,7 @@
 class CSettings
 {
 public:
+	string    sLogDirectory;
 	string    sAVSDLL;
 	BOOL      bDisplayFPS;
 	BOOL      bDisplayTPF;
@@ -53,6 +54,7 @@ public:
 	BOOL      bConUseStdOut;
 	BOOL      bLogEstimatedTime;
 	BOOL      bAutoCompleteExtension;
+	string    sSystemTime;
 };
 
 
@@ -88,6 +90,7 @@ int main(int argc, char* argv[])
 {
 	Settings.bPauseBeforeExit = TRUE;
 	Settings.bUseColor = TRUE;
+	Settings.sSystemTime = "";
 
 	int iRet = 0;
 	string sAVSMVersion = utils.GetFileVersion("");
@@ -100,6 +103,8 @@ int main(int argc, char* argv[])
 		sAVSMVersion += " (x86)";
 	#endif
 
+	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s\n", sAVSMVersion.c_str());
+
 	string sRet = ParseINIFile();
 	if (sRet != "")
 	{
@@ -107,8 +112,6 @@ int main(int argc, char* argv[])
 		Pause();
 		return -1;
 	}
-
-	PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s\n", sAVSMVersion.c_str());
 
 	string sOutBuf = "";
 	string sCommandLine = "";
@@ -128,16 +131,6 @@ int main(int argc, char* argv[])
 	BOOL bPrintAVSInfo = FALSE;
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
-
-	if (Settings.sAVSDLL != "")
-	{
-		if (!utils.FileExists(Settings.sAVSDLL))
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "Specified avisynth.dll does not exist:\n%s\n", Settings.sAVSDLL.c_str());
-			Pause();
-			return -1;
-		}
-	}
 
 	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
@@ -545,11 +538,18 @@ int main(int argc, char* argv[])
 
 		if (Settings.bCreateLog)
 		{
+			if (Settings.sSystemTime == "")
+				Settings.sSystemTime = utils.GetFormattedSystemTime();
+
  			string sInfoFile = "";
 			char szPath[2050];
 			if (::GetCurrentDirectory(sizeof(szPath), szPath) > 0)
 			{
-				sInfoFile = utils.StrFormat("%s\\avsinfo.log", szPath);
+				if (Settings.sLogDirectory == "")
+					sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", szPath, Settings.sSystemTime.c_str());
+				else
+					sInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemTime.c_str());
+
 				ofstream hInfoFile(sInfoFile.c_str());
 				if (hInfoFile.is_open())
 			  {
@@ -708,6 +708,12 @@ int main(int argc, char* argv[])
 		if (sCommandLine != "")
 		{
 			sOutBuf = utils.StrFormat("Command line switches:                 %s", sCommandLine.c_str());
+			sLogBuffer += sOutBuf + "\n";
+		}
+
+		if (Settings.sLogDirectory != "")
+		{
+			sOutBuf = utils.StrFormat("Log file directory:                    %s", Settings.sLogDirectory.c_str());
 			sLogBuffer += sOutBuf + "\n";
 		}
 
@@ -1508,6 +1514,7 @@ string ParseINIFile()
 	string sCurrentLine = "";
 
 	//defaults
+	Settings.sLogDirectory = "";
 	Settings.sAVSDLL = "";
 	Settings.bDisplayFPS = TRUE;
 	Settings.bDisplayTPF = FALSE;
@@ -1538,6 +1545,7 @@ string ParseINIFile()
 
 		hINIFile << "[Main]\n";
 		hINIFile << "Version=" << sAVSMVersion << "\n";
+		hINIFile << "LogDirectory=\n";
 		hINIFile << "AVSDLL=\n";
 		hINIFile << "DisplayFPS=1\n";
 		hINIFile << "DisplayTPF=0\n";
@@ -1577,15 +1585,31 @@ string ParseINIFile()
 
 	while (getline(hINIFile, sCurrentLine))
 	{
+		utils.StrTrim(sCurrentLine);
 		sOrgLine = sCurrentLine;
 		utils.StrToLC(sCurrentLine);
-		utils.StrTrim(sCurrentLine);
-		sCurrentLine.erase(remove(sCurrentLine.begin(), sCurrentLine.end(), ' '), sCurrentLine.end());
+
+		if (sCurrentLine.substr(0, 12) == "logdirectory")
+		{
+			Settings.sLogDirectory = sOrgLine.substr(13);
+			Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of("\\") + 1);
+			utils.StrTrim(Settings.sLogDirectory);
+			if ((!utils.DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
+			{
+				sRet = utils.StrFormat("\nLog directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
+				return sRet;
+			}
+		}
 
 		if (sCurrentLine.substr(0, 6) == "avsdll")
 		{
-			Settings.sAVSDLL = sCurrentLine.substr(7);
+			Settings.sAVSDLL = sOrgLine.substr(7);
 			utils.StrTrim(Settings.sAVSDLL);
+			if ((!utils.FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
+			{
+				sRet = utils.StrFormat("\nAvisynth.dll specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sAVSDLL.c_str());
+				return sRet;
+			}
 		}
 
 		if (sCurrentLine.substr(0, 10) == "displayfps")
@@ -1700,6 +1724,7 @@ string ParseINIFile()
 
 		if (sCurrentLine.substr(0, 10) == "framerange")
 		{
+			sCurrentLine.erase(remove(sCurrentLine.begin(), sCurrentLine.end(), ' '), sCurrentLine.end());
 			Settings.sFrameRange = sOrgLine;
 			Settings.iStartFrame = 0xFFFFFFFFFF;
 			Settings.iStopFrame = 0xFFFFFFFFFF;
@@ -1749,6 +1774,9 @@ string ParseINIFile()
 
 	hNewINIFile << "[Main]\n";
 	hNewINIFile << "Version=" << sAVSMVersion << "\n";
+
+	sCurrentLine = utils.StrFormat("LogDirectory=%s\n", Settings.sLogDirectory.c_str());
+	hNewINIFile << sCurrentLine;
 
 	sCurrentLine = utils.StrFormat("AVSDLL=%s\n", Settings.sAVSDLL.c_str());
 	hNewINIFile << sCurrentLine;
@@ -1816,6 +1844,9 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	string sAVSBuffer = "";
 	string sCurrentLine = "";
 
+	if (Settings.sSystemTime == "")
+		Settings.sSystemTime = utils.GetFormattedSystemTime();
+
 	ifstream hAVSFile(s_avsfile.c_str());
 	if (!hAVSFile.is_open())
 	{
@@ -1833,9 +1864,22 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 	size_t ilen = s_avsfile.length();
 
 	if (ilen > 4)
-		sLogFile = s_avsfile.substr(0, ilen - 4) + ".log";
+		sLogFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].log";
 	else
-		sLogFile = s_avsfile + ".log";
+		sLogFile = s_avsfile + " [" + Settings.sSystemTime + "].log";
+
+	if (Settings.sLogDirectory != "")
+	{
+		size_t sLen = sLogFile.length();
+		for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
+		{
+			if (sLogFile[nPos] == '\\')
+			{
+				sLogFile = Settings.sLogDirectory + "\\" + sLogFile.substr(nPos + 1);
+				break;
+			}
+		}
+	}
 
 	ofstream hLogFile(sLogFile.c_str());
 	if (!hLogFile.is_open())
@@ -1908,14 +1952,31 @@ string CreateCSVFile(string &s_avsfile, string &s_gpuinfo, CPerformanceData * cs
 {
 	string sRet = "";
 	string sCurrentLine = "";
-
 	string sCSVFile = "";
+
+	if (Settings.sSystemTime == "")
+		Settings.sSystemTime = utils.GetFormattedSystemTime();
+
 	size_t ilen = s_avsfile.length();
 
 	if (ilen > 4)
-		sCSVFile = s_avsfile.substr(0, ilen - 4) + ".csv";
+		sCSVFile = s_avsfile.substr(0, ilen - 4) + " [" + Settings.sSystemTime + "].csv";
 	else
-		sCSVFile = s_avsfile + ".csv";
+		sCSVFile = s_avsfile + " [" + Settings.sSystemTime + "].csv";
+
+	if (Settings.sLogDirectory != "")
+	{
+		size_t sLen = sCSVFile.length();
+		for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
+		{
+			if (sCSVFile[nPos] == '\\')
+			{
+				sCSVFile = Settings.sLogDirectory + "\\" + sCSVFile.substr(nPos + 1);
+				break;
+			}
+		}
+	}
+
 
 	ofstream hCSVFile(sCSVFile.c_str());
 	if (!hCSVFile.is_open())

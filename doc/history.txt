@@ -1,3 +1,8 @@
+v2.2.1
+- New ini option "LogDirectory". If specified, all .log and .csv files will be created in that directory.
+- All .log and .csv files now have a suffix containing date and time of creation.
+- Various fixes
+
 v2.2.0
 - Settings in an existing INI file will no longer be overwritten with default settings
   by a new version of AVSMeter.

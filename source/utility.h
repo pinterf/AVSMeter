@@ -62,11 +62,12 @@ public:
 	CUtils();
 	virtual        ~CUtils();
 	BOOL           FileExists(string s_file);
+	BOOL           DirectoryExists(string s_dir);
 	void           CursorUp(unsigned int iLines);
 	void           SetRGB(WORD wAttributes, BOOL bSet);
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
-
+	string         GetFormattedSystemTime();
 	//string functions
 	string         StrFormat(const char *fmt, ...);
 	void           StrTrimLeft(string &s_string);
@@ -149,6 +150,29 @@ BOOL CUtils::FileExists(string s_file)
 }
 
 
+BOOL CUtils::DirectoryExists(string s_dir)
+{
+	DWORD dwAttrib;
+	dwAttrib = ::GetFileAttributes(s_dir.c_str());
+	if (dwAttrib == 0xFFFFFFFF)
+		return FALSE;
+
+	if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
+		return TRUE;
+
+	return FALSE;
+}
+
+
+string CUtils::GetFormattedSystemTime()
+{
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+
+	return StrFormat("%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+}
+
+
 string CUtils::StrFormat(const char *fmt, ...)
 {
 	if (!fmt)	return "";
@@ -160,7 +184,7 @@ string CUtils::StrFormat(const char *fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	while (result == -1)
+	while (result < 0)
 	{
 		if (buffer)	delete [] buffer;
 		buffer = new char[length];

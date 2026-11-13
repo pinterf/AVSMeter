@@ -60,6 +60,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
         Display extended Avisynth info (<font color="#ff0000">1</font>)<br>
         &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
@@ -71,6 +80,15 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
+
+
+
+
+
+
 
 
 
@@ -141,6 +159,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
           Set process priority (1:low, 2:normal, 3:high)<br>
         </font></font></big><b><big><font face="Courier New"><br>
         </font></big></b><br>
@@ -148,23 +175,27 @@
     info about the installed Avisynth version and the plugin sub-system.
     If a custom avisynth.dll is specified in the ini file, info about
     that file will be displayed. The "-avsinfo" switch can be combined
-    with "-log" in order to write the info to a file ("avsinfo.log" in
-    the current directory).<br>
+    with "-log" in order to write the info to a file ("avsinfo.log" is
+    created in the current (working) directory unless the INI option
+    "LogDirectory" points to a valid directory).<br>
     <br>
     (<b><code><font color="#ff0000"><big>2</big></font></code></b>)
     Creates a log file with various details about the installed Avisynth
     version, clip info, runtime results, a copy of the script and a
     performance data table with the measured details about each
     frame/frame interval. The log file is created in the same directory
-    as the script.<br>
-    <b><i>Note:</i></b> The numbering of the frames in the performance
-    data section is not zero-based, i.e. the first frame is 1, not 0.<br>
+    as the script unless the INI option "LogDirectory" points to a valid
+    directory.<b><nobr></nobr><br>
+    </b><b><i>Note:</i></b> The numbering of the frames in the
+    performance data section is not zero-based, i.e. the first frame is
+    1, not 0.<br>
     <br>
     (<b><code><font color="#ff0000"><big>3</big></font></code></b>)
     Creates a CSV file containing the performance data formatted as
     comma-separated values for direct import in Excel or a similar
     spread sheet program (OpenOffice, LibreOffice). The CSV file is
-    created in the same directory as the script.<br>
+    created in the same directory as the script unless the INI option
+    "LogDirectory" points to a valid directory.<nobr><b></b></nobr><br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -184,18 +215,27 @@
     Specify a time limit (in seconds) after which the program stops
     reading frames and terminates.<br>
     <br>
-    <b><font color="#3333ff"><big><b><i>Note:</i></b> Command line
-          switches override INI settings.</big></font><br>
+    <b><font color="#3333ff"><big><b><i>Note:</i></b> If applicable,
+          command line switches override INI settings.</big></font><br>
+      <br>
       <br>
       <u> <br>
-        INI file settings</u></b><br>
+        <big>INI file settings</big></u></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini") exists in the
     directory from where it is started. If not, it will be created with
     the default settings.<br>
     Supported settings for the INI file (default values in <b><font
         color="Red">red</font></b>):<br>
     <br>
-    <b><b><b><b>"AVSDLL"</b></b><b><b><b></b>:</b><br>
+    <b><b><b><b><b><b><b><b>"LogDirectory"</b></b><b><b>:</b></b></b></b></b></b></b></b><br>
+    The user can specify a directory in which all log files are stored.
+    This has to be a fully qualified path, for example
+    "LogDirectory=c:\LogFiles" (without the quotes). The default is an
+    empty string which means that all log files are stored in the script
+    directory or, in case the "-avsinfo" switch was used, the current
+    (working) directory.<br>
+    <b><b><b><b><br>
+            "AVSDLL"</b></b><b><b>:</b><br>
         </b></b></b>The user can specify the avisynth.dll to be used.
     This has to be a fully qualified path, for example
     "AVSDLL=d:\apps\avisynth\avisynth.dll" (<b>without</b> the quotes).
@@ -222,7 +262,8 @@
     version, clip info, runtime results, a copy of the script and a
     performance data table with the measured details about each
     frame/frame interval. The log file is created in the same directory
-    as the script. <br>
+    as the script unless the INI option "LogDirectory" points to a valid
+    directory.<b><nobr></nobr></b> <br>
     <b><i>Note:</i></b> The numbering of the frames in the performance
     data section is not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -230,7 +271,8 @@
     Creates a CSV file containing the performance data formatted as
     comma-separated values for direct import in Excel or a similar
     spread sheet program (OpenOffice, LibreOffice). The CSV file is
-    created in the same directory as the script.<br>
+    created in the same directory as the script unless the INI option
+    "LogDirectory" points to a valid directory.<nobr><b></b></nobr><br>
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
@@ -280,7 +322,7 @@
     Specify the process priority for AVSMeter and all attached processes
     (1: low, 2: normal, 3: high).<br>
     <br>
-    <b>"TimeLimit</b><b>" (1 - 999999</b><b><b><b></b></b>):</b><br>
+    <b>"TimeLimit</b><b>" (1 - 999999</b><b>):</b><br>
     Specify a time limit (in seconds) after which the program stops
     reading frames and terminates. A setting of "<b><font color="Red">-1</font></b>"
     disables this feature. This setting is ignored when the program is

@@ -813,7 +813,7 @@ string CAvisynthInfo::StrFormat(const char *fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	while (result == -1)
+	while (result < 0)
 	{
 		if (buffer)	delete [] buffer;
 		buffer = new char[length];
