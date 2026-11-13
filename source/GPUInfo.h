@@ -164,6 +164,9 @@ void CGPUInfo::ReadData()
 	BYTE nCUDA = 0;
 	double dCUDACaps = 0.0;
 	data.NVVPU = FALSE;
+	data.GeneralMem = FALSE;
+	data.DedicatedMem = FALSE;
+	data.DynamicMem = FALSE;
 
 	if (IsValidVersionNumber(GPUZ_Version))
 		data.GPUZVersion = GPUZ_Version;
@@ -201,8 +204,14 @@ void CGPUInfo::ReadData()
 			data.DriverVersion = sValue;
 		if (sKey == "OPENCL_VERSION")
 			data.OpenCLVersion = sValue;
+		if (sKey == "CUDA")
+			nCUDA = (BYTE)atol(sValue.c_str());		
+		if (sKey == "CUDA_Capability")
+			dCUDACaps = atof(sValue.c_str());		
 	}
 	
+	if ((nCUDA != 0) && (dCUDACaps >= 1.0))
+		data.NVVPU = TRUE;
 
 	if (data.GPUName == "G86")
 		data.VPEngineName = "VP2";
@@ -279,14 +288,7 @@ void CGPUInfo::ReadData()
 	else if (data.GPUName == "GP102")
 		data.VPEngineName = "VP8";
 	else
-		data.VPEngineName = "Unknown VPU";
-
-	if (data.VPEngineName != "Unknown VPU")
-		data.NVVPU = TRUE;
-
-	data.GeneralMem = FALSE;
-	data.DedicatedMem = FALSE;
-	data.DynamicMem = FALSE;
+		data.VPEngineName = "";
 
 	return;
 }

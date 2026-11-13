@@ -73,13 +73,15 @@ public:
 
 
 	//CPUID
-	BOOL           GetCPUID();
+	void           GetCPUID();
+	BOOL           bCPUIDSuccess;
 	struct CPUData
 	{
-		string CPUName;
-		string CPUModel;
+		string CPUBrandString;
+		string CPUCodeName;
 		BYTE   CPUCores;
 		BYTE   CPULogicalCores;
+		double CPURealClock;   
 	} cpudata;
 
 	//string functions
@@ -109,6 +111,7 @@ CUtils::CUtils()
 	CONSOLE_SCREEN_BUFFER_INFO csbi; 
 	GetConsoleScreenBufferInfo(hConsole, &csbi); 
 	wSaveAttributes = csbi.wAttributes;
+	bCPUIDSuccess = FALSE;
 }
 
 CUtils::~CUtils()
@@ -480,26 +483,34 @@ string CUtils::GetOSVersion()
 }
 
 
-BOOL CUtils::GetCPUID()
+void CUtils::GetCPUID()
 {
 	if (!cpuid_present())
-		return FALSE;
+		return;
 
 	struct cpu_raw_data_t raw;
 	struct cpu_id_t data;
 
 	if (cpuid_get_raw_data(&raw) < 0)
-		return FALSE;
+		return;
 
 	if (cpu_identify(&raw, &data) < 0)
-		return FALSE;
+		return;
 
 	cpudata.CPUCores = (BYTE)data.num_cores;
 	cpudata.CPULogicalCores = (BYTE)data.num_logical_cpus;
-	cpudata.CPUModel = StrFormat("%s", data.cpu_codename);
-	cpudata.CPUName = StrFormat("%s", data.brand_str);
+	cpudata.CPUCodeName = StrFormat("%s", data.cpu_codename);
+	cpudata.CPUBrandString = StrFormat("%s", data.brand_str);
 
-	return TRUE;
+	int clk = cpu_clock_by_ic(100, 5);
+	if (clk > 100)
+		cpudata.CPURealClock = (double)clk / 1000.0;
+	else
+		cpudata.CPURealClock = 0.0;
+
+	bCPUIDSuccess = TRUE;
+
+	return;
 }
 
 

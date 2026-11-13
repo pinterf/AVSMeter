@@ -1,3 +1,8 @@
+v2.3.3
+- Added real (measured) CPU clock to the CPU info
+- Reduced overhead of the process info functions
+- Various bug and cosmetic fixes
+
 v2.3.2
 - Added CPU info to log files (using Veselin Georgiev's LibCPUID)
 - Removed some redundant info from the console output/log

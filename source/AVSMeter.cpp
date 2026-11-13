@@ -144,6 +144,8 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	utils.GetCPUID();
+
 	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
@@ -412,12 +414,17 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("OS version:                       %s\n", utils.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf;
 
-		if (utils.GetCPUID())
+		if (utils.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU name:                         %s\n", utils.cpudata.CPUName.c_str());
+			sOutBuf = utils.StrFormat("CPU (brand string):               %s\n", utils.cpudata.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU model:                        %s\n", utils.cpudata.CPUModel.c_str());
+			sOutBuf = utils.StrFormat("CPU (code name):                  %s\n", utils.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
+			if (utils.cpudata.CPURealClock > 0.5)
+			{
+				sOutBuf = utils.StrFormat("CPU clock (measured):             %.2f GHz\n", utils.cpudata.CPURealClock);
+				sLogBuffer += sOutBuf;
+			}
 			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:   %u / %u\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
@@ -843,12 +850,17 @@ int main(int argc, char* argv[])
 		sOutBuf = utils.StrFormat("\nOS version:                            %s", utils.GetOSVersion().c_str());
 		sLogBuffer += sOutBuf + "\n";
 
-		if (utils.GetCPUID())
+		if (utils.bCPUIDSuccess)
 		{
-			sOutBuf = utils.StrFormat("CPU name:                              %s\n", utils.cpudata.CPUName.c_str());
+			sOutBuf = utils.StrFormat("CPU (brand string):                    %s\n", utils.cpudata.CPUBrandString.c_str());
 			sLogBuffer += sOutBuf;
-			sOutBuf = utils.StrFormat("CPU model:                             %s\n", utils.cpudata.CPUModel.c_str());
+			sOutBuf = utils.StrFormat("CPU (code name):                       %s\n", utils.cpudata.CPUCodeName.c_str());
 			sLogBuffer += sOutBuf;
+			if (utils.cpudata.CPURealClock > 0.5)
+			{
+				sOutBuf = utils.StrFormat("CPU clock (measured):                  %.2f GHz\n", utils.cpudata.CPURealClock);
+				sLogBuffer += sOutBuf;
+			}
 			sOutBuf = utils.StrFormat("CPU cores / Logical Processors:        %u / %u\n\n", utils.cpudata.CPUCores, utils.cpudata.CPULogicalCores);
 			sLogBuffer += sOutBuf;
 		}
@@ -897,7 +909,7 @@ int main(int argc, char* argv[])
 			sGPUInfo += sOutBuf + "\n";
 			sOutBuf = utils.StrFormat("GPU name:                %s", gpuinfo.data.GPUName.c_str());
 			sGPUInfo += sOutBuf + "\n";
-			if (gpuinfo.data.NVVPU)
+			if (gpuinfo.data.VPEngineName != "")
 			{
 				sOutBuf = utils.StrFormat("VPU version:             %s", gpuinfo.data.VPEngineName.c_str());
 				sGPUInfo += sOutBuf + "\n";
