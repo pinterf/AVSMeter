@@ -15,9 +15,7 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
 
-#if _MSC_VER > 1000
 #pragma once
-#endif
 
 //#pragma warning (disable : 4101)
 

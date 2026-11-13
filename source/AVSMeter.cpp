@@ -90,6 +90,7 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...);
 
 int main(int argc, char* argv[])
 {
+	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 	Settings.bPauseBeforeExit = TRUE;
 	Settings.bUseColor = TRUE;
 	Settings.sSystemTime = "";
@@ -439,6 +440,11 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n\r%s\r", utils.StrPad("Query Plugins...").c_str());
+		AvisynthInfo.EnumPluginDLLs();
+		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", utils.StrPad("").c_str());
+		utils.CursorUp(1);
+
 		string sPluginDLL = "";
 
 		//CPP26 plugs
@@ -545,16 +551,18 @@ int main(int argc, char* argv[])
 		string sPluginError = "";
 		if (!AvisynthInfo.mPluginErrors.empty())
 		{
-			sOutBuf = "\nPlugin errors:";
+			sOutBuf = "\n\n*** Plugin errors ***\n";
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_AVSM_VERSION, sOutBuf.c_str());
+			sOutBuf = utils.StrFormat("%s\n", std::string(utils.iConsoleWidth - 1, '-').c_str());
+			sLogBuffer += sOutBuf;
+			PrintConsole(TRUE, COLOR_ERROR, sOutBuf.c_str());
 		}
 
 		for (map<string, BYTE>::iterator err = AvisynthInfo.mPluginErrors.begin(); err != AvisynthInfo.mPluginErrors.end(); ++err)
 		{
 			sPluginError = err->first;
-
-			sOutBuf = utils.StrFormat("\n%s\n", sPluginError.c_str());
+			sOutBuf = utils.StrFormat("\n%s\n\n%s\n", sPluginError.c_str(), std::string(utils.iConsoleWidth - 1, '-').c_str());
 			sLogBuffer += sOutBuf;
 			PrintConsole(TRUE, COLOR_ERROR, utils.StrAnsiToOEM(sOutBuf).c_str());
 		}
@@ -933,7 +941,7 @@ int main(int argc, char* argv[])
 			AVS_clip = 0;
 			AVS_main = 0;
 			AVS_temp = 0;
-			Sleep(100);
+			Sleep(50);
 			AVS_env->DeleteScriptEnvironment();
 			AVS_env = 0;
 
@@ -1147,7 +1155,7 @@ int main(int argc, char* argv[])
 		double dLastIntervalTime = dStartTime;
 
 		unsigned int uiCursorOffset = 0;
-
+		SetErrorMode(nPrevErrorMode);
 		for (uiCurrentFrame = uiFirstFrame; uiCurrentFrame <= uiLastFrame; uiCurrentFrame++)
 		{
 			PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
@@ -1348,7 +1356,7 @@ int main(int argc, char* argv[])
 		AVS_clip = 0;
 		AVS_main = 0;
 		AVS_temp = 0;
-		Sleep(100);
+		Sleep(50);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 

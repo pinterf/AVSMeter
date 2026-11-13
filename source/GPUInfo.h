@@ -15,8 +15,7 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
 
-#ifndef _GPUINFO_H
-#define _GPUINFO_H
+#pragma once
 
 #include "common.h"
 
@@ -310,7 +309,4 @@ BOOL CGPUInfo::IsValidVersionNumber(string s_string)
 
 	return TRUE;
 }
-
-
-#endif //_GPUINFO_H
 

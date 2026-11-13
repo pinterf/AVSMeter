@@ -15,8 +15,7 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
 
-#ifndef _AVISYNTHINFO_H
-#define _AVISYNTHINFO_H
+#pragma once
 
 #include "common.h"
 
@@ -29,6 +28,7 @@ public:
 	CAvisynthInfo();
 	string  sAVSDLL;
 	BOOL    GetInfo(string &s_ErrorMsg);
+	void    EnumPluginDLLs();
 	BOOL    bIsMTVersion;
 	int     iInterfaceVersion;
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
@@ -55,11 +55,11 @@ private:
 	string  GetTimeStamp(string s_file);
 	int     GetInterfaceVersion(string &s_ErrorMsg);
   void    EnumPluginDirs();
-	void    EnumPluginDLLs();
 	BOOL    SYSCheckPlugin(string s_dll, string &s_Msg);
 	void    AVSCheckPlugins();
 	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies);
 	void    FindStrings(string s_dll, string &s_failed_deps);
+	__int64 GetSize(string s_file);
 	string  StrFormat(const char *fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
@@ -81,6 +81,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 {
 	int iInterfaceVersion = 0;
 	s_ErrorMsg = "";
+	string sSysError = "";
 
 	HINSTANCE hDLL;
 	if (sAVSDLL == "")
@@ -90,11 +91,16 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 
 	if (!hDLL)
 	{
-		s_ErrorMsg = SysErrorMessage();
-		if (s_ErrorMsg != "")
-			s_ErrorMsg = "Cannot load avisynth.dll\n" + s_ErrorMsg;
+		sSysError = SysErrorMessage();
+		if (sSysError != "")
+			s_ErrorMsg = StrFormat("Failed to load avisynth.dll. OS returned:\n%s", sSysError.c_str());
 		else
-			s_ErrorMsg = "Cannot load avisynth.dll";
+			s_ErrorMsg = "Failed to load avisynth.dll.";
+
+		string sFailedDependencies = "";
+		GetDLLDependencies(sDLLPath, sFailedDependencies);
+		if (sFailedDependencies != "")
+			s_ErrorMsg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
 
 		return 0;
 	}
@@ -130,7 +136,7 @@ int CAvisynthInfo::GetInterfaceVersion(string &s_ErrorMsg)
 		{
 		}
 
-		Sleep(100);
+		Sleep(50);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -379,7 +385,7 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 			bIsMTVersion = TRUE;
 
 		foo = 0;
-		Sleep(100);
+		Sleep(50);
 		AVS_env->DeleteScriptEnvironment();
 		AVS_env = 0;
 	}
@@ -416,7 +422,6 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 	Sleep(50);
 
 	EnumPluginDirs();
-	EnumPluginDLLs();
 
 	return bRet;
 }
@@ -918,14 +923,14 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 
 	LOADED_IMAGE li;
 	BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,	TRUE,	TRUE);
-	
+
 	if (!bLoaded)
 	{
 		s_Msg = SysErrorMessage();
 		if (s_Msg != "")
-			s_Msg = StrFormat("Load error:\n\"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
+			s_Msg = StrFormat("Error loading \"%s\"\n%s", s_dll.c_str(), s_Msg.c_str());
 		else
-			s_Msg = StrFormat("Load error:\n\"%s\"", s_dll.c_str());
+			s_Msg = StrFormat("Error loading \"%s\"", s_dll.c_str());
 
 		return FALSE;
 	}
@@ -939,7 +944,7 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 			bIs64BitDLL = TRUE;
 			#ifndef AVS64
 				UnMapAndLoad(&li);
-				s_Msg = StrFormat("Load error:\n\"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
+				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 64 bit DLL with 32 bit Avisynth", s_dll.c_str());
 				return FALSE;
 			#endif
 		}
@@ -947,7 +952,7 @@ BOOL CAvisynthInfo::SYSCheckPlugin(string s_dll, string &s_Msg)
 		{
 			#ifdef AVS64
 				UnMapAndLoad(&li);
-				s_Msg = StrFormat("Load error:\n\"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
+				s_Msg = StrFormat("Error loading \"%s\"\nCannot load 32 bit DLL with 64 bit Avisynth", s_dll.c_str());
 				return FALSE;
 			#endif
 		}
@@ -1067,140 +1072,204 @@ void CAvisynthInfo::AVSCheckPlugins()
 
 	AVS_linkage = AVS_env->GetAVSLinkage();
 	AVSValue AVS_main;
+	BOOL bPlugError = FALSE;
+	string sAVSError = "";
 
 	for (map<string, BYTE>::iterator itCPP26 = mPluginDLLsCPP26.begin(); itCPP26 != mPluginDLLsCPP26.end(); ++itCPP26)
 	{
 		sPlugin = itCPP26->first;
 
-		sFailedDependencies = "";
-		GetDLLDependencies(sPlugin, sFailedDependencies);
-		if (sFailedDependencies != "")
+		bPlugError = FALSE;
+		string s_Msg = "";
+		try
 		{
-			sMsg = StrFormat("\"%s\"\nMissing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
-			mPluginErrors[sMsg] = 1;
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			sAVSError = StrFormat("%s", (PCSTR)err.msg);
+			StrTrim(sAVSError);
+			bPlugError = TRUE;
+			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError);
+			StrTrim(s_Msg);
+		}
+
+		if (bPlugError)
+		{
+			sFailedDependencies = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
 		}
 		else
 		{
-			try
-			{
-				AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
-			}
-			catch (AvisynthError err)
-			{
-				string s_Msg = StrFormat("%s", (PCSTR)err.msg);
-				if (s_Msg != "")
-					mPluginErrors[s_Msg] = 1;
-			}
+			//Look for delay-load dependencies
+			sFailedDependencies = "";
+			FindStrings(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
 		}
+
+		if (s_Msg != "")
+			mPluginErrors[s_Msg] = 1;
 	}
 
 	for (map<string, BYTE>::iterator itCPP25 = mPluginDLLsCPP25.begin(); itCPP25 != mPluginDLLsCPP25.end(); ++itCPP25)
 	{
 		sPlugin = itCPP25->first;
 
-		sFailedDependencies = "";
-		GetDLLDependencies(sPlugin, sFailedDependencies);
-		if (sFailedDependencies != "")
+		bPlugError = FALSE;
+		string s_Msg = "";
+		try
 		{
-			sMsg = StrFormat("\"%s\"\nMissing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
-			mPluginErrors[sMsg] = 1;
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			sAVSError = StrFormat("%s", (PCSTR)err.msg);
+			StrTrim(sAVSError);
+			bPlugError = TRUE;
+			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError);
+			StrTrim(s_Msg);
+		}
+
+		if (bPlugError)
+		{
+			sFailedDependencies = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
 		}
 		else
 		{
-			try
-			{
-				AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
-			}
-			catch (AvisynthError err)
-			{
-				string s_Msg = StrFormat("%s", (PCSTR)err.msg);
-				if (s_Msg != "")
-					mPluginErrors[s_Msg] = 1;
-			}
+			//Look for delay-load dependencies
+			sFailedDependencies = "";
+			FindStrings(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
 		}
+
+		if (s_Msg != "")
+			mPluginErrors[s_Msg] = 1;
 	}
 
 	for (map<string, BYTE>::iterator itCPP20 = mPluginDLLsCPP20.begin(); itCPP20 != mPluginDLLsCPP20.end(); ++itCPP20)
 	{
 		sPlugin = itCPP20->first;
 
-		sFailedDependencies = "";
-		GetDLLDependencies(sPlugin, sFailedDependencies);
-		if (sFailedDependencies != "")
+		bPlugError = FALSE;
+		string s_Msg = "";
+		try
 		{
-			sMsg = StrFormat("\"%s\"\nMissing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
-			mPluginErrors[sMsg] = 1;
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			sAVSError = StrFormat("%s", (PCSTR)err.msg);
+			StrTrim(sAVSError);
+			bPlugError = TRUE;
+			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s", sPlugin.c_str(), sAVSError);
+			StrTrim(s_Msg);
+		}
+
+		if (bPlugError)
+		{
+			sFailedDependencies = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
 		}
 		else
 		{
-			try
-			{
-				AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
-			}
-			catch (AvisynthError err)
-			{
-				string s_Msg = StrFormat("%s", (PCSTR)err.msg);
-				if (s_Msg != "")
-					mPluginErrors[s_Msg] = 1;
-			}
+			//Look for delay-load dependencies
+			sFailedDependencies = "";
+			FindStrings(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
 		}
+
+		if (s_Msg != "")
+			mPluginErrors[s_Msg] = 1;
 	}
 
 	for (map<string, BYTE>::iterator itC25 = mPluginDLLsC25.begin(); itC25 != mPluginDLLsC25.end(); ++itC25)
 	{
 		sPlugin = itC25->first;
 
-		sFailedDependencies = "";
-		GetDLLDependencies(sPlugin, sFailedDependencies);
-		if (sFailedDependencies != "")
+		bPlugError = FALSE;
+		string s_Msg = "";
+		try
 		{
-			sMsg = StrFormat("\"%s\"\nMissing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
-			mPluginErrors[sMsg] = 1;
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			sAVSError = StrFormat("%s", (PCSTR)err.msg);
+			StrTrim(sAVSError);
+			bPlugError = TRUE;
+			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"", sPlugin.c_str(), sAVSError);
+		}
+
+		if (bPlugError)
+		{
+			sFailedDependencies = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
 		}
 		else
 		{
-			try
-			{
-				AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
-			}
-			catch (AvisynthError err)
-			{
-				string s_Msg = StrFormat("%s\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"", (PCSTR)err.msg);
-				if (s_Msg != "")
-					mPluginErrors[s_Msg] = 1;
-			}
+			//Look for delay-load dependencies
+			sFailedDependencies = "";
+			FindStrings(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
 		}
+
+		if (s_Msg != "")
+			mPluginErrors[s_Msg] = 1;
 	}
 
 	for (map<string, BYTE>::iterator itC20 = mPluginDLLsC20.begin(); itC20 != mPluginDLLsC20.end(); ++itC20)
 	{
 		sPlugin = itC20->first;
 
-		sFailedDependencies = "";
-		GetDLLDependencies(sPlugin, sFailedDependencies);
-		if (sFailedDependencies != "")
+		bPlugError = FALSE;
+		string s_Msg = "";
+		try
 		{
-			sMsg = StrFormat("\"%s\"\nMissing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
-			mPluginErrors[sMsg] = 1;
+			AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+		}
+		catch (AvisynthError err)
+		{
+			sAVSError = StrFormat("%s", (PCSTR)err.msg);
+			StrTrim(sAVSError);
+			bPlugError = TRUE;
+			s_Msg = StrFormat("Failed to load plugin \"%s\". Avisynth returned:\n%s\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need \"avisynth_c.dll\" support DLL", sPlugin.c_str(), sAVSError);
+		}
+
+		if (bPlugError)
+		{
+			sFailedDependencies = "";
+			GetDLLDependencies(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\n\nPotentially missing dependencies:\n%s", sFailedDependencies.c_str());
 		}
 		else
 		{
-			try
-			{
-				AVS_main = AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
-			}
-			catch (AvisynthError err)
-			{
-				string s_Msg = StrFormat("%s\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need \"avisynth_c.dll\" support DLL", (PCSTR)err.msg);
-				if (s_Msg != "")
-					mPluginErrors[s_Msg] = 1;
-			}
+			//Look for delay-load dependencies
+			sFailedDependencies = "";
+			FindStrings(sPlugin, sFailedDependencies);
+			if (sFailedDependencies != "")
+				s_Msg += StrFormat("\"%s\"\n\nPotentially missing dependencies:\n%s", sPlugin.c_str(), sFailedDependencies.c_str());
 		}
+
+		if (s_Msg != "")
+			mPluginErrors[s_Msg] = 1;
 	}
 
-
 	AVS_main = 0;
-	Sleep(100);
+	Sleep(50);
 	AVS_env->DeleteScriptEnvironment();
 	AVS_env = 0;
 
@@ -1254,6 +1323,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 		}
 		
 		string sTemp = "";
+		string sDepDLL = "";
 		PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
 		IMAGE_IMPORT_DESCRIPTOR null_iid;
 		IMAGE_THUNK_DATA null_thunk;
@@ -1263,12 +1333,15 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 		{
 
 			LPCSTR szDepName = (LPCSTR)ImageRvaToVa(pNtHeaders, lpbaseAddress, pImageTable[i].Name,NULL);
-			HINSTANCE hDLL = ::LoadLibrary(szDepName);
+			sTemp = StrFormat("  %s", szDepName);
+			sDepDLL = sTemp + "\n";
+			StrTrim(sTemp);
+			StrToLC(sTemp);
+
+			HINSTANCE hDLL = ::LoadLibraryEx(szDepName, NULL, LOAD_LIBRARY_AS_DATAFILE);
+
 			if (!hDLL)
-			{
-				sTemp = StrFormat("%s\n", szDepName);
-				s_failed_dependencies += sTemp;
-			}
+				s_failed_dependencies += sDepDLL;
 			else
 				::FreeLibrary(hDLL);
 		}
@@ -1277,10 +1350,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 	{
 	}
 	
-	//Look for delay-load dependencies
-	FindStrings(s_dll, s_failed_dependencies);
-	StrTrim(s_failed_dependencies);
-
 	if (lpbaseAddress)
 		UnmapViewOfFile(lpbaseAddress);
 	if (hFileMapping)
@@ -1288,14 +1357,18 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_failed_dependenci
 	if (hFile)
 		CloseHandle(hFile);
 
+	s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
+
 	return;
 }
 
 
 void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 {
-	size_t pos1 = 0;
-	size_t pos2 = 0;
+	if (GetSize(s_dll) > (50 * 1024 * 1024))
+		return;
+
+	size_t pos = 0;
 
 	FILE *fp = fopen(s_dll.c_str(), "rb");
 	if (fp)
@@ -1308,43 +1381,29 @@ void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 		fclose(fp);
 
 		transform(content.begin(), content.end(), content.begin(), ::tolower);
-		pos1 = content.find("fftw3.dll");
-		pos2 = content.find("libfftw3f-3.dll");
 
-		if ((pos1 != std::string::npos) && (pos2 == std::string::npos))
-		{
-			HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
-			if (!hDLL)
-				s_failed_deps += "fftw3.dll\n";
-			else
-				::FreeLibrary(hDLL);
-
-			return;
-		}
-
-		if ((pos2 != std::string::npos) && (pos1 == std::string::npos))
+		pos = content.find("libfftw3f-3.dll");
+		if (pos != std::string::npos)
 		{
 			HINSTANCE hDLL = ::LoadLibrary("libfftw3f-3.dll");
 			if (!hDLL)
-				s_failed_deps += "libfftw3f-3.dll\n";
+				s_failed_deps += "  libfftw3f-3.dll";
 			else
 				::FreeLibrary(hDLL);
 
 			return;
 		}
 
-		if ((pos1 != std::string::npos) && (pos2 != std::string::npos))
+		pos = content.find("fftw3.dll");
+		if (pos != std::string::npos)
 		{
-			HINSTANCE hDLL1 = ::LoadLibrary("libfftw3f-3.dll");
-			HINSTANCE hDLL2 = ::LoadLibrary("fftw3.dll");
+			HINSTANCE hDLL = ::LoadLibrary("fftw3.dll");
+			if (!hDLL)
+				s_failed_deps += "  fftw3.dll";
+			else
+				::FreeLibrary(hDLL);
 
-			if ((!hDLL1) && (!hDLL2))
-				s_failed_deps += "libfftw3f-3.dll / fftw3.dll\n";
-
-			if (hDLL1)	
-				::FreeLibrary(hDLL1);
-			if (hDLL2)	
-				::FreeLibrary(hDLL2);
+			return;
 		}
 	}
 
@@ -1352,5 +1411,18 @@ void CAvisynthInfo::FindStrings(string s_dll, string &s_failed_deps)
 }
 
 
-#endif //_AVISYNTHINFO_H
+__int64 CAvisynthInfo::GetSize(string s_file)
+{
+	WIN32_FIND_DATA fd; 
+	__int64 iSize = -1;
+
+	HANDLE hFind = FindFirstFile(s_file.c_str(), &fd); 
+	if (hFind != INVALID_HANDLE_VALUE)
+		iSize =	(((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
+
+	FindClose(hFind); 
+
+	return iSize;
+}
+
 

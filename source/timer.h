@@ -15,8 +15,7 @@
 	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.                             
 */
 
-#ifndef _TIMER_H
-#define _TIMER_H
+#pragma once
 
 #include "common.h"
 
@@ -110,7 +109,4 @@ string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
 
 	return sTime;
 }
-
-
-#endif //_TIMER_H
 

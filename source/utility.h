@@ -16,8 +16,7 @@
 */
 
 
-#ifndef _UTILS_H
-#define _UTILS_H
+#pragma once
 
 #include "common.h"
 
@@ -68,6 +67,8 @@ public:
 	void           ResetRGB(BOOL bSet);
 	string         GetFileVersion(string s_file);
 	string         GetFormattedSystemTime();
+	int            iConsoleWidth;
+
 	//string functions
 	string         StrFormat(const char *fmt, ...);
 	void           StrTrimLeft(string &s_string);
@@ -84,7 +85,6 @@ public:
 private:
 	HANDLE         hConsole;
 	WORD           wSaveAttributes;
-	int            iConsoleWidth;
 };
 
 CUtils::CUtils()
@@ -390,6 +390,4 @@ string CUtils::StrAnsiToOEM(string s_string)
 	return sOEM;
 }
 
-
-#endif //_UTILS_H
 

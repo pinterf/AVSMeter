@@ -18,8 +18,7 @@
 	http://www.philosophicalgeek.com/2009/01/03/determine-cpu-usage-of-current-process-c-and-c/
 */
 
-#ifndef _PROCESSINFO_H
-#define _PROCESSINFO_H
+#pragma once
 
 #include "common.h"
 
@@ -210,6 +209,4 @@ unsigned __int64 CProcessInfo::GetSTDTimer()
 	return (uiSTDTimer + uiTimerWrapComp);
 }
 
-
-#endif //_PROCESSINFO_H
 
