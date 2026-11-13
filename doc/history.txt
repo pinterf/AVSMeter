@@ -1,3 +1,6 @@
+v3.0.9.0
+- Updated libcpuid (Intel Rocket Lake, AMD Ryzen Milan)
+
 v3.0.8.0
 - Updated libcpuid (Intel Whiskey Lake-U CPUs, AMD Ryzen Cezanne)
 - Updated AVS header files
