@@ -131,11 +131,18 @@ int main(int argc, char* argv[])
 	BOOL bEarlyExit = TRUE;
 	BOOL bInfoOnly = FALSE;
 	string sAVSError = "";
-	unsigned int uiFrameInterval = 1;
+	unsigned int uiFrameInterval = 10;
 	string sErrorMsg = "";
 	BOOL bPrintAVSInfo = FALSE;
 
 	PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Query Avisynth info...").c_str());
+
+	if (!timer.TestTimer())
+	{
+		PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
+		Pause();
+		return -1;
+	}
 
 	AvisynthInfo.sAVSDLL = Settings.sAVSDLL;
 	BOOL bRet = AvisynthInfo.GetInfo(sErrorMsg);
@@ -226,6 +233,13 @@ int main(int argc, char* argv[])
 		{
 			sCommandLine += sCmdToken + " ";
 			Settings.bCreateLog = TRUE;
+			continue;
+		}
+
+		if (sArgTest == "-n")
+		{
+			sCommandLine += sCmdToken + " ";
+			Settings.bSkipSpeedTest = TRUE;
 			continue;
 		}
 
@@ -558,13 +572,29 @@ int main(int argc, char* argv[])
 		string sFunction = "";
 		if (!AvisynthInfo.mPluginFunctions.empty())
 		{
-			sOutBuf = "\n\n[Plugin Functions]\n";
+			sOutBuf = "\n\n[External (plugin) functions]\n";
 			sLogBuffer += sOutBuf;
 		}
 
-		for (set<string, StrCaseInsensitiveCompare>::iterator pfunc = AvisynthInfo.mPluginFunctions.begin(); pfunc != AvisynthInfo.mPluginFunctions.end(); ++pfunc)
+		for (set<string, StrCaseInsensitiveCompare>::iterator ppfunc = AvisynthInfo.mPluginFunctions.begin(); ppfunc != AvisynthInfo.mPluginFunctions.end(); ++ppfunc)
 		{
-			sFunction = *pfunc;
+			sFunction = *ppfunc;
+			sOutBuf = utils.StrFormat("  %s\n", sFunction.c_str());
+			sLogBuffer += sOutBuf;
+		}
+
+
+		//Internal Functions
+		sFunction = "";
+		if (!AvisynthInfo.mInternalFunctions.empty())
+		{
+			sOutBuf = "\n\n[Internal functions]\n";
+			sLogBuffer += sOutBuf;
+		}
+
+		for (set<string, StrCaseInsensitiveCompare>::iterator pifunc = AvisynthInfo.mInternalFunctions.begin(); pifunc != AvisynthInfo.mInternalFunctions.end(); ++pifunc)
+		{
+			sFunction = *pifunc;
 			sOutBuf = utils.StrFormat("  %s\n", sFunction.c_str());
 			sLogBuffer += sOutBuf;
 		}
@@ -695,21 +725,15 @@ int main(int argc, char* argv[])
 		sAVSError = "";
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("Analysing script...").c_str());
 
-		if (!timer.TestTimer())
-		{
-			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nQueryPerformanceCounter() is not supported\n");
-			Pause();
-			return -1;
-		}
-
 		uiFrameInterval = CalculateFrameInterval(sAVSFile, sAVSError);
 		PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", utils.StrPad("").c_str());
-		if ((uiFrameInterval == 0) || (sAVSError != ""))
+		if (uiFrameInterval == 0)
 		{
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
 			Pause();
 			return -1;
 		}
+		sAVSError = "";
 	}
 
 
@@ -1104,12 +1128,6 @@ int main(int argc, char* argv[])
 			uiFramesToProcess = uiFrames;
 		}
 
-		if (Settings.bSkipSpeedTest)
-		{
-			if (uiFramesToProcess >= 2000)
-				uiFrameInterval = 10;
-		}
-
 		while ((uiFramesToProcess / uiFrameInterval) > 500000)
 			uiFrameInterval *= 10;
 
@@ -1388,7 +1406,7 @@ int main(int argc, char* argv[])
 
 		sLogBuffer += "\n\n[Runtime info]\n";
 
-		if ((n >= uiFrameInterval) && (iElapsedMS > 100))
+		if ((n >= uiFrameInterval) && (iElapsedMS >= 500))
 		{
 			if (!bFirstScr)
 				utils.CursorUp(uiCursorOffset);
@@ -1511,7 +1529,7 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			sOutBuf = "The running time of the script is too short for meaningful measurements.";
+			sOutBuf = "Script runtime is too short for meaningful measurements";
 			PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s\n", utils.StrPad(sOutBuf).c_str());
 			sLogBuffer += sOutBuf;
 			uiPDIndex = 0;
@@ -2250,7 +2268,7 @@ void PrintConsole(BOOL bUseStdOut, WORD wAttributes, const char *fmt, ...)
 unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 {
 	unsigned int uiFrameInterval = 0;
-	s_avserror = "";
+	s_avserror = "Unknown error";
 
 	HINSTANCE hDLL;
 	if (Settings.sAVSDLL == "")
@@ -2332,7 +2350,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_avserror)
 		if (TDelta > 0.5)
 			dAverageFrameTime = (1000.0 * TDelta) / (double)uiFrame; //ms
 		else
-			s_avserror = "Script runtime is too short for accurate measurements";
+			AVS_env->ThrowError("Script runtime is too short for meaningful measurements");
 
 		uiFrameInterval = 20000;
 		if (dAverageFrameTime >   0.001)
@@ -2412,7 +2430,8 @@ void PrintUsage()
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -gpu                Monitor GPU/VPU usage\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -range=first,last   Set frame range\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  -timelimit=n        Set time limit (seconds)\n");
-	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -priority=n         Set process priority (1:low, 2:normal, 3:high)\n");
+	PrintConsole(TRUE, COLOR_EMPHASIS, "  -n                  Skip initial speed test\n\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  For more info on the command line switches and INI file\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  options read the documentation (AVSMeter.html) included\n");
 	PrintConsole(TRUE, COLOR_EMPHASIS, "  in the distribution package.\n");

@@ -78,6 +78,9 @@
 
 
 
+
+
+
         Display extended Avisynth info (<font color="#ff0000">1</font>)<br>
         &nbsp;-info [-i] &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Display clip info<br>
@@ -89,6 +92,9 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file (<font
             color="#ff0000">3</font>)<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+
+
 
 
 
@@ -189,8 +195,16 @@
 
 
 
-          Set process priority (1:low, 2:normal, 3:high)<br>
-        </font></font></big><b><big><font face="Courier New"><br>
+
+
+
+          Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
+    <big><font face="Courier New"><font face="Fixedsys">&nbsp;-n &nbsp;
+          &nbsp; &nbsp; &nbsp;
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Skip initial
+          speed test (<font color="#ff0000">7</font>)</font></font></big><b><big><font
+          face="Courier New"><br>
+          <br>
         </font></big></b><br>
     (<b><b><b><font color="Red">1</font></b></b></b>) Displays extended
     info about the installed Avisynth version and the plugin sub-system.
@@ -235,6 +249,20 @@
     (<b><code><font color="#ff0000"><big>6</big></font></code></b>)
     Specify a time limit (in seconds) after which the program stops
     reading frames and terminates.<br>
+    <br>
+    (<b><code><font color="#ff0000"><big>7</big></font></code></b>)
+    AVSMeter runs a quick test on a few frames at the start in order to
+    measure the frames/second that Avisynth returns for a given script.
+    The result is used to determine a suitable interval for measuring
+    CPU/GPU/memory usage and minimize the overhead of these
+    measurements.<br>
+    If "-n" is used, that test will be omitted. This can be useful if,
+    for example, AVSMeter is used with a script that just writes a
+    single image or a sequence of images where the speed test is
+    irrelevant.<br>
+    For normal operation, i.e. testing the speed of a script, this
+    switch should not be used, otherwise the accuracy of the FPS/TPF
+    measurements may be reduced, particularly for fast scripts.<br>
     <br>
     <b><font color="#3333ff"><big><b><i>Note:</i></b> If applicable,
           command line switches override INI settings.</big></font><br>

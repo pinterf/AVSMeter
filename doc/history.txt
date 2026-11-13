@@ -1,3 +1,9 @@
+v2.3.1
+- Added switch "-n" which disables the initial speed test.
+- Updated Avisynth header to the latest AVS+ version
+- Added enumeration of internal functions to the "avsinfo" log
+- Some tweaks and minor fixes
+
 v2.3.0
 - Moved enumeration and testing of auto-load plugins back to main.
 - Changed file access modes in CreateFile() calls

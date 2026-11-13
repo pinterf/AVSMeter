@@ -71,7 +71,7 @@ public:
 	string         GetOSVersion();
 
 	//string functions
-	string         StrFormat(LPCSTR fmt, ...);
+	string         StrFormat(const char* fmt, ...);
 	void           StrTrimLeft(string &s_string);
 	void           StrTrimRight(string &s_string);
 	void           StrTrim(string &s_string);
@@ -86,6 +86,7 @@ public:
 private:
 	HANDLE         hConsole;
 	WORD           wSaveAttributes;
+	char           CONSOLE_BUFFER[4096];
 };
 
 CUtils::CUtils()
@@ -182,26 +183,22 @@ string CUtils::GetFormattedSystemTime()
 }
 
 
-string CUtils::StrFormat(LPCSTR fmt, ...)
+string CUtils::StrFormat(const char* fmt, ...)
 {
 	if (!fmt)	return "";
 
 	va_list args;
 	va_start(args, fmt);
-	char *buffer = NULL;
-	unsigned int bufsize = 4096;
-	buffer = new char[bufsize];
-	memset(buffer, 0, sizeof(buffer));
-	int result = _vsnprintf(buffer, bufsize - 2, fmt, args);
+	memset(CONSOLE_BUFFER, 0, sizeof(CONSOLE_BUFFER));
+
+	int result = vsprintf(CONSOLE_BUFFER, fmt, args);
 	if (result < 0)
 	{
-		delete [] buffer;
 		va_end(args);
-		return "\n_vsnprintf buffer overflow\n";
+		return "\nvsprintf buffer overflow\n";
 	}		
 
-	string str(buffer);
-	delete [] buffer;
+	string str(CONSOLE_BUFFER);
 	va_end(args);
 
 	return str;

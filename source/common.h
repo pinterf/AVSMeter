@@ -168,6 +168,7 @@ static void SE_Translator(unsigned int u, EXCEPTION_POINTERS* pExcept)
   }
 
 	_snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p", pExcept->ExceptionRecord->ExceptionCode, sExceptionName.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
+
   throw exception(msg);
 }
 

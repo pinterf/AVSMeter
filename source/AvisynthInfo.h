@@ -35,6 +35,7 @@ public:
 	string  saPluginDirRefs[NUM_PLUG_DIR_REFS];
 	set     <string, StrCaseInsensitiveCompare> mPluginDirs;
 	set     <string, StrCaseInsensitiveCompare> mPluginFunctions;
+	set     <string, StrCaseInsensitiveCompare> mInternalFunctions;
 	set     <string, StrCaseInsensitiveCompare> mPluginDLLsC25;
 	set     <string, StrCaseInsensitiveCompare> mPluginDLLsC20;
 	set     <string, StrCaseInsensitiveCompare> mPluginDLLsCPP26;
@@ -62,9 +63,10 @@ private:
 	void    GetDLLDependencies(string s_dll, string &s_failed_dependencies, string &s_hint);
 	void    FindStrings(string s_dll, string &s_failed_dependencies, string &s_hint);
 	__int64 FileSize(string s_file);
-	string  StrFormat(LPCSTR fmt, ...);
+	string  StrFormat(const char* fmt, ...);
 	void    StrTrim(string &s_string);
 	void    StrToLC(string &s_string);
+	char    CONSOLE_BUFFER[4096];
 };
 
 
@@ -391,6 +393,18 @@ BOOL CAvisynthInfo::GetInfo(string &s_ErrorMsg)
 
 		if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
 			bIsMTVersion = TRUE;
+
+
+		string sInternalFunctions = "";
+		try
+		{
+			foo = AVS_env->GetVar("$InternalFunctions$");
+			sInternalFunctions = foo.AsString();
+			StrTokenize(sInternalFunctions, mInternalFunctions);
+		}
+		catch(...)
+		{
+		}
 
 		string sPluginFunctions = "";
 		try
@@ -762,13 +776,7 @@ string CAvisynthInfo::GetFileVersion(string s_file)
 	string sFileVersion = "0.0.0.0";
 	char szFilename[MAX_PATH + 1] = {0};
 
-	if (s_file == "")
-	{
-		if (GetModuleFileName(NULL, szFilename, MAX_PATH) == 0)
-			return sFileVersion;
-	}
-	else
-		sprintf(szFilename, "%s", s_file.c_str());
+	sprintf(szFilename, "%s", s_file.c_str());
 
 	DWORD dummy;
 	DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
@@ -830,26 +838,21 @@ string CAvisynthInfo::GetTimeStamp(string s_file)
 }
 
 
-string CAvisynthInfo::StrFormat(LPCSTR fmt, ...)
+string CAvisynthInfo::StrFormat(const char* fmt, ...)
 {
 	if (!fmt)	return "";
 
 	va_list args;
 	va_start(args, fmt);
-	char *buffer = NULL;
-	unsigned int bufsize = 4096;
-	buffer = new char[bufsize];
-	memset(buffer, 0, sizeof(buffer));
-	int result = _vsnprintf(buffer, bufsize - 2, fmt, args);
+	memset(CONSOLE_BUFFER, 0, sizeof(CONSOLE_BUFFER));
+	int result = vsprintf(CONSOLE_BUFFER, fmt, args);
 	if (result < 0)
 	{
-		delete [] buffer;
 		va_end(args);
-		return "\n_vsnprintf buffer overflow\n";
+		return "\nvsprintf buffer overflow\n";
 	}		
 
-	string str(buffer);
-	delete [] buffer;
+	string str(CONSOLE_BUFFER);
 	va_end(args);
 
 	return str;
