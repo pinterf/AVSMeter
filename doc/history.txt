@@ -1,3 +1,6 @@
+v2.4.8
+- Fixed a regression from 2.4.7 - some helpful hints in the error report were suppressed
+
 v2.4.7
 - Added audio info to the console output
 - Tweaked timer test

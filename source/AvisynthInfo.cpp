@@ -1155,9 +1155,9 @@ void CAvisynthInfo::AVSCheckPlugins()
 				if (sHint != "")
 					sNote += StrFormat("\n\nNote: \"%s\"", sHint.c_str());
 			}
-			if (sPluginType == "C 2.0")
+			if (sPluginType.substr(0, 5) == "C 2.0")
 				sNote += "\n\nNote 1: C 2.0 Plugins are not supported by Avisynth+\nNote 2: For other Avisynth versions, C 2.0 Plugins must be loaded explicitly\n        with \"LoadCPlugin()\" and need the \"avisynth_c.dll\" support DLL";
-			if (sPluginType == "C 2.5")
+			if (sPluginType.substr(0, 5) == "C 2.5")
 				sNote += "\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"";
 		}
 		else
