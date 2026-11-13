@@ -1,5 +1,9 @@
+v2.7.4
+- Added ini option "LogUseFileSaveDialog". See manual for details.
+- Brought back ini options "LogDirectory" and "LogFileDateTimeSuffix". See manual for details.
+
 v2.7.3
-- Fixed a bug in the external plugin enumeration
+- Fixed a bug in the plugin enumeration
 
 v2.7.2
 - Added new switch "-c". This allows in combination with "-avsinfo" to specify a custom plugin directory.

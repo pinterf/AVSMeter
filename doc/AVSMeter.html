@@ -59,77 +59,12 @@
         Switches<br>
         &nbsp;-avsinfo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         Display extended Avisynth info<br>
         &nbsp;-c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
         Specify custom plugin directory<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
 
         in combination with "-avsinfo"<br>
         <br>
@@ -142,177 +77,11 @@
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Create csv file<br>
           &nbsp;-gpu&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
           Display GPU/VPU usage (requires GPU-Z)<br>
           &nbsp;-range=first,last&nbsp;&nbsp; Set frame range<br>
           &nbsp;-timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           Set time limit (seconds)<br>
           &nbsp;-priority=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
           Set process priority (1:low, 2:normal, 3:high)</font></font></big><br>
     <b><big><font face="Courier New"><br>
@@ -402,7 +171,28 @@
     <b><i>Note:</i></b> The numbering of the frames in the .csv file is
     not zero-based, i.e. the first frame is 1, not 0.<br>
     <br>
-    <b>"MonitorGPULoad" (<font color="#ff0000">0</font> or 1):</b><br>
+    <b><b>"LogDirectory"</b><br>
+    </b> The user can specify a directory in which all log files are
+    stored. This has to be a fully qualified<br>
+    path, for example "LogDirectory=c:\LogFiles" (without the quotes).
+    The <b><font color="#ff0000">default is an empty string</font></b><br>
+    which means that all log files are stored in the script directory
+    or, in case the "-avsinfo"<br>
+    switch was used, the current (working) directory.<br>
+    <b><i>Note:</i></b> This setting is ignored if "LogUseFileSaveDialog" is
+    set to "1".<br>
+    <br>
+    <b><b>"LogFileDateTimeSuffix" (<font color="#ff0000">0</font> or 1):</b><br>
+    </b>If set to "1", adds a date/time suffix to all .log and .csv
+    files.<b><br>
+    </b><b><i>Note:</i></b> This setting is ignored if
+    "LogUseFileSaveDialog" is set to "1".<b><br>
+      <br>
+      "LogUseFileSaveDialog" (</b><b><b>0 or <font color="#ff0000">1</font>):</b><br>
+    </b>If set to "1", AVSMeter prompts with a file save dialog so the
+    user can choose where to save .log/.csv files.<br>
+    <b><br>
+      "MonitorGPULoad" (<font color="#ff0000">0</font> or 1):</b><br>
     If set to "1", enables display of the GPU/VPU usage which of course
     is only useful if a filter that uses the GPU is in the chain.
     AVSMeter uses GPU-Z to access the graphics card sensors through a
@@ -418,9 +208,9 @@
     The user can specify the avisynth.dll to be used. This has to be a
     fully qualified path, for example
     "AVSDLL=d:\apps\avisynth\avisynth.dll" (without the quotes). The <font
-      color="#ff0000">default is an empty string </font>which means
-    that AVSMeter will attempt to load avisynth.dll through the standard
-    Windows search hierarchy.<br>
+      color="#ff0000"><b>default is an empty string</b> </font>which
+    means that AVSMeter will attempt to load avisynth.dll through the
+    standard Windows search hierarchy.<br>
     <br>
     <b>"FrameRange" (first,last):</b><br>
     Specify the range of frames to be processed. "FrameRange=<font
