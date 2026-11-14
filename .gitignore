@@ -434,3 +434,5 @@ FodyWeavers.xsd
 /Intermediate/
 /Intermediate32/
 /Intermediate64/
+/msvc/bin/
+/msvc/obj/

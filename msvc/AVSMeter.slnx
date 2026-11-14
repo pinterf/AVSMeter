@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Win32" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="AVSMeter.vcxproj" Id="f854bb81-89c0-4c82-b10f-811d802f3b0a" />
+</Solution>

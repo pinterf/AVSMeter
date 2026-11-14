@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{B5ACAE89-732C-4FDC-B815-0A3537AF81DA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{E6B8CAFA-3522-44B9-BE83-347C6B84D341}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{0A4F85BE-B51C-40B1-9845-FD9BE9F9D8B6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\AviSynth">
+      <UniqueIdentifier>{B123ED51-7561-44D6-AF18-1BBE08D2EE9E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libcpuid">
+      <UniqueIdentifier>{F3D7D944-F281-4DEE-82FA-07686B563899}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\AVSMeter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ResourceCompile Include="..\source\AVSMeter.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+    <Image Include="..\source\AVSMeter.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <ClInclude Include="..\source\*.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\*.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\cpuid\*.h">
+      <Filter>Header Files\libcpuid</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
