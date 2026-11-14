@@ -380,7 +380,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
 
 void CAvisynthInfo::EnumPluginDirs()
 {
-	vPluginDirs.empty();
+	vPluginDirs.clear();
 
 	//- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
 	//- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
