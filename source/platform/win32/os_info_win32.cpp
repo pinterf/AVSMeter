@@ -37,6 +37,24 @@ namespace
 
     return szBuf;
   }
+
+  const char *pszCurrentVersionKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+
+  std::string RegString(const char *psz_value)
+  {
+    char szBuf[64] = "";
+    DWORD dwSize = sizeof(szBuf);
+    if (::RegGetValueA(HKEY_LOCAL_MACHINE, pszCurrentVersionKey, psz_value, RRF_RT_REG_SZ, NULL, szBuf, &dwSize) != ERROR_SUCCESS)
+      return "";
+
+    return szBuf;
+  }
+
+  bool RegDword(const char *psz_value, DWORD &dw_value)
+  {
+    DWORD dwSize = sizeof(dw_value);
+    return ::RegGetValueA(HKEY_LOCAL_MACHINE, pszCurrentVersionKey, psz_value, RRF_RT_REG_DWORD, NULL, &dw_value, &dwSize) == ERROR_SUCCESS;
+  }
 }
 
 
@@ -130,10 +148,26 @@ std::string platform::OsVersion()
     }
   }
 
+  // Feature update (e.g. 24H2) and update revision as shown by winver.
+  // DisplayVersion since 20H2; ReleaseId before (it stays "2009" after).
+  if (osvi.dwMajorVersion == 10)
+  {
+    std::string sDisplayVersion = RegString("DisplayVersion");
+    if (sDisplayVersion == "")
+      sDisplayVersion = RegString("ReleaseId");
+    if (sDisplayVersion != "")
+      sOSVersion += " " + sDisplayVersion;
+  }
+
+  std::string sBuild = StrFormat("%u", (unsigned int)osvi.dwBuildNumber);
+  DWORD dwUBR = 0;
+  if (RegDword("UBR", dwUBR))
+    sBuild += StrFormat(".%u", (unsigned int)dwUBR);
+
   if ((osvi.wServicePackMajor > 0) || (osvi.wServicePackMinor > 0))
-    sOSAddendum = StrFormat(" Service Pack %u.%u (Build %u)", (unsigned int)osvi.wServicePackMajor, (unsigned int)osvi.wServicePackMinor, (unsigned int)osvi.dwBuildNumber);
+    sOSAddendum = StrFormat(" Service Pack %u.%u (Build %s)", (unsigned int)osvi.wServicePackMajor, (unsigned int)osvi.wServicePackMinor, sBuild.c_str());
   else
-    sOSAddendum = StrFormat(" (Build %u)", (unsigned int)osvi.dwBuildNumber);
+    sOSAddendum = " (Build " + sBuild + ")";
 
   return sOSVersion + sOSAddendum;
 }
