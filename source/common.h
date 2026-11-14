@@ -57,9 +57,9 @@ using std::exception;
 #define MAX_PATH_LEN 32768
 #define DSE_DELAY 500
 const BOOL PROCESS_64 = (sizeof(void*) == 8) ? TRUE : FALSE;
-const HWND ConsoleHWND = GetConsoleWindow();
+inline const HWND ConsoleHWND = GetConsoleWindow();
 
-static BOOL CompareNoCase(string first, string second)
+inline BOOL CompareNoCase(string first, string second)
 {
   size_t i = 0;
   while ((i < first.length()) && (i < second.length()))

@@ -84,6 +84,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\source\AVSMeter.cpp" />
+    <ClCompile Include="..\source\AvisynthInfo.cpp" />
+    <ClCompile Include="..\source\exception.cpp" />
+    <ClCompile Include="..\source\GPUInfo.cpp" />
+    <ClCompile Include="..\source\ProcessInfo.cpp" />
+    <ClCompile Include="..\source\SysInfo.cpp" />
+    <ClCompile Include="..\source\Timer.cpp" />
+    <ClCompile Include="..\source\Utility.cpp" />
     <ResourceCompile Include="..\source\AVSMeter.rc" />
     <Image Include="..\source\AVSMeter.ico" />
     <ClInclude Include="..\source\AvisynthInfo.h" />
