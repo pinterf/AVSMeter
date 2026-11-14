@@ -69,7 +69,14 @@ set(AVSMeter_Headers
   "${SRC}/Timer.h"
   "${SRC}/Utility.h"
   "${SRC}/version.h"
+  "${SRC}/platform/console.h"
 )
+
+if(WIN32)
+  list(APPEND AVSMeter_Sources
+    "${SRC}/platform/win32/console_win32.cpp"
+  )
+endif()
 
 add_executable(AVSMeter ${AVSMeter_Sources} ${AVSMeter_Headers})
 set_target_properties(AVSMeter PROPERTIES "OUTPUT_NAME" "${ProgramName}")

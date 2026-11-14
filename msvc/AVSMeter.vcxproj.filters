@@ -16,6 +16,12 @@
     <Filter Include="Header Files\libcpuid">
       <UniqueIdentifier>{F3D7D944-F281-4DEE-82FA-07686B563899}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\platform">
+      <UniqueIdentifier>{DC19D113-F916-43A1-AEDD-849179BB3D52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\platform">
+      <UniqueIdentifier>{3D931548-839E-4126-91DF-C737637C210A}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\AVSMeter.cpp">
@@ -41,6 +47,9 @@
     </ClCompile>
     <ClCompile Include="..\source\Utility.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\platform\win32\console_win32.cpp">
+      <Filter>Source Files\platform</Filter>
     </ClCompile>
     <ResourceCompile Include="..\source\AVSMeter.rc">
       <Filter>Resource Files</Filter>
@@ -71,6 +80,9 @@
     </ClInclude>
     <ClInclude Include="..\source\Utility.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\platform\console.h">
+      <Filter>Header Files\platform</Filter>
     </ClInclude>
     <ClInclude Include="..\source\version.h">
       <Filter>Header Files</Filter>

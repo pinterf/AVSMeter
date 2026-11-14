@@ -36,7 +36,6 @@
 #include <tlhelp32.h>
 #include <wintrust.h>
 #include <imagehlp.h>
-#include <conio.h>
 #include <fstream>
 #include <vector>
 #include <map>

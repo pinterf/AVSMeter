@@ -21,39 +21,6 @@
 
 #include "common.h"
 
-#define FG_BLACK     0
-#define FG_RED       FOREGROUND_RED
-#define FG_GREEN     FOREGROUND_GREEN
-#define FG_BLUE      FOREGROUND_BLUE
-#define FG_YELLOW    FOREGROUND_RED | FOREGROUND_GREEN
-#define FG_MAGENTA   FOREGROUND_RED | FOREGROUND_BLUE
-#define FG_CYAN      FOREGROUND_GREEN | FOREGROUND_BLUE
-#define FG_HRED      FOREGROUND_RED | FOREGROUND_INTENSITY
-#define FG_HGREEN    FOREGROUND_GREEN | FOREGROUND_INTENSITY
-#define FG_HBLUE     FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define FG_HYELLOW   FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY
-#define FG_HMAGENTA  FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define FG_HCYAN     FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define FG_DARKGREY  FOREGROUND_INTENSITY
-#define FG_GREY      FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED
-#define FG_WHITE     FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY
-
-#define BG_BLACK     0
-#define BG_RED       BACKGROUND_RED
-#define BG_GREEN     BACKGROUND_GREEN
-#define BG_BLUE      BACKGROUND_BLUE
-#define BG_YELLOW    BACKGROUND_RED | BACKGROUND_GREEN
-#define BG_MAGENTA   BACKGROUND_RED | BACKGROUND_BLUE
-#define BG_CYAN      BACKGROUND_GREEN | BACKGROUND_BLUE
-#define BG_HRED      BACKGROUND_RED | BACKGROUND_INTENSITY
-#define BG_HGREEN    BACKGROUND_GREEN | BACKGROUND_INTENSITY
-#define BG_HBLUE     BACKGROUND_BLUE | BACKGROUND_INTENSITY
-#define BG_HYELLOW   BACKGROUND_GREEN | BACKGROUND_RED | BACKGROUND_INTENSITY
-#define BG_HMAGENTA  BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_INTENSITY
-#define BG_HCYAN     BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_INTENSITY
-#define BG_DARKGREY  BACKGROUND_INTENSITY
-#define BG_GREY      BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED
-#define BG_WHITE     BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_RED | BACKGROUND_INTENSITY
 
 
 class CUtils
@@ -73,12 +40,6 @@ public:
   bool           DirectoryExists(string s_dir);
   string         GetWOW64FilePath(string s_filepath);
 
-  //Console functions
-  int            GetConsoleWidth();
-  void           SetConsoleColors(WORD wAttributes);
-  void           ResetConsoleColors();
-  void           CursorUp(unsigned int iLines);
-
   //string functions
   string         StrFormat(char const *fmt, ...);
   void           StrTrimLeft(string &s_string);
@@ -91,9 +52,6 @@ public:
   void           StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, bool b_removedups);
   bool           IsNumeric(string s_string);
 
-private:
-  HANDLE         hConsole;
-  WORD           wSavedAttributes;
 };
 
 

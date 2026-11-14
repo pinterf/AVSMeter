@@ -21,18 +21,10 @@
 
 CUtils::CUtils()
 {
-  hConsole = ::GetStdHandle(STD_OUTPUT_HANDLE);
-
-  //save attributes
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  GetConsoleScreenBufferInfo(hConsole, &csbi);
-  wSavedAttributes = csbi.wAttributes;
 }
 
 CUtils::~CUtils()
 {
-  //restore attributes
-  SetConsoleTextAttribute(hConsole, wSavedAttributes);
 }
 
 
@@ -99,42 +91,6 @@ string CUtils::SysErrorMessage()
   sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
 
   return sRet;
-}
-
-
-int CUtils::GetConsoleWidth()
-{
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  GetConsoleScreenBufferInfo(hConsole, &csbi);
-
-  return (int)csbi.dwSize.X;
-}
-
-
-void CUtils::CursorUp(unsigned int iRows)
-{
-  COORD pos;
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  ::GetConsoleScreenBufferInfo(hConsole, &csbi);
-  pos.Y = (short)(csbi.dwCursorPosition.Y - iRows);
-  pos.X = 0;
-  ::SetConsoleCursorPosition(hConsole, pos);
-
-  return;
-}
-
-
-void CUtils::SetConsoleColors(WORD wAttributes)
-{
-  SetConsoleTextAttribute(hConsole, wAttributes);
-  return;
-}
-
-
-void CUtils::ResetConsoleColors()
-{
-  SetConsoleTextAttribute(hConsole, wSavedAttributes);
-  return;
 }
 
 

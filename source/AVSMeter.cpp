@@ -25,6 +25,7 @@
 #include "GPUInfo.h"
 #include "Timer.h"
 #include "version.h"
+#include "platform/console.h"
 
 
 #define COLOR_DEFAULT           0
@@ -475,10 +476,10 @@ int main(int argc, char* argv[])
 
     if (bEarlyExit == false)
     {
-      utils.CursorUp(2);
+      platform::ConsoleCursorUp(2);
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-      utils.CursorUp(2);
+      platform::ConsoleCursorUp(2);
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s\n", sAVSError.c_str());
     }
     else
@@ -490,10 +491,10 @@ int main(int argc, char* argv[])
     iRet = -1;
     if (bEarlyExit == false)
     {
-      utils.CursorUp(2);
+      platform::ConsoleCursorUp(2);
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-      utils.CursorUp(2);
+      platform::ConsoleCursorUp(2);
     }
 
     sAVSError = ex.what();
@@ -509,10 +510,10 @@ int main(int argc, char* argv[])
     iRet = -1;
     if (bEarlyExit == false)
     {
-      utils.CursorUp(2);
+      platform::ConsoleCursorUp(2);
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-      utils.CursorUp(2);
+      platform::ConsoleCursorUp(2);
     }
 
     sAVSError = utils.SysErrorMessage();
@@ -1570,7 +1571,7 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, CGP
 
     if (!rs.bFirstScr)
     {
-      utils.CursorUp(rs.uiCursorOffset);
+      platform::ConsoleCursorUp(rs.uiCursorOffset);
       rs.uiCursorOffset = 0;
     }
 
@@ -1670,9 +1671,9 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, CGP
       }
     }
 
-    if (_kbhit())
+    if (platform::KeyPressed())
     {
-      if (_getch() == 0x1B) //ESC
+      if (platform::ReadKey() == 0x1B) //ESC
       {
         rs.uiLastFrame = uiCurrentFrame;
         break;
@@ -1697,7 +1698,7 @@ static void ReportRuntime(const stRunStats &rs, CGPUInfo &gpuinfo, unsigned int 
   if (rs.iElapsedMS >= MIN_RUNTIME)
   {
     if (!rs.bFirstScr)
-      utils.CursorUp(rs.uiCursorOffset);
+      platform::ConsoleCursorUp(rs.uiCursorOffset);
 
     if (rs.uiFirstFrame == rs.uiLastFrame)
     {
@@ -1796,7 +1797,7 @@ static void ReportRuntime(const stRunStats &rs, CGPUInfo &gpuinfo, unsigned int 
 
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-    utils.CursorUp(2);
+    platform::ConsoleCursorUp(2);
   }
   else
   {
@@ -1805,7 +1806,7 @@ static void ReportRuntime(const stRunStats &rs, CGPUInfo &gpuinfo, unsigned int 
       for (unsigned int u = 0; u < rs.uiCursorOffset; u++)
       {
         PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", Pad("").c_str());
-        utils.CursorUp(1);
+        platform::ConsoleCursorUp(1);
       }
     }
 
@@ -2265,12 +2266,12 @@ void PollKeys()
     for (;;)
     {
       Sleep(100);
-      if (_getch())
+      if (platform::ReadKey())
         break;
     }
 
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", Pad("").c_str());
-    utils.CursorUp(1);
+    platform::ConsoleCursorUp(1);
   }
 
   return;
@@ -2294,10 +2295,10 @@ void PrintConsole(bool bUseStdOut, WORD wAttributes, const char *fmt, ...)
 
   va_end(args);
 
-  CharToOem(buffer, buffer);
+  platform::ConsoleToOutputCP(buffer);
 
   if (wAttributes && Settings.bUseColor)
-    utils.SetConsoleColors(wAttributes);
+    platform::ConsoleSetColors(wAttributes);
 
   if (bUseStdOut)
   {
@@ -2311,7 +2312,7 @@ void PrintConsole(bool bUseStdOut, WORD wAttributes, const char *fmt, ...)
   }
 
   if (wAttributes && Settings.bUseColor)
-    utils.ResetConsoleColors();
+    platform::ConsoleResetColors();
 
   return;
 }
@@ -2319,7 +2320,7 @@ void PrintConsole(bool bUseStdOut, WORD wAttributes, const char *fmt, ...)
 
 string Pad(string s_line)
 {
-  int iPadLen = utils.GetConsoleWidth() - (int)s_line.length();
+  int iPadLen = platform::ConsoleWidth() - (int)s_line.length();
   if ((iPadLen > 0) && (iPadLen <= 1000))
     s_line.append(iPadLen - 1, ' ');
 
@@ -2415,9 +2416,9 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
         PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\rPre-scanning script (F%u / T%.2lf)\r", uiFrame, TDelta);
         D0 = timer.GetSTDTimerMS();
 
-        if (_kbhit())
+        if (platform::KeyPressed())
         {
-          if (_getch() == 0x1B) //ESC
+          if (platform::ReadKey() == 0x1B) //ESC
             AVS_env->ThrowError("\'ESC\' pressed, cancelled.");
         }
       }
