@@ -20,7 +20,6 @@
 #define _GPUINFO_H
 
 #include "common.h"
-#include "exception.h"
 #include "Utility.h"
 
 #define SHMEM_NAME "GPUZShMem"

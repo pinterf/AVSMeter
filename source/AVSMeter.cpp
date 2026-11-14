@@ -17,7 +17,6 @@
 
 
 #include "common.h"
-#include "exception.h"
 #include "AvisynthInfo.h"
 #include "Utility.h"
 #include "SysInfo.h"
@@ -26,6 +25,7 @@
 #include "Timer.h"
 #include "version.h"
 #include "platform/console.h"
+#include "platform/crash_guard.h"
 #include "platform/dynlib.h"
 #include "platform/file_info.h"
 #include "platform/process.h"
@@ -336,7 +336,7 @@ int main(int argc, char* argv[])
   IScriptEnvironment *AVS_env = 0;
   try
   {
-    _set_se_translator(SE_Translator);
+    platform::TranslateCrashes();
 
     CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
     if (!CreateEnvironment)
@@ -2355,7 +2355,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
 
   try
   {
-    _set_se_translator(SE_Translator);
+    platform::TranslateCrashes();
 
     CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
     if (!CreateEnvironment)

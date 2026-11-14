@@ -19,6 +19,7 @@
 #include "AvisynthInfo.h"
 #include "platform/avs_registry.h"
 #include "platform/binary_info.h"
+#include "platform/crash_guard.h"
 #include "platform/dynlib.h"
 #include "platform/file_info.h"
 #include "platform/os_info.h"
@@ -156,7 +157,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
 
   try
   {
-    _set_se_translator(SE_Translator);
+    platform::TranslateCrashes();
 
     CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
     if (!CreateEnvironment)
@@ -697,7 +698,7 @@ void CAvisynthInfo::TestLoadPlugins()
     {
       try
       {
-        _set_se_translator(SE_Translator);
+        platform::TranslateCrashes();
 
         CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
         if (!CreateEnvironment)

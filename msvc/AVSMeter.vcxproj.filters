@@ -30,9 +30,6 @@
     <ClCompile Include="..\source\AvisynthInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\source\exception.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\source\GPUInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -55,6 +52,9 @@
       <Filter>Source Files\platform</Filter>
     </ClCompile>
     <ClCompile Include="..\source\platform\win32\os_info_win32.cpp">
+      <Filter>Source Files\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\platform\win32\crash_guard_win32.cpp">
       <Filter>Source Files\platform</Filter>
     </ClCompile>
     <ClCompile Include="..\source\platform\win32\avs_registry_win32.cpp">
@@ -87,9 +87,6 @@
     <ClInclude Include="..\source\common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\exception.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\source\GPUInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -112,6 +109,9 @@
       <Filter>Header Files\platform</Filter>
     </ClInclude>
     <ClInclude Include="..\source\platform\os_info.h">
+      <Filter>Header Files\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\platform\crash_guard.h">
       <Filter>Header Files\platform</Filter>
     </ClInclude>
     <ClInclude Include="..\source\platform\avs_registry.h">

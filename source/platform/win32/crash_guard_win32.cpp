@@ -16,12 +16,22 @@
 */
 
 
-#include "exception.h"
+#include "platform/crash_guard.h"
 #include "platform/file_info.h"
 #include "platform/win32/utf_win32.h"
 
+#include <cstdio>
+#include <exception>
+#include <string>
 
-string GetExceptionModule(LPVOID address)
+#include <eh.h>
+#include <psapi.h>
+
+
+namespace
+{
+
+std::string GetExceptionModule(LPVOID address)
 {
   HMODULE hModules[2048];
   DWORD dwSizeNeeded = 0;
@@ -58,9 +68,8 @@ string GetExceptionModule(LPVOID address)
 void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 {
   char msg[2048];
-  string sModule = "";
-  string sExceptionDescription = "UNKNOWN_EXCEPTION";
-  string sExceptionModule = GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress);
+  std::string sExceptionDescription = "UNKNOWN_EXCEPTION";
+  std::string sExceptionModule = GetExceptionModule(pExcept->ExceptionRecord->ExceptionAddress);
 
   if (sExceptionModule == "") sExceptionModule = "Cannot determine module";
 
@@ -1835,5 +1844,13 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 
   _snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p", pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
 
-  throw exception(msg);
+  throw std::exception(msg);
+}
+
+}
+
+
+void platform::TranslateCrashes()
+{
+  _set_se_translator(SE_Translator);
 }

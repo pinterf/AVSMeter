@@ -39,7 +39,6 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <eh.h>
 
 using std::string;
 using std::ifstream;

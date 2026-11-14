@@ -86,7 +86,6 @@
   <ItemGroup>
     <ClCompile Include="..\source\AVSMeter.cpp" />
     <ClCompile Include="..\source\AvisynthInfo.cpp" />
-    <ClCompile Include="..\source\exception.cpp" />
     <ClCompile Include="..\source\GPUInfo.cpp" />
     <ClCompile Include="..\source\ProcessInfo.cpp" />
     <ClCompile Include="..\source\SysInfo.cpp" />
@@ -94,6 +93,7 @@
     <ClCompile Include="..\source\Utility.cpp" />
     <ClCompile Include="..\source\platform\win32\avs_registry_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\binary_info_win32.cpp" />
+    <ClCompile Include="..\source\platform\win32\crash_guard_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\console_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\os_info_win32.cpp" />
@@ -105,7 +105,6 @@
     <Image Include="..\source\AVSMeter.ico" />
     <ClInclude Include="..\source\AvisynthInfo.h" />
     <ClInclude Include="..\source\common.h" />
-    <ClInclude Include="..\source\exception.h" />
     <ClInclude Include="..\source\GPUInfo.h" />
     <ClInclude Include="..\source\ProcessInfo.h" />
     <ClInclude Include="..\source\SysInfo.h" />
@@ -114,6 +113,7 @@
     <ClInclude Include="..\source\version.h" />
     <ClInclude Include="..\source\platform\avs_registry.h" />
     <ClInclude Include="..\source\platform\binary_info.h" />
+    <ClInclude Include="..\source\platform\crash_guard.h" />
     <ClInclude Include="..\source\platform\console.h" />
     <ClInclude Include="..\source\platform\dynlib.h" />
     <ClInclude Include="..\source\platform\os_info.h" />

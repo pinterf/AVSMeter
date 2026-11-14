@@ -32,7 +32,7 @@ endif()
 # Static runtime (/MT, /MTd), same as msvc/AVSMeter.vcxproj
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-# /EHa: the SEH translator in exception.cpp turns access violations etc. into C++ exceptions.
+# /EHa: the SEH translator in platform/win32/crash_guard_win32.cpp turns access violations etc. into C++ exceptions.
 # CMake's default /EHsc must go, else Ninja gives D9025 (overriding '/EHs' with '/EHa');
 # the VS generator hides the conflict.
 string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -52,7 +52,6 @@ set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/source")
 set(AVSMeter_Sources
   "${SRC}/AVSMeter.cpp"
   "${SRC}/AvisynthInfo.cpp"
-  "${SRC}/exception.cpp"
   "${SRC}/GPUInfo.cpp"
   "${SRC}/ProcessInfo.cpp"
   "${SRC}/SysInfo.cpp"
@@ -62,7 +61,6 @@ set(AVSMeter_Sources
 set(AVSMeter_Headers
   "${SRC}/AvisynthInfo.h"
   "${SRC}/common.h"
-  "${SRC}/exception.h"
   "${SRC}/GPUInfo.h"
   "${SRC}/ProcessInfo.h"
   "${SRC}/SysInfo.h"
@@ -73,6 +71,7 @@ set(AVSMeter_Headers
   "${SRC}/platform/dynlib.h"
   "${SRC}/platform/os_info.h"
   "${SRC}/platform/avs_registry.h"
+  "${SRC}/platform/crash_guard.h"
   "${SRC}/platform/binary_info.h"
   "${SRC}/platform/file_info.h"
   "${SRC}/platform/process.h"
@@ -86,6 +85,7 @@ if(WIN32)
     "${SRC}/platform/win32/dynlib_win32.cpp"
     "${SRC}/platform/win32/os_info_win32.cpp"
     "${SRC}/platform/win32/avs_registry_win32.cpp"
+    "${SRC}/platform/win32/crash_guard_win32.cpp"
     "${SRC}/platform/win32/binary_info_win32.cpp"
     "${SRC}/platform/win32/file_info_win32.cpp"
     "${SRC}/platform/win32/process_win32.cpp"
