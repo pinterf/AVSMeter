@@ -1,18 +1,18 @@
 /*
-	This file is part of AVSMeter, Copyright(C) Groucho2004.
+  This file is part of AVSMeter, Copyright(C) Groucho2004.
 
-	AVSMeter is free software. You can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation, either
-	version 3 of the License, or any later version.
+  AVSMeter is free software. You can redistribute it and/or
+  modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation, either
+  version 3 of the License, or any later version.
 
-	AVSMeter is distributed in the hope that it will be useful
-	but WITHOUT ANY WARRANTY and without the implied warranty
-	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-	See the GNU General Public License for more details.
+  AVSMeter is distributed in the hope that it will be useful
+  but WITHOUT ANY WARRANTY and without the implied warranty
+  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU General Public License
+  along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -65,17 +65,17 @@ static BOOL CompareNoCase(string first, string second)
   while ((i < first.length()) && (i < second.length()))
   {
     if (tolower (first[i]) < tolower (second[i]))
-			return true;
+      return true;
     else if (tolower (first[i]) > tolower (second[i]))
-			return false;
- 
+      return false;
+
    i++;
   }
 
   if (first.length() < second.length())
-		return true;
+    return true;
   else
-		return false;
+    return false;
 }
 
 
