@@ -39,11 +39,9 @@ namespace
     std::wstring wsPath;
     if (s_path.empty())
     {
-      std::vector<wchar_t> vBuf(32768);
-      DWORD dwLen = ::GetModuleFileNameW(NULL, vBuf.data(), (DWORD)vBuf.size());
-      if ((dwLen == 0) || (dwLen >= vBuf.size()))
+      wsPath = platform::win32::ModuleFileNameW(NULL);
+      if (wsPath.empty())
         return false;
-      wsPath.assign(vBuf.data(), dwLen);
     }
     else
       wsPath = platform::win32::ToWide(s_path.c_str());

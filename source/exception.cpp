@@ -18,12 +18,11 @@
 
 #include "exception.h"
 #include "platform/file_info.h"
+#include "platform/win32/utf_win32.h"
 
 
 string GetExceptionModule(LPVOID address)
 {
-  CUtils utils;
-  char modulename[2048];
   HMODULE hModules[2048];
   DWORD dwSizeNeeded = 0;
   if(!EnumProcessModules(GetCurrentProcess(), hModules, sizeof(hModules), &dwSizeNeeded) || dwSizeNeeded < sizeof(HMODULE))
@@ -47,13 +46,12 @@ string GetExceptionModule(LPVOID address)
   if (iCurModule == -1)
     return "";
 
-  if (!GetModuleFileName(hModules[iCurModule], modulename, MAX_PATH_LEN))
+  std::wstring wsModule = platform::win32::ModuleFileNameW(hModules[iCurModule]);
+  if (wsModule.empty())
     return "";
 
-  string sModule(modulename);
-  sModule = platform::NativeSystemPath(sModule);
-
-  return sModule;
+  //ANSI, as the module paths of the plugin scan
+  return platform::NativeSystemPath(platform::win32::WideToAnsi(wsModule.c_str()));
 }
 
 

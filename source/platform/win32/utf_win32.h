@@ -26,6 +26,7 @@
 #define _PLATFORM_UTF_WIN32_H
 
 #include <string>
+#include <vector>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -88,6 +89,25 @@ namespace platform::win32
       return WideToAnsi(pwsz);
 
     return WideToUtf8(pwsz);
+  }
+
+  // Full path of a loaded module (NULL: own exe), empty on error. The buffer grows,
+  // as module paths may exceed MAX_PATH; a full buffer means a cut (and on XP,
+  // unterminated) result.
+  inline std::wstring ModuleFileNameW(HMODULE h_module)
+  {
+    std::vector<wchar_t> vBuf(MAX_PATH);
+    for (;;)
+    {
+      DWORD dwLen = ::GetModuleFileNameW(h_module, vBuf.data(), (DWORD)vBuf.size());
+      if (dwLen == 0)
+        return std::wstring();
+      if (dwLen < vBuf.size())
+        return std::wstring(vBuf.data(), dwLen);
+      if (vBuf.size() >= 32768)
+        return std::wstring();
+      vBuf.resize(vBuf.size() * 2);
+    }
   }
 }
 
