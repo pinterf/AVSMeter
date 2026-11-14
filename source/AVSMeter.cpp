@@ -30,6 +30,9 @@
 #include "platform/process.h"
 #include "platform/single_instance.h"
 
+#include <chrono>
+#include <thread>
+
 
 #define COLOR_DEFAULT           0
 #define COLOR_AVSM_VERSION      FG_HRED | BG_BLACK
@@ -2263,7 +2266,7 @@ void PollKeys()
 
     for (;;)
     {
-      Sleep(100);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       if (platform::ReadKey())
         break;
     }
@@ -2443,7 +2446,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
     AVS_clip = 0;
     AVS_main = 0;
     AVS_temp = 0;
-    Sleep(DSE_DELAY);
+    std::this_thread::sleep_for(std::chrono::milliseconds(DSE_DELAY));
     AVS_env->DeleteScriptEnvironment();
     AVS_env = 0;
     AVS_linkage = 0;
