@@ -26,6 +26,7 @@
 #include "Timer.h"
 #include "version.h"
 #include "platform/console.h"
+#include "platform/dynlib.h"
 
 
 #define COLOR_DEFAULT           0
@@ -315,11 +316,11 @@ int main(int argc, char* argv[])
   }
 
 
-  HINSTANCE hDLL;
+  platform::LibHandle hDLL;
   if (Settings.sAVSDLL == "")
-    hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(platform::kAvsLibName);
   else
-    hDLL = ::LoadLibraryEx(Settings.sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(Settings.sAVSDLL.c_str());
 
 
   if (!hDLL)
@@ -335,7 +336,7 @@ int main(int argc, char* argv[])
   {
     _set_se_translator(SE_Translator);
 
-    CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+    CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
     if (!CreateEnvironment)
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Failed to load CreateScriptEnvironment()\n");
@@ -412,7 +413,7 @@ int main(int argc, char* argv[])
       }
 
       AVS_linkage = 0;
-      ::FreeLibrary(hDLL);
+      platform::FreeLib(hDLL);
 
       PollKeys();
       return 0;
@@ -523,7 +524,7 @@ int main(int argc, char* argv[])
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
   }
 
-  ::FreeLibrary(hDLL);
+  platform::FreeLib(hDLL);
 
   if (Settings.bCreateLog)
   {
@@ -2332,14 +2333,14 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
   s_error = "";
   unsigned int uiFrameInterval = 10;
 
-  HINSTANCE hDLL;
+  platform::LibHandle hDLL;
 
 
 
   if (Settings.sAVSDLL == "")
-    hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(platform::kAvsLibName);
   else
-    hDLL = ::LoadLibraryEx(Settings.sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(Settings.sAVSDLL.c_str());
 
 
   if (!hDLL)
@@ -2354,7 +2355,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
   {
     _set_se_translator(SE_Translator);
 
-    CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+    CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
     if (!CreateEnvironment)
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Failed to load CreateScriptEnvironment()\n");
@@ -2367,7 +2368,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
     if (!AVS_env)
     {
       s_error = "Could not create IScriptenvironment";
-      ::FreeLibrary(hDLL);
+      platform::FreeLib(hDLL);
       return uiFrameInterval;
     }
 
@@ -2470,7 +2471,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
     uiFrameInterval = 10;
   }
 
-  if (!::FreeLibrary(hDLL))
+  if (!platform::FreeLib(hDLL))
   {
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
     s_error = "Cannot unload avisynth.dll";

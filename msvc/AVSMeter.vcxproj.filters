@@ -51,6 +51,9 @@
     <ClCompile Include="..\source\platform\win32\console_win32.cpp">
       <Filter>Source Files\platform</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp">
+      <Filter>Source Files\platform</Filter>
+    </ClCompile>
     <ClCompile Include="..\source\platform\win32\process_stats_win32.cpp">
       <Filter>Source Files\platform</Filter>
     </ClCompile>
@@ -85,6 +88,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\source\platform\console.h">
+      <Filter>Header Files\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\platform\dynlib.h">
+      <Filter>Header Files\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\platform\win32\utf_win32.h">
       <Filter>Header Files\platform</Filter>
     </ClInclude>
     <ClInclude Include="..\source\platform\process_stats.h">

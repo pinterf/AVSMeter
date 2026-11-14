@@ -17,6 +17,7 @@
 
 
 #include "AvisynthInfo.h"
+#include "platform/dynlib.h"
 
 
 const AVS_Linkage *AVS_linkage = 0;
@@ -165,11 +166,11 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
     return false;
   }
 
-  HINSTANCE hDLL;
+  platform::LibHandle hDLL;
   if (sAVSDLL == "")
-    hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(platform::kAvsLibName);
   else
-    hDLL = ::LoadLibraryEx(sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(sAVSDLL.c_str());
 
 
   if (!hDLL)
@@ -189,11 +190,11 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
   {
     _set_se_translator(SE_Translator);
 
-    CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+    CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
     if (!CreateEnvironment)
     {
       s_ErrorMsg = "Error: Failed to load CreateScriptEnvironment()";
-      ::FreeLibrary(hDLL);
+      platform::FreeLib(hDLL);
       return false;
     }
 
@@ -205,7 +206,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
       if (iInterfaceVersion < 5)
       {
         s_ErrorMsg = "Error: Cannot create IScriptenvironment";
-        ::FreeLibrary(hDLL);
+        platform::FreeLib(hDLL);
         return 0;
       }
 
@@ -297,7 +298,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
       s_ErrorMsg = "Error: Cannot load avisynth.dll";
   }
 
-  ::FreeLibrary(hDLL);
+  platform::FreeLib(hDLL);
 
   if (!bSuccess)
     return false;
@@ -771,11 +772,11 @@ bool CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDL
 
 void CAvisynthInfo::TestLoadPlugins()
 {
-  HINSTANCE hDLL;
+  platform::LibHandle hDLL;
   if (sAVSDLL == "")
-    hDLL = ::LoadLibraryEx("avisynth", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(platform::kAvsLibName);
   else
-    hDLL = ::LoadLibraryEx(sAVSDLL.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    hDLL = platform::LoadLib(sAVSDLL.c_str());
 
   if (!hDLL)
     return;
@@ -804,10 +805,10 @@ void CAvisynthInfo::TestLoadPlugins()
       {
         _set_se_translator(SE_Translator);
 
-        CREATE_ENV *CreateEnvironment = (CREATE_ENV *)GetProcAddress(hDLL, "CreateScriptEnvironment");
+        CREATE_ENV *CreateEnvironment = (CREATE_ENV *)platform::GetLibSymbol(hDLL, "CreateScriptEnvironment");
         if (!CreateEnvironment)
         {
-          ::FreeLibrary(hDLL);
+          platform::FreeLib(hDLL);
           return;
         }
 
@@ -815,13 +816,13 @@ void CAvisynthInfo::TestLoadPlugins()
 
         if (!AVS_env)
         {
-          ::FreeLibrary(hDLL);
+          platform::FreeLib(hDLL);
           return;
         }
       }
       catch (exception& ex)
       {
-        ::FreeLibrary(hDLL);
+        platform::FreeLib(hDLL);
         string dummy = ex.what();
         return;
       }
@@ -912,7 +913,7 @@ void CAvisynthInfo::TestLoadPlugins()
     AVS_linkage = 0;
   }
 
-  FreeLibrary(hDLL);
+  platform::FreeLib(hDLL);
 
   return;
 }
@@ -990,11 +991,11 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
       continue;
     }
 
-    HINSTANCE hDLL = ::LoadLibraryEx(szDepName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    platform::LibHandle hDLL = platform::LoadLib(szDepName);
     if (!hDLL)
       s_failed_dependencies += sDepDLL;
     else
-      ::FreeLibrary(hDLL);
+      platform::FreeLib(hDLL);
   }
 
   if (lpbaseAddress)
@@ -1160,28 +1161,28 @@ bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 
       if (filedata.find("libfftw3f-3.dll") != std::string::npos)
       {
-        HINSTANCE hDLL = ::LoadLibraryEx("libfftw3f-3.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        platform::LibHandle hDLL = platform::LoadLib("libfftw3f-3.dll");
         if (!hDLL)
         {
           s_failed_deps += "  libfftw3f-3.dll\n";
           bSuccess = false;
         }
         else
-          ::FreeLibrary(hDLL);
+          platform::FreeLib(hDLL);
 
         return bSuccess;
       }
 
       if (filedata.find("fftw3.dll") != std::string::npos)
       {
-        HINSTANCE hDLL = ::LoadLibraryEx("fftw3.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        platform::LibHandle hDLL = platform::LoadLib("fftw3.dll");
         if (!hDLL)
         {
           s_failed_deps += "  fftw3.dll\n";
           bSuccess = false;
         }
         else
-          ::FreeLibrary(hDLL);
+          platform::FreeLib(hDLL);
       }
     }
   }
