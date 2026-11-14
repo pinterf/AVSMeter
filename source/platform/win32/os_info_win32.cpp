@@ -107,7 +107,27 @@ std::string platform::OsVersion()
   if (osvi.dwMajorVersion == 10)
   {
     if (osvi.dwMinorVersion == 0)
-      sOSVersion = "Windows 10 " + sArchitecture;
+    {
+      // Windows 11 and the servers since 2016 still report 10.0; the build tells them apart
+      const char *pszName = "Windows 10";
+      if (osvi.wProductType == VER_NT_WORKSTATION)
+      {
+        if (osvi.dwBuildNumber >= 22000)
+          pszName = "Windows 11";
+      }
+      else
+      {
+        if (osvi.dwBuildNumber >= 26100)
+          pszName = "Windows Server 2025";
+        else if (osvi.dwBuildNumber >= 20348)
+          pszName = "Windows Server 2022";
+        else if (osvi.dwBuildNumber >= 17763)
+          pszName = "Windows Server 2019";
+        else
+          pszName = "Windows Server 2016";
+      }
+      sOSVersion = std::string(pszName) + " " + sArchitecture;
+    }
   }
 
   if ((osvi.wServicePackMajor > 0) || (osvi.wServicePackMinor > 0))
