@@ -40,19 +40,8 @@ CTimer::~CTimer()
 
 double CTimer::GetTimer()
 {
-#ifdef _WIN32
-  DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x1);
-  Sleep(0);
-#endif
   using namespace std::chrono;
-  double dNow = duration<double>(steady_clock::now().time_since_epoch()).count();
-
-#ifdef _WIN32
-  if (dwpOldMask != 0)
-    ::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
-#endif
-
-  return dNow;
+  return duration<double>(steady_clock::now().time_since_epoch()).count();
 }
 
 
