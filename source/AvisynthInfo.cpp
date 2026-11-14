@@ -17,6 +17,7 @@
 
 
 #include "AvisynthInfo.h"
+#include "platform/binary_info.h"
 #include "platform/dynlib.h"
 #include "platform/file_info.h"
 #include "platform/os_info.h"
@@ -48,13 +49,8 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
   bool bSuccess = true;
   s_ErrorMsg = "";
 
-  LOADED_IMAGE li;
-  bool bLoaded;
-
-  if (s_AVSDLL == "")
-    bLoaded = MapAndLoad("avisynth", NULL, &li, true,   true);
-  else
-    bLoaded = MapAndLoad((LPSTR)s_AVSDLL.c_str(), NULL, &li,    true,   true);
+  platform::BinaryInfo bi;
+  bool bLoaded = platform::InspectBinary((s_AVSDLL == "") ? platform::kAvsLibName : s_AVSDLL, bi);
 
   //Need a local copy
   sAVSDLL = s_AVSDLL;
@@ -70,68 +66,35 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
     return false;
   }
 
-  try
+  sDLLPath = bi.path;
+
+  if (bi.is64Bit)
   {
-    _set_se_translator(SE_Translator);
-    sDLLPath = utils.StrFormat("%s", li.ModuleName);
-
-    if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
+    bIs64BitAVSDLL = true;
+    if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
     {
-      bIs64BitAVSDLL = true;
-      if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
-      {
-        UnMapAndLoad(&li);
-        s_ErrorMsg = "Error: AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
-        return false;
-      }
-    }
-    else //32 Bit Avisynth DLL
-    {
-      if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
-      {
-        UnMapAndLoad(&li);
-        s_ErrorMsg = "Error: AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
-        return false;
-      }
-    }
-
-    DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-    PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
-    DWORD rvaNames = pExp->AddressOfNames;
-    DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
-
-    for (DWORD dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
-    {
-      DWORD rvaName = prvaNames[dwName];
-      string sName((char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL));
-      utils.StrToLC(sName);
-
-      if (sName.find("avs_linkage") != string::npos)
-      {
-        bAVSLinkage = true;
-        break;
-      }
+      s_ErrorMsg = "Error: AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
+      return false;
     }
   }
-  catch (exception& ex)
+  else //32 Bit Avisynth DLL
   {
-    bSuccess = false;
-    s_ErrorMsg = ex.what();
-  }
-  catch (...)
-  {
-    bSuccess = false;
-    s_ErrorMsg = utils.SysErrorMessage();
-    if (s_ErrorMsg != "")
-      s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
-    else
-      s_ErrorMsg = "Error: Cannot load avisynth.dll";
+    if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
+    {
+      s_ErrorMsg = "Error: AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
+      return false;
+    }
   }
 
-  UnMapAndLoad(&li);
-
-  if (!bSuccess)
-    return false;
+  for (string sName : bi.exports)
+  {
+    utils.StrToLC(sName);
+    if (sName.find("avs_linkage") != string::npos)
+    {
+      bAVSLinkage = true;
+      break;
+    }
+  }
 
 
   if (!bAVSLinkage)
@@ -650,14 +613,11 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 
 bool CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDLL)
 {
-  bool bRet = true;
   b_Is64BitDLL = false;
   s_Msg = "UNCATEGORIZED";
 
-  LOADED_IMAGE li;
-  bool bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,    true,   true);
-
-  if (!bLoaded)
+  platform::BinaryInfo bi;
+  if (!platform::InspectBinary(s_dll, bi))
   {
     s_Msg = utils.SysErrorMessage();
     if (s_Msg != "")
@@ -668,107 +628,46 @@ bool CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDL
     return false;
   }
 
-  try
+  b_Is64BitDLL = bi.is64Bit;
+  if (b_Is64BitDLL != PROCESS_64)
+    return true;
+
+  for (string sExportFunc : bi.exports)
   {
-    _set_se_translator(SE_Translator);
+    utils.StrToLC(sExportFunc); //convert to lower case for comparison
 
-    if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
+    if (sExportFunc.find("avisynthplugininit3") != string::npos) //CPP 2.6, 32 or 64 bit
     {
-      b_Is64BitDLL = true;
-      if (!PROCESS_64)
-      {
-        UnMapAndLoad(&li);
-        return true;
-      }
-    }
-    else
-    {
-      if (PROCESS_64)
-      {
-        UnMapAndLoad(&li);
-        return true;
-      }
+      s_Msg = "AVSCPP26";
+      break;
     }
 
-    DWORD expVA = li.FileHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-    if (expVA == 0)
+    if (sExportFunc.find("avisynthplugininit2") != string::npos) //CPP 2.5, 32 or 64 bit
     {
-      UnMapAndLoad(&li);
-      return true;
+      s_Msg = "AVSCPP25";
+      break;
     }
 
-    PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
-    if (pExp == 0)
+    if ((sExportFunc.find("avisynthplugininit") != string::npos) && !b_Is64BitDLL) //CPP 2.0
+      s_Msg = "AVSCPP20"; //don't break here, keep looping
+
+    if ((sExportFunc.find("avisynth_c_plugin_init@4") != string::npos) && !b_Is64BitDLL) //32 bit C2.5
     {
-      UnMapAndLoad(&li);
-      return true;
+      s_Msg = "AVSC25";
+      break;
     }
 
-    DWORD rvaNames = pExp->AddressOfNames;
-    DWORD *prvaNames = (DWORD*)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaNames, NULL);
-    if (prvaNames == 0)
+    if ((sExportFunc.find("avisynth_c_plugin_init") != string::npos) && b_Is64BitDLL) //64 bit C2.5
     {
-      UnMapAndLoad(&li);
-      return true;
+      s_Msg = "AVSC25";
+      break;
     }
 
-    DWORD dwName = 0;
-
-    for (dwName = 0; dwName < pExp->NumberOfNames; ++dwName)
-    {
-      DWORD rvaName = prvaNames[dwName];
-      std::string sExportFunc((char *)ImageRvaToVa(li.FileHeader, li.MappedAddress, rvaName, NULL));
-      std::transform(sExportFunc.begin(), sExportFunc.end(), sExportFunc.begin(), ::tolower); //convert to lower case for comparison
-
-      if (sExportFunc.find("avisynthplugininit3") != string::npos) //CPP 2.6, 32 or 64 bit
-      {
-        s_Msg = "AVSCPP26";
-        break;
-      }
-
-      if (sExportFunc.find("avisynthplugininit2") != string::npos) //CPP 2.5, 32 or 64 bit
-      {
-        s_Msg = "AVSCPP25";
-        break;
-      }
-
-      if ((sExportFunc.find("avisynthplugininit") != string::npos) && !b_Is64BitDLL) //CPP 2.0
-        s_Msg = "AVSCPP20"; //don't break here, keep looping
-
-      if ((sExportFunc.find("avisynth_c_plugin_init@4") != string::npos) && !b_Is64BitDLL) //32 bit C2.5
-      {
-        s_Msg = "AVSC25";
-        break;
-      }
-
-      if ((sExportFunc.find("avisynth_c_plugin_init") != string::npos) && b_Is64BitDLL) //64 bit C2.5
-      {
-        s_Msg = "AVSC25";
-        break;
-      }
-
-      if ((sExportFunc == "avisynth_c_plugin_init") && !b_Is64BitDLL) //C2.0
-        s_Msg = "AVSC20"; //don't break here, keep looping
-    }
-  }
-  catch (exception& ex)
-  {
-    bRet = false;
-    s_Msg = utils.StrFormat("\"Error: %s\"\n", s_dll.c_str()) + ex.what();
-  }
-  catch (...)
-  {
-    bRet = false;
-    s_Msg = utils.SysErrorMessage();
-    if (s_Msg != "")
-      s_Msg = utils.StrFormat("\"Error: %s\"\n%s", s_dll.c_str(), s_Msg.c_str());
-    else
-      s_Msg = utils.StrFormat("Error: Unknown exception:\n\"%s\"", s_dll.c_str());
+    if ((sExportFunc == "avisynth_c_plugin_init") && !b_Is64BitDLL) //C2.0
+      s_Msg = "AVSC20"; //don't break here, keep looping
   }
 
-  UnMapAndLoad(&li);
-
-  return bRet;
+  return true;
 }
 
 
@@ -923,53 +822,19 @@ void CAvisynthInfo::TestLoadPlugins()
 
 void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, bool &fftw_fail)
 {
-  HANDLE hFile = NULL;
-  HANDLE hFileMapping = NULL;
-  LPBYTE lpbaseAddress = NULL;
   s_failed_dependencies = "";
   string sTemp = "";
 
-  hFile = CreateFile(s_dll.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (hFile == INVALID_HANDLE_VALUE)
+  platform::BinaryInfo bi;
+  if (!platform::InspectBinary(s_dll, bi) || bi.imports.empty())
     return;
-
-  hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-  if (hFileMapping == NULL || hFileMapping == INVALID_HANDLE_VALUE)
-  {
-    CloseHandle(hFile);
-    return;
-  }
-
-  lpbaseAddress = (LPBYTE)MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
-  if (lpbaseAddress == NULL)
-  {
-    CloseHandle(hFileMapping);
-    CloseHandle(hFile);
-    return;
-  }
-
-  PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)lpbaseAddress;
-  PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(lpbaseAddress + pDosHeader->e_lfanew);
-  DWORD rva_import_table = pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-  if (rva_import_table == 0)
-  {
-    UnmapViewOfFile(lpbaseAddress);
-    CloseHandle(hFileMapping);
-    CloseHandle(hFile);
-    return;
-  }
 
   s_dependencies = s_dll + ":\n";
   string sDepDLL = "";
-  PIMAGE_IMPORT_DESCRIPTOR pImageTable = (PIMAGE_IMPORT_DESCRIPTOR)ImageRvaToVa(pNtHeaders, lpbaseAddress, rva_import_table, NULL);
-  IMAGE_IMPORT_DESCRIPTOR null_iid;
-  IMAGE_THUNK_DATA null_thunk;
-  memset(&null_iid, 0, sizeof(null_iid));
-  memset(&null_thunk, 0, sizeof(null_thunk));
 
-  for (int i = 0; memcmp(pImageTable + i, &null_iid, sizeof(null_iid)) != 0; i++)
+  for (const string &sImport : bi.imports)
   {
-    LPCSTR szDepName = (LPCSTR)ImageRvaToVa(pNtHeaders, lpbaseAddress, pImageTable[i].Name,NULL);
+    const char *szDepName = sImport.c_str();
     sTemp = utils.StrFormat("%s", szDepName);
     utils.StrToLC(sTemp);
     utils.StrTrim(sTemp);
@@ -979,7 +844,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 
     if ((sTemp == "msvcm80.dll") || (sTemp == "msvcp80.dll") || (sTemp == "msvcr80.dll"))
     {
-      if (!IsRuntimeInstalled("2005"))
+      if (!platform::IsVCRuntimeInstalled("2005", bIs64BitAVSDLL))
         s_failed_dependencies += sDepDLL;
 
       continue;
@@ -987,7 +852,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 
     if ((sTemp == "msvcm90.dll") || (sTemp == "msvcp90.dll") || (sTemp == "msvcr90.dll"))
     {
-      if (!IsRuntimeInstalled("2008"))
+      if (!platform::IsVCRuntimeInstalled("2008", bIs64BitAVSDLL))
         s_failed_dependencies += sDepDLL;
 
       continue;
@@ -999,13 +864,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
     else
       platform::FreeLib(hDLL);
   }
-
-  if (lpbaseAddress)
-    UnmapViewOfFile(lpbaseAddress);
-  if (hFileMapping)
-    CloseHandle(hFileMapping);
-  if (hFile)
-    CloseHandle(hFile);
 
   if (!CheckFFTW(s_dll, s_failed_dependencies))
     fftw_fail = true;
@@ -1067,78 +925,6 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
   s_hint.erase(s_hint.find_last_not_of("\n") + 1);
 
   return;
-}
-
-
-bool CAvisynthInfo::IsRuntimeInstalled(string s_version)
-{
-  bool bInstalled = false;
-  LONG lRes;
-  HKEY hKeyResult = 0;
-
-  char szSubKey[2048] = "";
-  vector<string> vSubKeys;
-  DWORD dwBytes = 2050;
-  DWORD dwIndex = 0;
-  if (platform::Is64BitOS())
-    lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Classes\\Installer\\Products", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-  else
-    lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Classes\\Installer\\Products", 0, KEY_READ, &hKeyResult);
-
-  if (lRes == ERROR_SUCCESS)
-  {
-    while (RegEnumKeyEx(hKeyResult, dwIndex, szSubKey, &dwBytes, NULL, NULL, NULL, NULL) == ERROR_SUCCESS)
-    {
-      vSubKeys.push_back(utils.StrFormat("%s", szSubKey));
-      dwBytes = 2050;
-      ++dwIndex;
-    }
-  }
-  RegCloseKey(hKeyResult);
-
-  for (size_t uiKey = 0; uiKey < vSubKeys.size(); uiKey++)
-  {
-    string sKey = "Software\\Classes\\Installer\\Products\\" + vSubKeys[uiKey];
-    hKeyResult = 0;
-
-    if (platform::Is64BitOS())
-      lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, sKey.c_str(), 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
-    else
-      lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, sKey.c_str(), 0, KEY_READ, &hKeyResult);
-
-    if (lRes == ERROR_SUCCESS)
-    {
-      char szValue[2048] = "";
-      DWORD dwType = REG_SZ;
-      dwBytes = 2050;
-      if (RegQueryValueEx(hKeyResult, "ProductName", NULL, &dwType, (LPBYTE)szValue, &dwBytes) == 0)
-      {
-        string sValue(szValue);
-        utils.StrToLC(sValue);
-
-        bool bVersion = false;
-        bool bVC = false;
-        bool bRedist = false;
-        bool b64Bit = false;
-
-        if (sValue.find(s_version) != string::npos)
-          bVersion = true;
-        if (sValue.find("visual c++") != string::npos)
-          bVC = true;
-        if ((sValue.find("redistributable") != string::npos) || (sValue.find("runtime") != string::npos))
-          bRedist = true;
-        if (sValue.find("x64") != string::npos)
-          b64Bit = true;
-        if (bVersion && bVC && bRedist && !b64Bit && !bIs64BitAVSDLL)
-          bInstalled = true;
-        if (bVersion && bVC && bRedist && b64Bit && bIs64BitAVSDLL)
-          bInstalled = true;
-      }
-    }
-    RegCloseKey(hKeyResult);
-  }
-
-  return bInstalled;
 }
 
 

@@ -80,6 +80,15 @@ namespace platform::win32
     std::wstring ws = Utf8ToWide(psz);
     return ws.empty() ? AnsiToWide(psz) : ws;
   }
+
+  // Back to the encoding ToWide() detected on psz_like.
+  inline std::string FromWideAs(const wchar_t *pwsz, const char *psz_like)
+  {
+    if ((*psz_like != 0) && Utf8ToWide(psz_like).empty())
+      return WideToAnsi(pwsz);
+
+    return WideToUtf8(pwsz);
+  }
 }
 
 

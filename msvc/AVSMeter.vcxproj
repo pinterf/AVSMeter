@@ -78,7 +78,7 @@
       <SubSystem>Console</SubSystem>
       <MinimumRequiredVersion>6.01</MinimumRequiredVersion>
       <LargeAddressAware>true</LargeAddressAware>
-      <AdditionalDependencies>$(PrebuiltLibcpuidLibrary);Shell32.lib;comdlg32.lib;psapi.lib;imagehlp.lib;version.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(PrebuiltLibcpuidLibrary);Shell32.lib;comdlg32.lib;psapi.lib;version.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
@@ -92,6 +92,7 @@
     <ClCompile Include="..\source\SysInfo.cpp" />
     <ClCompile Include="..\source\Timer.cpp" />
     <ClCompile Include="..\source\Utility.cpp" />
+    <ClCompile Include="..\source\platform\win32\binary_info_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\console_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\os_info_win32.cpp" />
@@ -110,6 +111,7 @@
     <ClInclude Include="..\source\Timer.h" />
     <ClInclude Include="..\source\Utility.h" />
     <ClInclude Include="..\source\version.h" />
+    <ClInclude Include="..\source\platform\binary_info.h" />
     <ClInclude Include="..\source\platform\console.h" />
     <ClInclude Include="..\source\platform\dynlib.h" />
     <ClInclude Include="..\source\platform\os_info.h" />

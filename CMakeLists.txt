@@ -72,6 +72,7 @@ set(AVSMeter_Headers
   "${SRC}/platform/console.h"
   "${SRC}/platform/dynlib.h"
   "${SRC}/platform/os_info.h"
+  "${SRC}/platform/binary_info.h"
   "${SRC}/platform/file_info.h"
   "${SRC}/platform/process.h"
   "${SRC}/platform/process_stats.h"
@@ -83,6 +84,7 @@ if(WIN32)
     "${SRC}/platform/win32/console_win32.cpp"
     "${SRC}/platform/win32/dynlib_win32.cpp"
     "${SRC}/platform/win32/os_info_win32.cpp"
+    "${SRC}/platform/win32/binary_info_win32.cpp"
     "${SRC}/platform/win32/file_info_win32.cpp"
     "${SRC}/platform/win32/process_win32.cpp"
     "${SRC}/platform/win32/utf_win32.h"
@@ -116,7 +118,7 @@ if(WIN32)
   # prebuilt libcpuid 0.8.2 static libraries
   target_link_libraries(AVSMeter PRIVATE
     "${SRC}/cpuid/libcpuid${ArchBits}$<$<CONFIG:Debug>:d>.lib"
-    kernel32 user32 advapi32 shell32 comdlg32 psapi imagehlp version
+    kernel32 user32 advapi32 shell32 comdlg32 psapi version
   )
 endif()
 

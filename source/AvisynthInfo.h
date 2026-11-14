@@ -62,7 +62,6 @@ private:
   void                TestLoadPlugins();
   void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, bool &fftw_fail);
   bool                CheckFFTW(string s_dll, string &s_failed_deps);
-  bool                IsRuntimeInstalled(string s_version);
   typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 
