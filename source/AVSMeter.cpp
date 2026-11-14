@@ -27,6 +27,7 @@
 #include "version.h"
 #include "platform/console.h"
 #include "platform/dynlib.h"
+#include "platform/single_instance.h"
 
 
 #define COLOR_DEFAULT           0
@@ -182,12 +183,8 @@ int main(int argc, char* argv[])
 
   if (Settings.bAllowOnlyOneInstance)
   {
-    if (PROCESS_64)
-      CreateMutex(NULL, true, "__avsmeter64__single__instance__lock__");
-    else
-      CreateMutex(NULL, true, "__avsmeter32__single__instance__lock__");
-
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    const char *pszLock = PROCESS_64 ? "__avsmeter64__single__instance__lock__" : "__avsmeter32__single__instance__lock__";
+    if (!platform::AcquireSingleInstance(pszLock))
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: One instance of AVSMeter is already running\n");
       PollKeys();

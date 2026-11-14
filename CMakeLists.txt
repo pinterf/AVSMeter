@@ -72,6 +72,7 @@ set(AVSMeter_Headers
   "${SRC}/platform/console.h"
   "${SRC}/platform/dynlib.h"
   "${SRC}/platform/process_stats.h"
+  "${SRC}/platform/single_instance.h"
 )
 
 if(WIN32)
@@ -80,6 +81,7 @@ if(WIN32)
     "${SRC}/platform/win32/dynlib_win32.cpp"
     "${SRC}/platform/win32/utf_win32.h"
     "${SRC}/platform/win32/process_stats_win32.cpp"
+    "${SRC}/platform/win32/single_instance_win32.cpp"
   )
 endif()
 
