@@ -29,6 +29,7 @@ CGPUInfo::CGPUInfo()
   sensors.MemoryUsedDynamic = 0;
   sensors.ReadError = false;
   sError = "";
+  bInitialized = false;
   pMapAddr = NULL;
   hMapFile = NULL;
 }
@@ -65,6 +66,7 @@ void CGPUInfo::GPUZInit()
       sError = "Error initializing GPU-Z memory interface";
     if (hMapFile)
       CloseHandle(hMapFile);
+    hMapFile = NULL;
     return;
   }
 
@@ -80,11 +82,14 @@ void CGPUInfo::GPUZRelease()
   if (!bInitialized)
     return;
 
+  if (pMapAddr)
+    UnmapViewOfFile(pMapAddr);
   if (hMapFile)
     CloseHandle(hMapFile);
 
   pMapAddr = NULL;
   hMapFile = NULL;
+  bInitialized = false;
 
   return;
 }
