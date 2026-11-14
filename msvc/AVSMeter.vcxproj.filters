@@ -54,31 +54,34 @@
     <ClInclude Include="..\source\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\alignment.h">
+    <ClInclude Include="..\source\avs_headers\avs\alignment.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
     <ClInclude Include="..\source\avs_headers\avisynth.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\capi.h">
+    <ClInclude Include="..\source\avs_headers\avs\capi.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\config.h">
+    <ClInclude Include="..\source\avs_headers\avs\config.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\cpuid.h">
+    <ClInclude Include="..\source\avs_headers\avs\cpuid.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\filesystem.h">
+    <ClInclude Include="..\source\avs_headers\avs\filesystem.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\minmax.h">
+    <ClInclude Include="..\source\avs_headers\avs\minmax.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\types.h">
+    <ClInclude Include="..\source\avs_headers\avs\posix.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\win.h">
+    <ClInclude Include="..\source\avs_headers\avs\types.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\avs\win.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
     <ClInclude Include="..\source\cpuid\libcpuid.h">
