@@ -30,7 +30,7 @@ public:
   CAvisynthInfo();
   virtual ~CAvisynthInfo();
 
-  BOOL    GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugCheck);
+  bool    GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugCheck);
   int     iInterfaceVersion;
   vector  <string> vPluginDirs;
   vector  <string> vInternalFunctions;
@@ -45,26 +45,26 @@ public:
   string  sVersionString;
   string  sVersionNumber;
   string  sTimeStamp;
-  BOOL    bIs64BitAVSDLL;
-  BOOL    bIsAVSPlus;
-  BOOL    bIsMTVersion;
+  bool    bIs64BitAVSDLL;
+  bool    bIsAVSPlus;
+  bool    bIsMTVersion;
   size_t  nLoadPlugInterval;
 
 private:
   CUtils              utils;
   string              sAVSDLL;
-  BOOL                IsGruntFunc(string s_function);
+  bool                IsGruntFunc(string s_function);
   void                EnumPluginDirs();
   void                EnumPluginDLLs();
   void                AddScriptFunctions(string s_avsi_file);
   void                CheckFunctionDuplicates();
-  BOOL                GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL);
+  bool                GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDLL);
   void                TestLoadPlugins();
-  void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, BOOL &fftw_fail);
-  BOOL                CheckFFTW(string s_dll, string &s_failed_deps);
-  BOOL                IsRuntimeInstalled(string s_version);
-  __int64             FileSize(string s_file);
-  BOOL                Is64BitOS();
+  void                GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, bool &fftw_fail);
+  bool                CheckFFTW(string s_dll, string &s_failed_deps);
+  bool                IsRuntimeInstalled(string s_version);
+  int64_t             FileSize(string s_file);
+  bool                Is64BitOS();
   typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 

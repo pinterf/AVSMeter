@@ -64,13 +64,13 @@ public:
 
   //File/directory/system
   string         SysErrorMessage();
-  __int64        FileSize(string s_file);
+  int64_t        FileSize(string s_file);
   string         GetFileVersion(string s_file);
   string         GetProductVersion(string s_file);
   string         GetFileTimeStamp(string s_file);
   string         GetFileDateStamp(string s_file);
-  BOOL           FileExists(string s_file);
-  BOOL           DirectoryExists(string s_dir);
+  bool           FileExists(string s_file);
+  bool           DirectoryExists(string s_dir);
   string         GetWOW64FilePath(string s_filepath);
 
   //Console functions
@@ -88,8 +88,8 @@ public:
   void           StrToLC(string &s_string);
   string         StrFormatFPS(double d_fps);
   string         StrFormatTPF(double d_frametime);
-  void           StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, BOOL b_removedups);
-  BOOL           IsNumeric(string s_string);
+  void           StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, bool b_removedups);
+  bool           IsNumeric(string s_string);
 
 private:
   HANDLE         hConsole;

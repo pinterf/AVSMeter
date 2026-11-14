@@ -30,11 +30,11 @@ public:
   virtual        ~CSysInfo();
   string         GetOSVersion();
   string         GetFormattedSystemDateTime();
-  BOOL           Is64BitOS();
+  bool           Is64BitOS();
 
   //CPUID
   void           GetCPUID();
-  BOOL           bCPUIDSuccess;
+  bool           bCPUIDSuccess;
   struct CPUData
   {
     string       CPUBrandString;

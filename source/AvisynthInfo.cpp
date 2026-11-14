@@ -31,27 +31,27 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugCheck)
+bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugCheck)
 {
   sDLLPath = "";
-  bIs64BitAVSDLL = FALSE;
-  bIsMTVersion = FALSE;
-  bIsAVSPlus = FALSE;
+  bIs64BitAVSDLL = false;
+  bIsMTVersion = false;
+  bIsAVSPlus = false;
   iInterfaceVersion = 0;
   sFileVersion = "";
   sProductVersion = "";
   sVersionString = "Unknown Avisynth Version";
-  BOOL bAVSLinkage = FALSE;
-  BOOL bSuccess = TRUE;
+  bool bAVSLinkage = false;
+  bool bSuccess = true;
   s_ErrorMsg = "";
 
   LOADED_IMAGE li;
-  BOOL bLoaded;
+  bool bLoaded;
 
   if (s_AVSDLL == "")
-    bLoaded = MapAndLoad("avisynth", NULL, &li, TRUE,   TRUE);
+    bLoaded = MapAndLoad("avisynth", NULL, &li, true,   true);
   else
-    bLoaded = MapAndLoad((LPSTR)s_AVSDLL.c_str(), NULL, &li,    TRUE,   TRUE);
+    bLoaded = MapAndLoad((LPSTR)s_AVSDLL.c_str(), NULL, &li,    true,   true);
 
   //Need a local copy
   sAVSDLL = s_AVSDLL;
@@ -64,7 +64,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     else
       s_ErrorMsg = "Error: Cannot load avisynth.dll";
 
-    return FALSE;
+    return false;
   }
 
   try
@@ -74,12 +74,12 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
 
     if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
     {
-      bIs64BitAVSDLL = TRUE;
+      bIs64BitAVSDLL = true;
       if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
       {
         UnMapAndLoad(&li);
         s_ErrorMsg = "Error: AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
-        return FALSE;
+        return false;
       }
     }
     else //32 Bit Avisynth DLL
@@ -88,7 +88,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
       {
         UnMapAndLoad(&li);
         s_ErrorMsg = "Error: AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
-        return FALSE;
+        return false;
       }
     }
 
@@ -105,19 +105,19 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
 
       if (sName.find("avs_linkage") != string::npos)
       {
-        bAVSLinkage = TRUE;
+        bAVSLinkage = true;
         break;
       }
     }
   }
   catch (exception& ex)
   {
-    bSuccess = FALSE;
+    bSuccess = false;
     s_ErrorMsg = ex.what();
   }
   catch (...)
   {
-    bSuccess = FALSE;
+    bSuccess = false;
     s_ErrorMsg = utils.SysErrorMessage();
     if (s_ErrorMsg != "")
       s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
@@ -128,7 +128,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
   UnMapAndLoad(&li);
 
   if (!bSuccess)
-    return FALSE;
+    return false;
 
 
   if (!bAVSLinkage)
@@ -140,7 +140,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     else
       s_ErrorMsg = utils.StrFormat("Error: Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str(), sFileVersion.c_str());
 
-    return FALSE;
+    return false;
   }
 
 
@@ -153,7 +153,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
   string sFailedDeps = "";
   string sNote = "";
   string sHint = "";
-  BOOL bFFTWFail = FALSE;
+  bool bFFTWFail = false;
   GetDLLDependencies(sDLLPath, sDeps, sFailedDeps, sHint, bFFTWFail);
 
   if (sFailedDeps != "")
@@ -162,7 +162,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     if (sHint != "")
       s_ErrorMsg += utils.StrFormat("\n\nNote:\n  %s\n", sHint.c_str());
 
-    return FALSE;
+    return false;
   }
 
   HINSTANCE hDLL;
@@ -180,7 +180,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     else
       s_ErrorMsg = "Error: Cannot load avisynth.dll";
 
-    return FALSE;
+    return false;
   }
 
   IScriptEnvironment *AVS_env = 0;
@@ -194,7 +194,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     {
       s_ErrorMsg = "Error: Failed to load CreateScriptEnvironment()";
       ::FreeLibrary(hDLL);
-      return FALSE;
+      return false;
     }
 
     iInterfaceVersion = 16;
@@ -217,9 +217,9 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     AVSValue foo;
 
     if (AVS_env->FunctionExists("AutoloadPlugins"))
-      bIsAVSPlus = TRUE;
+      bIsAVSPlus = true;
     if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
-      bIsMTVersion = TRUE;
+      bIsMTVersion = true;
 
     try
     {
@@ -251,7 +251,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     {
       foo = AVS_env->GetVar("$InternalFunctions$");
       sInternalFunctions = foo.AsString();
-      utils.StrTokenize(sInternalFunctions, vInternalFunctions, " ", TRUE);
+      utils.StrTokenize(sInternalFunctions, vInternalFunctions, " ", true);
       sort(vInternalFunctions.begin(), vInternalFunctions.end(), CompareNoCase);
     }
     catch(...)
@@ -264,7 +264,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
     {
       foo = AVS_env->GetVar("$PluginFunctions$");
       sDLLFunctions = foo.AsString();
-      utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", TRUE);
+      utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", true);
       sort(vPluginFunctions.begin(), vPluginFunctions.end(), CompareNoCase);
     }
     catch(...)
@@ -279,17 +279,17 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
   }
   catch (AvisynthError err)
   {
-    bSuccess = FALSE;
+    bSuccess = false;
     s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
   }
   catch (exception& ex)
   {
-    bSuccess = FALSE;
+    bSuccess = false;
     s_ErrorMsg = ex.what();
   }
   catch (...)
   {
-    bSuccess = FALSE;
+    bSuccess = false;
     s_ErrorMsg = utils.SysErrorMessage();
     if (s_ErrorMsg != "")
       s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
@@ -300,7 +300,7 @@ BOOL CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, BOOL b_ExtPlugC
   ::FreeLibrary(hDLL);
 
   if (!bSuccess)
-    return FALSE;
+    return false;
 
 
   string sFunction = "";
@@ -438,7 +438,7 @@ void CAvisynthInfo::EnumPluginDLLs()
 {
   string sDir = "";
   string sMessage = "";
-  BOOL bIs64BitPlugin = FALSE;
+  bool bIs64BitPlugin = false;
   set <string> mDuplicates;
 
   for (size_t uiPlugDir = 0; uiPlugDir < vPluginDirs.size(); uiPlugDir++)
@@ -452,7 +452,7 @@ void CAvisynthInfo::EnumPluginDLLs()
       WIN32_FIND_DATA fd;
       HANDLE hFind;
       string sFind =  sDir + "\\*.*";
-      BOOL bRet = TRUE;
+      bool bRet = true;
       string sCurrentFile = "";
       string sCurrentFileLC = "";
       hFind = FindFirstFile (sFind.c_str(), &fd);
@@ -645,14 +645,14 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 }
 
 
-BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDLL)
+bool CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDLL)
 {
-  BOOL bRet = TRUE;
-  b_Is64BitDLL = FALSE;
+  bool bRet = true;
+  b_Is64BitDLL = false;
   s_Msg = "UNCATEGORIZED";
 
   LOADED_IMAGE li;
-  BOOL bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,    TRUE,   TRUE);
+  bool bLoaded = MapAndLoad((LPSTR)s_dll.c_str(), NULL, &li,    true,   true);
 
   if (!bLoaded)
   {
@@ -662,7 +662,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
     else
       s_Msg = utils.StrFormat("Error loading \"%s\"", s_dll.c_str());
 
-    return FALSE;
+    return false;
   }
 
   try
@@ -671,11 +671,11 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
 
     if (li.FileHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_I386)
     {
-      b_Is64BitDLL = TRUE;
+      b_Is64BitDLL = true;
       if (!PROCESS_64)
       {
         UnMapAndLoad(&li);
-        return TRUE;
+        return true;
       }
     }
     else
@@ -683,7 +683,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
       if (PROCESS_64)
       {
         UnMapAndLoad(&li);
-        return TRUE;
+        return true;
       }
     }
 
@@ -691,14 +691,14 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
     if (expVA == 0)
     {
       UnMapAndLoad(&li);
-      return TRUE;
+      return true;
     }
 
     PIMAGE_EXPORT_DIRECTORY pExp = (PIMAGE_EXPORT_DIRECTORY)ImageRvaToVa(li.FileHeader, li.MappedAddress, expVA, NULL);
     if (pExp == 0)
     {
       UnMapAndLoad(&li);
-      return TRUE;
+      return true;
     }
 
     DWORD rvaNames = pExp->AddressOfNames;
@@ -706,7 +706,7 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
     if (prvaNames == 0)
     {
       UnMapAndLoad(&li);
-      return TRUE;
+      return true;
     }
 
     DWORD dwName = 0;
@@ -750,12 +750,12 @@ BOOL CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, BOOL &b_Is64BitDL
   }
   catch (exception& ex)
   {
-    bRet = FALSE;
+    bRet = false;
     s_Msg = utils.StrFormat("\"Error: %s\"\n", s_dll.c_str()) + ex.what();
   }
   catch (...)
   {
-    bRet = FALSE;
+    bRet = false;
     s_Msg = utils.SysErrorMessage();
     if (s_Msg != "")
       s_Msg = utils.StrFormat("\"Error: %s\"\n%s", s_dll.c_str(), s_Msg.c_str());
@@ -792,7 +792,7 @@ void CAvisynthInfo::TestLoadPlugins()
   string sHint = "";
   string sMsg = "";
   string sTemp = "";
-  BOOL bFFTWFail = FALSE;
+  bool bFFTWFail = false;
 
   IScriptEnvironment *AVS_env = 0;
 
@@ -844,7 +844,7 @@ void CAvisynthInfo::TestLoadPlugins()
     sDependencies = "";
     sFailedDependencies = "";
     sHint = "";
-    bFFTWFail = FALSE;
+    bFFTWFail = false;
     GetDLLDependencies(sPlugin, sDependencies, sFailedDependencies, sHint, bFFTWFail);
 
     sPlugLoadError = "";
@@ -918,7 +918,7 @@ void CAvisynthInfo::TestLoadPlugins()
 }
 
 
-void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, BOOL &fftw_fail)
+void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, bool &fftw_fail)
 {
   HANDLE hFile = NULL;
   HANDLE hFileMapping = NULL;
@@ -1005,9 +1005,9 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
     CloseHandle(hFile);
 
   if (!CheckFFTW(s_dll, s_failed_dependencies))
-    fftw_fail = TRUE;
+    fftw_fail = true;
   else
-    fftw_fail = FALSE;
+    fftw_fail = false;
 
   s_failed_dependencies.erase(s_failed_dependencies.find_last_not_of("\n") + 1);
   sTemp = s_failed_dependencies;
@@ -1067,9 +1067,9 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 }
 
 
-BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
+bool CAvisynthInfo::IsRuntimeInstalled(string s_version)
 {
-  BOOL bInstalled = FALSE;
+  bool bInstalled = false;
   LONG lRes;
   HKEY hKeyResult = 0;
 
@@ -1113,23 +1113,23 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
         string sValue(szValue);
         utils.StrToLC(sValue);
 
-        BOOL bVersion = FALSE;
-        BOOL bVC = FALSE;
-        BOOL bRedist = FALSE;
-        BOOL b64Bit = FALSE;
+        bool bVersion = false;
+        bool bVC = false;
+        bool bRedist = false;
+        bool b64Bit = false;
 
         if (sValue.find(s_version) != string::npos)
-          bVersion = TRUE;
+          bVersion = true;
         if (sValue.find("visual c++") != string::npos)
-          bVC = TRUE;
+          bVC = true;
         if ((sValue.find("redistributable") != string::npos) || (sValue.find("runtime") != string::npos))
-          bRedist = TRUE;
+          bRedist = true;
         if (sValue.find("x64") != string::npos)
-          b64Bit = TRUE;
+          b64Bit = true;
         if (bVersion && bVC && bRedist && !b64Bit && !bIs64BitAVSDLL)
-          bInstalled = TRUE;
+          bInstalled = true;
         if (bVersion && bVC && bRedist && b64Bit && bIs64BitAVSDLL)
-          bInstalled = TRUE;
+          bInstalled = true;
       }
     }
     RegCloseKey(hKeyResult);
@@ -1139,10 +1139,10 @@ BOOL CAvisynthInfo::IsRuntimeInstalled(string s_version)
 }
 
 
-BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
+bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 {
-  __int64 fsize = FileSize(s_dll);
-  BOOL bSuccess = TRUE;
+  int64_t fsize = FileSize(s_dll);
+  bool bSuccess = true;
 
   if ((fsize < (20 * 1024 * 1024)) && (fsize > 1024 ))
   {
@@ -1164,7 +1164,7 @@ BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
         if (!hDLL)
         {
           s_failed_deps += "  libfftw3f-3.dll\n";
-          bSuccess = FALSE;
+          bSuccess = false;
         }
         else
           ::FreeLibrary(hDLL);
@@ -1178,7 +1178,7 @@ BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
         if (!hDLL)
         {
           s_failed_deps += "  fftw3.dll\n";
-          bSuccess = FALSE;
+          bSuccess = false;
         }
         else
           ::FreeLibrary(hDLL);
@@ -1190,14 +1190,14 @@ BOOL CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 }
 
 
-__int64 CAvisynthInfo::FileSize(string s_file)
+int64_t CAvisynthInfo::FileSize(string s_file)
 {
   WIN32_FIND_DATA fd;
-  __int64 iSize = -1;
+  int64_t iSize = -1;
 
   HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
   if (hFind != INVALID_HANDLE_VALUE)
-    iSize = (((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
+    iSize = (((int64_t)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
 
   FindClose(hFind);
 
@@ -1205,71 +1205,71 @@ __int64 CAvisynthInfo::FileSize(string s_file)
 }
 
 
-BOOL CAvisynthInfo::Is64BitOS()
+bool CAvisynthInfo::Is64BitOS()
 {
   if (sizeof(void*) == 8)
-    return TRUE; //64 on 64
+    return true; //64 on 64
 
   BOOL bWoW64Process = FALSE;
   typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
   LPFN_ISWOW64PROCESS fnIsWow64Process;
   HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
   if (hKernel32 == NULL)
-    return FALSE;
+    return false;
 
   fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
   if (fnIsWow64Process != NULL)
     fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
   if (bWoW64Process)
-    return TRUE;
+    return true;
 
-  return FALSE;
+  return false;
 }
 
 
-BOOL CAvisynthInfo::IsGruntFunc(string s_function)
+bool CAvisynthInfo::IsGruntFunc(string s_function)
 {
   utils.StrToLC(s_function);
 
-  if (s_function == "averagechromau") return TRUE;
-  if (s_function == "averagechromav") return TRUE;
-  if (s_function == "averageluma") return TRUE;
-  if (s_function == "bindstr") return TRUE;
-  if (s_function == "chromaudifference") return TRUE;
-  if (s_function == "chromavdifference") return TRUE;
-  if (s_function == "conditionalfilter") return TRUE;
-  if (s_function == "frameevaluate") return TRUE;
-  if (s_function == "gconditionalfilter") return TRUE;
-  if (s_function == "gframeevaluate") return TRUE;
-  if (s_function == "grtconfig") return TRUE;
-  if (s_function == "gscriptclip") return TRUE;
-  if (s_function == "gwritefile") return TRUE;
-  if (s_function == "gwritefileif") return TRUE;
-  if (s_function == "lumadifference") return TRUE;
-  if (s_function == "rgbdifference") return TRUE;
-  if (s_function == "rgbdifferencefromprevious") return TRUE;
-  if (s_function == "rgbdifferencetonext") return TRUE;
-  if (s_function == "scriptclip") return TRUE;
-  if (s_function == "udifferencefromprevious") return TRUE;
-  if (s_function == "udifferencetonext") return TRUE;
-  if (s_function == "uplanemax") return TRUE;
-  if (s_function == "uplanemedian") return TRUE;
-  if (s_function == "uplanemin") return TRUE;
-  if (s_function == "uplaneminmaxdifference") return TRUE;
-  if (s_function == "vdifferencefromprevious") return TRUE;
-  if (s_function == "vdifferencetonext") return TRUE;
-  if (s_function == "vplanemax") return TRUE;
-  if (s_function == "vplanemedian") return TRUE;
-  if (s_function == "vplanemin") return TRUE;
-  if (s_function == "vplaneminmaxdifference") return TRUE;
-  if (s_function == "writefile") return TRUE;
-  if (s_function == "writefileif") return TRUE;
-  if (s_function == "ydifferencefromprevious") return TRUE;
-  if (s_function == "ydifferencetonext") return TRUE;
-  if (s_function == "yplanemax") return TRUE;
-  if (s_function == "yplanemedian") return TRUE;
-  if (s_function == "yplanemin") return TRUE;
-  if (s_function == "yplaneminmaxdifference") return TRUE;
+  if (s_function == "averagechromau") return true;
+  if (s_function == "averagechromav") return true;
+  if (s_function == "averageluma") return true;
+  if (s_function == "bindstr") return true;
+  if (s_function == "chromaudifference") return true;
+  if (s_function == "chromavdifference") return true;
+  if (s_function == "conditionalfilter") return true;
+  if (s_function == "frameevaluate") return true;
+  if (s_function == "gconditionalfilter") return true;
+  if (s_function == "gframeevaluate") return true;
+  if (s_function == "grtconfig") return true;
+  if (s_function == "gscriptclip") return true;
+  if (s_function == "gwritefile") return true;
+  if (s_function == "gwritefileif") return true;
+  if (s_function == "lumadifference") return true;
+  if (s_function == "rgbdifference") return true;
+  if (s_function == "rgbdifferencefromprevious") return true;
+  if (s_function == "rgbdifferencetonext") return true;
+  if (s_function == "scriptclip") return true;
+  if (s_function == "udifferencefromprevious") return true;
+  if (s_function == "udifferencetonext") return true;
+  if (s_function == "uplanemax") return true;
+  if (s_function == "uplanemedian") return true;
+  if (s_function == "uplanemin") return true;
+  if (s_function == "uplaneminmaxdifference") return true;
+  if (s_function == "vdifferencefromprevious") return true;
+  if (s_function == "vdifferencetonext") return true;
+  if (s_function == "vplanemax") return true;
+  if (s_function == "vplanemedian") return true;
+  if (s_function == "vplanemin") return true;
+  if (s_function == "vplaneminmaxdifference") return true;
+  if (s_function == "writefile") return true;
+  if (s_function == "writefileif") return true;
+  if (s_function == "ydifferencefromprevious") return true;
+  if (s_function == "ydifferencetonext") return true;
+  if (s_function == "yplanemax") return true;
+  if (s_function == "yplanemedian") return true;
+  if (s_function == "yplanemin") return true;
+  if (s_function == "yplaneminmaxdifference") return true;
 
-  return FALSE;
+  return false;
 }

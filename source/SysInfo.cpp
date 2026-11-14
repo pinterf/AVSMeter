@@ -126,25 +126,25 @@ string CSysInfo::RemoveMultipleWhiteSpaces(string s)
 }
 
 
-BOOL CSysInfo::Is64BitOS()
+bool CSysInfo::Is64BitOS()
 {
   if (sizeof(void*) == 8)
-    return TRUE; //64 on 64
+    return true; //64 on 64
 
   BOOL bWoW64Process = FALSE;
   typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
   LPFN_ISWOW64PROCESS fnIsWow64Process;
   HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
   if (hKernel32 == NULL)
-    return FALSE;
+    return false;
 
   fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
   if (fnIsWow64Process != NULL)
     fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
   if (bWoW64Process)
-    return TRUE;
+    return true;
 
-  return FALSE;
+  return false;
 }
 
 
@@ -206,7 +206,7 @@ void CSysInfo::GetCPUID()
 
   cpudata.CPUSupportedInstructionSets.erase(cpudata.CPUSupportedInstructionSets.find_last_not_of(", ") + 1);
 
-  bCPUIDSuccess = TRUE;
+  bCPUIDSuccess = true;
 
   return;
 }

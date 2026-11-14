@@ -27,7 +27,7 @@ CGPUInfo::CGPUInfo()
   sensors.MemoryUsedGeneral = 0;
   sensors.MemoryUsedDedicated = 0;
   sensors.MemoryUsedDynamic = 0;
-  sensors.ReadError = FALSE;
+  sensors.ReadError = false;
   sError = "";
   pMapAddr = NULL;
   hMapFile = NULL;
@@ -42,8 +42,8 @@ void CGPUInfo::GPUZInit()
 {
   sError = "";
   string sTemp = "";
-  bInitialized = FALSE;
-  if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHMEM_NAME)) == 0)
+  bInitialized = false;
+  if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, false, SHMEM_NAME)) == 0)
   {
     sError = utils.SysErrorMessage();
     DWORD dwLastError = GetLastError();
@@ -68,7 +68,7 @@ void CGPUInfo::GPUZInit()
     return;
   }
 
-  bInitialized = TRUE;
+  bInitialized = true;
   ReadData();
 
   return;
@@ -96,10 +96,10 @@ void CGPUInfo::ReadData()
 
   BYTE nCUDA = 0;
   double dCUDACaps = 0.0;
-  data.NVVPU = FALSE;
-  data.GeneralMem = FALSE;
-  data.DedicatedMem = FALSE;
-  data.DynamicMem = FALSE;
+  data.NVVPU = false;
+  data.GeneralMem = false;
+  data.DedicatedMem = false;
+  data.DynamicMem = false;
 
   for (int i = 0; i < MAX_RECORDS; i++)
   {
@@ -129,7 +129,7 @@ void CGPUInfo::ReadData()
   }
 
   if ((nCUDA != 0) && (dCUDACaps >= 1.0))
-    data.NVVPU = TRUE;
+    data.NVVPU = true;
 
   return;
 }
@@ -147,7 +147,7 @@ void CGPUInfo::ReadSensors()
 
   LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
   if (lpMem->version == 0)
-    sensors.ReadError = TRUE;
+    sensors.ReadError = true;
 
 
   for (int i = 0; i < MAX_RECORDS; i++)
@@ -177,19 +177,19 @@ void CGPUInfo::ReadSensors()
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"Memory Used") == 0)
     {
-      data.GeneralMem = TRUE;
+      data.GeneralMem = true;
       sensors.MemoryUsedGeneral = (DWORD)(lpMem->sensors[i].value + 0.5);
       continue;
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dedicated)") == 0)
     {
-      data.DedicatedMem = TRUE;
+      data.DedicatedMem = true;
       sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);
       continue;
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dynamic)") == 0)
     {
-      data.DynamicMem = TRUE;
+      data.DynamicMem = true;
       sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);
     }
   }

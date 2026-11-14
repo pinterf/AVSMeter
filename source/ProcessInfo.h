@@ -39,9 +39,9 @@ public:
 private:
   WORD GetCurrentThreadCount();
   void GetCPUUsage();
-  unsigned __int64 SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
-  BOOL bFirstRun;
-  unsigned __int64 GetSTDTimer();
+  uint64_t SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
+  bool bFirstRun;
+  uint64_t GetSTDTimer();
 
   FILETIME ftPrevSysKernel;
   FILETIME ftPrevSysUser;

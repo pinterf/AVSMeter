@@ -28,11 +28,11 @@ public:
   virtual          ~CTimer();
   double           GetTimer();
   double           GetSTDTimer();
-  unsigned __int64 GetSTDTimerMS();
-  string           FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned);
+  uint64_t         GetSTDTimerMS();
+  string           FormatTimeString(int64_t i_milliseconds, bool b_rightaligned);
   LARGE_INTEGER    liPerfFreq;
   double           dPerfFreq;
-  BOOL             supported;
+  bool             supported;
 };
 
 

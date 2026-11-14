@@ -138,13 +138,13 @@ void CUtils::ResetConsoleColors()
 }
 
 
-__int64 CUtils::FileSize(string s_file)
+int64_t CUtils::FileSize(string s_file)
 {
   WIN32_FIND_DATA fd;
-  __int64 iSize = -1;
+  int64_t iSize = -1;
   HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
   if (hFind != INVALID_HANDLE_VALUE)
-    iSize = (((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
+    iSize = (((int64_t)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
 
   FindClose(hFind);
 
@@ -152,30 +152,30 @@ __int64 CUtils::FileSize(string s_file)
 }
 
 
-BOOL CUtils::FileExists(string s_file)
+bool CUtils::FileExists(string s_file)
 {
   DWORD dwAttrib;
   dwAttrib = ::GetFileAttributes(s_file.c_str());
 
   if (dwAttrib == 0xFFFFFFFF)
-    return FALSE;
+    return false;
   if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
-    return FALSE;
+    return false;
 
-  return TRUE;
+  return true;
 }
 
 
-BOOL CUtils::DirectoryExists(string s_dir)
+bool CUtils::DirectoryExists(string s_dir)
 {
   DWORD dwAttrib;
   dwAttrib = ::GetFileAttributes(s_dir.c_str());
   if (dwAttrib == 0xFFFFFFFF)
-    return FALSE;
+    return false;
   if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
-    return TRUE;
+    return true;
 
-  return FALSE;
+  return false;
 }
 
 
@@ -379,10 +379,10 @@ string CUtils::GetProductVersion(string s_file)
 }
 
 
-BOOL CUtils::IsNumeric(string s_string)
+bool CUtils::IsNumeric(string s_string)
 {
   if (s_string == "")
-    return FALSE;
+    return false;
 
   for (unsigned int ipos = 0; ipos < s_string.length(); ipos++)
   {
@@ -401,15 +401,15 @@ BOOL CUtils::IsNumeric(string s_string)
       case '-':
         continue;
       default:
-        return FALSE;
+        return false;
     }
   }
 
-  return TRUE;
+  return true;
 }
 
 
-void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, BOOL b_removedups)
+void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, bool b_removedups)
 {
   StrTrim(s_string);
   string sToken = "";

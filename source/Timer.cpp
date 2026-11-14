@@ -22,9 +22,9 @@
 CTimer::CTimer()
 {
   liPerfFreq.QuadPart = 0;
-  supported = TRUE;
+  supported = true;
   if (::QueryPerformanceFrequency(&liPerfFreq) == 0)
-    supported = FALSE;
+    supported = false;
 
   dPerfFreq = (double)liPerfFreq.QuadPart;
 }
@@ -55,13 +55,13 @@ double CTimer::GetSTDTimer()
 }
 
 
-unsigned __int64 CTimer::GetSTDTimerMS()
+uint64_t CTimer::GetSTDTimerMS()
 {
-  return (unsigned __int64)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
+  return (uint64_t)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
 }
 
 
-string CTimer::FormatTimeString(__int64 i_milliseconds, BOOL b_rightaligned)
+string CTimer::FormatTimeString(int64_t i_milliseconds, bool b_rightaligned)
 {
   char buffer[128];
   unsigned int hours = (unsigned int)(i_milliseconds / 3600000);

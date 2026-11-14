@@ -41,7 +41,7 @@ public:
     DWORD  MemoryUsedGeneral;
     DWORD  MemoryUsedDedicated;
     DWORD  MemoryUsedDynamic;
-    BOOL   ReadError;
+    bool   ReadError;
   } sensors;
 
   struct Data
@@ -52,17 +52,17 @@ public:
     string MemSize;
     string OpenCLVersion;
     string DriverVersion;
-    BOOL   NVVPU;
-    BOOL   GeneralMem;
-    BOOL   DynamicMem;
-    BOOL   DedicatedMem;
+    bool   NVVPU;
+    bool   GeneralMem;
+    bool   DynamicMem;
+    bool   DedicatedMem;
   } data;
 
   void GPUZInit();
   void GPUZRelease();
   void ReadSensors();
   void ReadData();
-  BOOL bInitialized;
+  bool bInitialized;
   string sError;
 
 private:

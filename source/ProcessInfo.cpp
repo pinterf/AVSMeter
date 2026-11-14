@@ -24,7 +24,7 @@
 
 CProcessInfo::CProcessInfo()
 {
-  hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ::GetCurrentProcessId());
+  hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, ::GetCurrentProcessId());
 
   dwMemMB = 0;
 
@@ -35,7 +35,7 @@ CProcessInfo::CProcessInfo()
 
   dCPUUsage = 0.0;
   wThreadCount = GetCurrentThreadCount();
-  bFirstRun = TRUE;
+  bFirstRun = true;
   lRunCount = 0;
 }
 
@@ -55,8 +55,8 @@ void CProcessInfo::CloseProcess()
 
 void CProcessInfo::Update()
 {
-  static unsigned __int64 uiLastTimeRun;
-  static unsigned __int64 uiLastTimeRunTH;
+  static uint64_t uiLastTimeRun;
+  static uint64_t uiLastTimeRunTH;
 
   if (((GetSTDTimer() - uiLastTimeRun) < 500) && !bFirstRun)
     return;
@@ -64,7 +64,7 @@ void CProcessInfo::Update()
   uiLastTimeRun = GetSTDTimer();
 
   GetCPUUsage();
-  bFirstRun = FALSE;
+  bFirstRun = false;
 
   if (dCPUUsage >= 100.0)
     dCPUUsage = 99.99999999;
@@ -101,10 +101,10 @@ void CProcessInfo::GetCPUUsage()
       has operated since the last measurement (made up of kernel + user) and
       the total amount of time the process has run (kernel + user).
       */
-      unsigned __int64 uiSysKernelDiff = SubtractTimes(ftSysKernel, ftPrevSysKernel);
-      unsigned __int64 uiSysUserDiff = SubtractTimes(ftSysUser, ftPrevSysUser);
-      unsigned __int64 uiProcKernelDiff = SubtractTimes(ftProcKernel, ftPrevProcKernel);
-      unsigned __int64 uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
+      uint64_t uiSysKernelDiff = SubtractTimes(ftSysKernel, ftPrevSysKernel);
+      uint64_t uiSysUserDiff = SubtractTimes(ftSysUser, ftPrevSysUser);
+      uint64_t uiProcKernelDiff = SubtractTimes(ftProcKernel, ftPrevProcKernel);
+      uint64_t uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
 
       if ((uiSysKernelDiff + uiSysUserDiff) > 0)
         dCPUUsage = (100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff);
@@ -122,10 +122,10 @@ void CProcessInfo::GetCPUUsage()
 }
 
 
-unsigned __int64 CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
+uint64_t CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
 {
-  unsigned __int64 a = (((unsigned __int64)ftA.dwHighDateTime) << 32) + (unsigned __int64)ftA.dwLowDateTime;
-  unsigned __int64 b = (((unsigned __int64)ftB.dwHighDateTime) << 32) + (unsigned __int64)ftB.dwLowDateTime;
+  uint64_t a = (((uint64_t)ftA.dwHighDateTime) << 32) + (uint64_t)ftA.dwLowDateTime;
+  uint64_t b = (((uint64_t)ftB.dwHighDateTime) << 32) + (uint64_t)ftB.dwLowDateTime;
 
   return (a - b);
 }
@@ -162,7 +162,7 @@ WORD CProcessInfo::GetCurrentThreadCount()
 }
 
 
-unsigned __int64 CProcessInfo::GetSTDTimer()
+uint64_t CProcessInfo::GetSTDTimer()
 {
-  return (unsigned __int64)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
+  return (uint64_t)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
 }
