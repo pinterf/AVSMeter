@@ -1,0 +1,3 @@
+AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+
+Error: File not found: "<WORK>\missing_script\does_not_exist.avs"

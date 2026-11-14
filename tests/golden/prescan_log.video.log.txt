@@ -1,0 +1,43 @@
+Log file created with:      AVSMeter <VERSION> (<ARCH>)
+Script file:                <WORK>\prescan_log\video.avs
+Command line switches:      -log
+
+[OS/Hardware info]
+Operating system:
+CPU:
+[Avisynth info]
+VersionString:
+Interface Version:
+Avisynth.dll location:
+[Clip info]
+Number of frames:                      100
+Length (hh:mm:ss.ms):         00:00:04.000
+Frame width:                           640
+Frame height:                          360
+Framerate:                          25.000 (25/1)
+Colorspace:                           YV12
+Audio channels:                          1
+Audio bits/sample:                      16
+Audio sample rate:                     n/a
+Audio samples:                         n/a
+
+[Runtime info]
+Frames processed:                   100 (0 - 99)
+FPS (min | max | average):          <V>
+Process memory usage (max):         <V>
+Thread count:                       <V>
+CPU usage (average):                <V>
+
+Time (elapsed):                     <V>
+
+[Script]
+BlankClip(length=100, width=640, height=360, fps=25, pixel_type="YV12", audio_rate=0)
+# Per-frame interpreter work keeps the run above AVSMeter's 500 ms minimum runtime
+# on any build/architecture (SIMD-independent).
+ScriptClip("""n = 0
+for (i = 1, 30000) { n = n + i }
+last""")
+
+[Performance data]
+       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   Memory(MiB)
+<ROWS>

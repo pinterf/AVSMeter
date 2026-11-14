@@ -1,0 +1,21 @@
+AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+
+Usage1:  AVSMeter script.avs [switches]
+Usage2:  AVSMeter -avsinfo   [switches]
+
+Switches:
+  -avsinfo            Displays extended Avisynth info
+  -info   [-i]        Displays clip info
+  -log    [-l]        Creates log file
+  -csv                Creates csv file
+  -gpu                Displays GPU/VPU usage (requires GPU-Z)
+  -range=first,last   Sets frame range
+  -timelimit=n        Sets time limit (seconds)
+  -hp                 Sets process priority to high
+  -o                  Omits script pre-scanning
+  -lf                 Adds internal/external functions to the avsinfo*.log file
+  -p                  Pauses the program at the end and returns after pressing a key.
+
+  For more info on the command line switches and INI file
+  settings read the documentation (AVSMeter.html) included
+  in the distribution package.

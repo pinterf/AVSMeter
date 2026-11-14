@@ -1,0 +1,5 @@
+AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+<AVISYNTH VERSION>
+
+Script error: expected a , or )
+(<WORK>\syntax_error\syntax_error.avs, line 1, column 0)

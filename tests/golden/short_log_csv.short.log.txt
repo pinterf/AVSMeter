@@ -1,0 +1,31 @@
+Log file created with:      AVSMeter <VERSION> (<ARCH>)
+Script file:                <WORK>\short_log_csv\short.avs
+Command line switches:      -o -log -csv
+
+[OS/Hardware info]
+Operating system:
+CPU:
+[Avisynth info]
+VersionString:
+Interface Version:
+Avisynth.dll location:
+[Clip info]
+Number of frames:                       10
+Length (hh:mm:ss.ms):         00:00:00.400
+Frame width:                           320
+Frame height:                          240
+Framerate:                          25.000 (25/1)
+Colorspace:                           YV12
+Audio channels:                          1
+Audio bits/sample:                      16
+Audio sample rate:                     n/a
+Audio samples:                         n/a
+
+[Runtime info]
+Script runtime is too short for meaningful measurements
+
+Frames processed:               10 (0 - 9)
+Time (elapsed):                 <V>
+
+[Script]
+BlankClip(length=10, width=320, height=240, fps=25, pixel_type="YV12", audio_rate=0)

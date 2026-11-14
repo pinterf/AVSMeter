@@ -1,0 +1,12 @@
+AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+<AVISYNTH VERSION>
+
+Number of frames:                      100
+Length (hh:mm:ss.ms):         00:00:04.000
+Frame width:                           640
+Frame height:                          360
+Framerate:                          25.000 (25/1)
+Colorspace:                           YV12
+
+Invalid frame range specified:
+"FrameRange=50,10"

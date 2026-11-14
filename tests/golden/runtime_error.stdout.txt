@@ -1,0 +1,5 @@
+AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+<AVISYNTH VERSION>
+
+characterization runtime error
+(<WORK>\runtime_error\runtime_error.avs, line 1)
