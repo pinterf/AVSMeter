@@ -22,7 +22,10 @@
 #if !defined(_PROCESSINFO_H)
 #define _PROCESSINFO_H
 
-#include "common.h"
+#include <atomic>
+#include <cstdint>
+
+#include "platform/process_stats.h"
 
 class CProcessInfo
 {
@@ -30,29 +33,19 @@ public:
   CProcessInfo();
   virtual ~CProcessInfo();
 
-  void   Update();
-  void   CloseProcess();
-  double dCPUUsage;
-  WORD   wThreadCount;
-  DWORD  dwMemMB;
+  void     Update();
+  double   dCPUUsage;
+  uint16_t wThreadCount;
+  uint32_t dwMemMB;
 
 private:
-  WORD GetCurrentThreadCount();
   void GetCPUUsage();
-  uint64_t SubtractTimes(const FILETIME& ftA, const FILETIME& ftB);
   bool bFirstRun;
   uint64_t GetSTDTimer();
 
-  FILETIME ftPrevSysKernel;
-  FILETIME ftPrevSysUser;
-  FILETIME ftPrevProcKernel;
-  FILETIME ftPrevProcUser;
-
-  HANDLE hProcess;
-  PROCESS_MEMORY_COUNTERS pmc;
-  volatile LONG lRunCount;
+  platform::CpuTimes prevTimes;
+  std::atomic<long> lRunCount;
 };
 
 
 #endif //_PROCESSINFO_H
-

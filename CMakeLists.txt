@@ -70,11 +70,13 @@ set(AVSMeter_Headers
   "${SRC}/Utility.h"
   "${SRC}/version.h"
   "${SRC}/platform/console.h"
+  "${SRC}/platform/process_stats.h"
 )
 
 if(WIN32)
   list(APPEND AVSMeter_Sources
     "${SRC}/platform/win32/console_win32.cpp"
+    "${SRC}/platform/win32/process_stats_win32.cpp"
   )
 endif()
 

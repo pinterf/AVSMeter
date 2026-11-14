@@ -93,6 +93,7 @@
     <ClCompile Include="..\source\Timer.cpp" />
     <ClCompile Include="..\source\Utility.cpp" />
     <ClCompile Include="..\source\platform\win32\console_win32.cpp" />
+    <ClCompile Include="..\source\platform\win32\process_stats_win32.cpp" />
     <ResourceCompile Include="..\source\AVSMeter.rc" />
     <Image Include="..\source\AVSMeter.ico" />
     <ClInclude Include="..\source\AvisynthInfo.h" />
@@ -105,6 +106,7 @@
     <ClInclude Include="..\source\Utility.h" />
     <ClInclude Include="..\source\version.h" />
     <ClInclude Include="..\source\platform\console.h" />
+    <ClInclude Include="..\source\platform\process_stats.h" />
     <ClInclude Include="..\source\avs_headers\avs\alignment.h" />
     <ClInclude Include="..\source\avs_headers\avisynth.h" />
     <ClInclude Include="..\source\avs_headers\avs\capi.h" />

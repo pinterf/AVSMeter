@@ -1,0 +1,40 @@
+/*
+  This file is part of AVSMeter, (c) Groucho2004.
+
+  AVSMeter is free software. You can redistribute it and/or
+  modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation, either
+  version 3 of the License, or any later version.
+
+  AVSMeter is distributed in the hope that it will be useful
+  but WITHOUT ANY WARRANTY and without the implied warranty
+  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with AVSMeter. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+#if !defined(_PLATFORM_PROCESS_STATS_H)
+#define _PLATFORM_PROCESS_STATS_H
+
+#include <cstdint>
+
+namespace platform
+{
+  // Cumulative CPU times in an implementation-defined unit; only the ratio
+  // of deltas between two samples is meaningful.
+  struct CpuTimes
+  {
+    uint64_t system;  // all CPUs, busy + idle
+    uint64_t process; // current process, kernel + user
+  };
+
+  bool     GetCpuTimes(CpuTimes &times);
+  uint64_t ProcessWorkingSetBytes();
+  unsigned ProcessThreadCount();
+}
+
+
+#endif //_PLATFORM_PROCESS_STATS_H

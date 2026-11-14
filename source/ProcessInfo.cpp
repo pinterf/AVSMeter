@@ -26,32 +26,16 @@
 
 CProcessInfo::CProcessInfo()
 {
-  hProcess = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, ::GetCurrentProcessId());
-
   dwMemMB = 0;
-
-  ::ZeroMemory(&ftPrevSysKernel, sizeof(FILETIME));
-  ::ZeroMemory(&ftPrevSysUser, sizeof(FILETIME));
-  ::ZeroMemory(&ftPrevProcKernel, sizeof(FILETIME));
-  ::ZeroMemory(&ftPrevProcUser, sizeof(FILETIME));
-
+  prevTimes = {};
   dCPUUsage = 0.0;
-  wThreadCount = GetCurrentThreadCount();
+  wThreadCount = (uint16_t)platform::ProcessThreadCount();
   bFirstRun = true;
   lRunCount = 0;
 }
 
 CProcessInfo::~CProcessInfo()
 {
-}
-
-
-void CProcessInfo::CloseProcess()
-{
-  if (hProcess)
-    ::CloseHandle(hProcess);
-
-  return;
 }
 
 
@@ -71,14 +55,13 @@ void CProcessInfo::Update()
   if (dCPUUsage >= 100.0)
     dCPUUsage = 99.99999999;
 
-  ::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc));
-  dwMemMB = (DWORD)(((double)(pmc.WorkingSetSize) / 1048576.0) + 0.5);
+  dwMemMB = (uint32_t)(((double)platform::ProcessWorkingSetBytes() / 1048576.0) + 0.5);
 
   //Thread count should only be updated every few seconds to reduce overhead
   if ((GetSTDTimer() - uiLastTimeRunTH) < 5000)
     return;
 
-  wThreadCount = GetCurrentThreadCount();
+  wThreadCount = (uint16_t)platform::ProcessThreadCount();
   uiLastTimeRunTH = GetSTDTimer();
 
   return;
@@ -87,12 +70,12 @@ void CProcessInfo::Update()
 
 void CProcessInfo::GetCPUUsage()
 {
-  if (::InterlockedIncrement(&lRunCount) == 1)
+  if (++lRunCount == 1)
   {
-    FILETIME ftSysIdle, ftSysKernel, ftSysUser, ftProcCreation, ftProcExit, ftProcKernel, ftProcUser;
-    if (!::GetSystemTimes(&ftSysIdle, &ftSysKernel, &ftSysUser) || !::GetProcessTimes(::GetCurrentProcess(), &ftProcCreation, &ftProcExit, &ftProcKernel, &ftProcUser))
+    platform::CpuTimes times;
+    if (!platform::GetCpuTimes(times))
     {
-      ::InterlockedDecrement(&lRunCount);
+      --lRunCount;
       return;
     }
 
@@ -103,64 +86,19 @@ void CProcessInfo::GetCPUUsage()
       has operated since the last measurement (made up of kernel + user) and
       the total amount of time the process has run (kernel + user).
       */
-      uint64_t uiSysKernelDiff = SubtractTimes(ftSysKernel, ftPrevSysKernel);
-      uint64_t uiSysUserDiff = SubtractTimes(ftSysUser, ftPrevSysUser);
-      uint64_t uiProcKernelDiff = SubtractTimes(ftProcKernel, ftPrevProcKernel);
-      uint64_t uiProcUserDiff = SubtractTimes(ftProcUser, ftPrevProcUser);
+      uint64_t uiSysDiff = times.system - prevTimes.system;
+      uint64_t uiProcDiff = times.process - prevTimes.process;
 
-      if ((uiSysKernelDiff + uiSysUserDiff) > 0)
-        dCPUUsage = (100.0 * (double)(uiProcKernelDiff + uiProcUserDiff)) / (double)(uiSysKernelDiff + uiSysUserDiff);
+      if (uiSysDiff > 0)
+        dCPUUsage = (100.0 * (double)uiProcDiff) / (double)uiSysDiff;
     }
 
-    ftPrevSysKernel = ftSysKernel;
-    ftPrevSysUser = ftSysUser;
-    ftPrevProcKernel = ftProcKernel;
-    ftPrevProcUser = ftProcUser;
+    prevTimes = times;
   }
 
-  ::InterlockedDecrement(&lRunCount);
+  --lRunCount;
 
   return;
-}
-
-
-uint64_t CProcessInfo::SubtractTimes(const FILETIME& ftA, const FILETIME& ftB)
-{
-  uint64_t a = (((uint64_t)ftA.dwHighDateTime) << 32) + (uint64_t)ftA.dwLowDateTime;
-  uint64_t b = (((uint64_t)ftB.dwHighDateTime) << 32) + (uint64_t)ftB.dwLowDateTime;
-
-  return (a - b);
-}
-
-
-WORD CProcessInfo::GetCurrentThreadCount()
-{
-  DWORD dwPID = ::GetCurrentProcessId();
-  HANDLE hThreadSnapshot = INVALID_HANDLE_VALUE;
-  THREADENTRY32 te32;
-
-  hThreadSnapshot = ::CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-  if (hThreadSnapshot == INVALID_HANDLE_VALUE)
-    return 0;
-
-  te32.dwSize = sizeof(THREADENTRY32);
-
-  if (!::Thread32First(hThreadSnapshot, &te32))
-  {
-    ::CloseHandle(hThreadSnapshot);
-    return 0;
-  }
-
-  WORD wThreads = 0;
-  while (::Thread32Next(hThreadSnapshot, &te32))
-  {
-    if (te32.th32OwnerProcessID == dwPID)
-      ++wThreads;
-  }
-
-  ::CloseHandle(hThreadSnapshot);
-
-  return wThreads;
 }
 
 

@@ -1682,7 +1682,6 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, CGP
   }
 
   rs.wThreadCount = processinfo.wThreadCount;
-  processinfo.CloseProcess();
 
   if (Settings.bGPUInfo)
     gpuinfo.GPUZRelease();
