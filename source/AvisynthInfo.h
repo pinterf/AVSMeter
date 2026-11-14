@@ -21,8 +21,8 @@
 
 #include "common.h"
 #include "exception.h"
-#include "utility.h"
-#include "avs_headers\avisynth.h"
+#include "Utility.h"
+#include "avs_headers/avisynth.h"
 
 const AVS_Linkage *AVS_linkage = 0;
 

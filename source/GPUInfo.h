@@ -21,7 +21,7 @@
 
 #include "common.h"
 #include "exception.h"
-#include "utility.h"
+#include "Utility.h"
 
 #define SHMEM_NAME "GPUZShMem"
 #define MAX_RECORDS 128

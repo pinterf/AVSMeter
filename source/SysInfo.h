@@ -20,8 +20,8 @@
 #define _SYSINFO_H
 
 #include "common.h"
-#include "cpuid\libcpuid.h"
-#include "utility.h"
+#include "cpuid/libcpuid.h"
+#include "Utility.h"
 
 class CSysInfo
 {
