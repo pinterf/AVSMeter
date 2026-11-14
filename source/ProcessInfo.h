@@ -196,12 +196,7 @@ WORD CProcessInfo::GetCurrentThreadCount()
 
 unsigned __int64 CProcessInfo::GetSTDTimer()
 {
-	static unsigned __int64 uiLastSTDTimer;
-	unsigned __int64 uiSTDTimer = (unsigned __int64)GetTickCount();
-	unsigned __int64 uiTimerWrapComp = (uiSTDTimer < uiLastSTDTimer) ? 4294967296 : 0;
-	uiLastSTDTimer = uiSTDTimer;
-
-	return (uiSTDTimer + uiTimerWrapComp);
+	return (unsigned __int64)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
 }
 
 
