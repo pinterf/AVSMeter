@@ -31,14 +31,8 @@ public:
 
   //File/directory/system
   string         SysErrorMessage();
-  int64_t        FileSize(string s_file);
-  string         GetFileVersion(string s_file);
-  string         GetProductVersion(string s_file);
   string         GetFileTimeStamp(string s_file);
   string         GetFileDateStamp(string s_file);
-  bool           FileExists(string s_file);
-  bool           DirectoryExists(string s_dir);
-  string         GetWOW64FilePath(string s_filepath);
 
   //string functions
   string         StrFormat(char const *fmt, ...);

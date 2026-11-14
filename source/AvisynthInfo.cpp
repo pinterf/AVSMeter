@@ -18,6 +18,7 @@
 
 #include "AvisynthInfo.h"
 #include "platform/dynlib.h"
+#include "platform/file_info.h"
 #include "platform/os_info.h"
 
 
@@ -135,20 +136,20 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
 
   if (!bAVSLinkage)
   {
-    string sFileVersion = utils.GetFileVersion(sDLLPath);
+    string sFileVersion = platform::FileVersion(sDLLPath);
 
     if (sFileVersion.substr(0, 3) == "2.6")
-      s_ErrorMsg = utils.StrFormat("Error: The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str());
+      s_ErrorMsg = utils.StrFormat("Error: The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", platform::NativeSystemPath(sDLLPath).c_str());
     else
-      s_ErrorMsg = utils.StrFormat("Error: Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", utils.GetWOW64FilePath(sDLLPath).c_str(), sFileVersion.c_str());
+      s_ErrorMsg = utils.StrFormat("Error: Avisynth version is too old:\n%s (Version: %s)\n\nUpdate to Avisynth 2.6 or Avisynth+\n\n", platform::NativeSystemPath(sDLLPath).c_str(), sFileVersion.c_str());
 
     return false;
   }
 
 
-  sDLLPath = utils.GetWOW64FilePath(sDLLPath);
-  sFileVersion = utils.GetFileVersion(sDLLPath);
-  sProductVersion = utils.GetProductVersion(sDLLPath);
+  sDLLPath = platform::NativeSystemPath(sDLLPath);
+  sFileVersion = platform::FileVersion(sDLLPath);
+  sProductVersion = platform::ProductVersion(sDLLPath);
   sTimeStamp = utils.GetFileTimeStamp(sDLLPath);
 
   string sDeps = "";
@@ -1143,7 +1144,7 @@ bool CAvisynthInfo::IsRuntimeInstalled(string s_version)
 
 bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 {
-  int64_t fsize = FileSize(s_dll);
+  int64_t fsize = platform::FileSize(s_dll);
   bool bSuccess = true;
 
   if ((fsize < (20 * 1024 * 1024)) && (fsize > 1024 ))
@@ -1189,21 +1190,6 @@ bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
   }
 
   return bSuccess;
-}
-
-
-int64_t CAvisynthInfo::FileSize(string s_file)
-{
-  WIN32_FIND_DATA fd;
-  int64_t iSize = -1;
-
-  HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
-  if (hFind != INVALID_HANDLE_VALUE)
-    iSize = (((int64_t)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
-
-  FindClose(hFind);
-
-  return iSize;
 }
 
 

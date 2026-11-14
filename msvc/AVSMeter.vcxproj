@@ -95,6 +95,7 @@
     <ClCompile Include="..\source\platform\win32\console_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\os_info_win32.cpp" />
+    <ClCompile Include="..\source\platform\win32\file_info_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_stats_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\single_instance_win32.cpp" />
@@ -112,6 +113,7 @@
     <ClInclude Include="..\source\platform\console.h" />
     <ClInclude Include="..\source\platform\dynlib.h" />
     <ClInclude Include="..\source\platform\os_info.h" />
+    <ClInclude Include="..\source\platform\file_info.h" />
     <ClInclude Include="..\source\platform\process.h" />
     <ClInclude Include="..\source\platform\win32\utf_win32.h" />
     <ClInclude Include="..\source\platform\process_stats.h" />

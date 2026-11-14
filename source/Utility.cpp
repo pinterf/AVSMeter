@@ -17,6 +17,7 @@
 
 
 #include "Utility.h"
+#include "platform/file_info.h"
 
 
 CUtils::CUtils()
@@ -25,54 +26,6 @@ CUtils::CUtils()
 
 CUtils::~CUtils()
 {
-}
-
-
-string CUtils::GetWOW64FilePath(string s_filepath)
-{
-  string sRealFilePath = s_filepath;
-
-  BOOL bWoW64Process = FALSE;
-  typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-  LPFN_ISWOW64PROCESS fnIsWow64Process;
-
-  HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-  if (hKernel32 == NULL) return sRealFilePath;
-
-  fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
-  if (fnIsWow64Process != NULL)
-    fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
-  else
-    return sRealFilePath;
-
-  if (bWoW64Process)
-  {
-    char pszWinDir[1026];
-    GetWindowsDirectory(pszWinDir, 1024);
-    string sTestSystem32(pszWinDir);
-    sTestSystem32 = sTestSystem32 + "\\system32\\";
-    transform(sTestSystem32.begin(), sTestSystem32.end(), sTestSystem32.begin(), ::tolower);
-    string sTempDLLPath = s_filepath;
-    transform(sTempDLLPath.begin(), sTempDLLPath.end(), sTempDLLPath.begin(), ::tolower);
-    size_t slen = sTestSystem32.length();
-    if (sTempDLLPath.substr(0, slen) == sTestSystem32)
-    {
-      char szSysWOW64Directory[1026];
-      typedef UINT (WINAPI *LPFN_GETSYSTEMWOW64DIRECTORY)(LPTSTR, UINT);
-      LPFN_GETSYSTEMWOW64DIRECTORY getSystemWow64Directory;
-
-      getSystemWow64Directory = (LPFN_GETSYSTEMWOW64DIRECTORY)GetProcAddress(hKernel32, "GetSystemWow64DirectoryA");
-      if (getSystemWow64Directory == NULL) return sRealFilePath;
-
-      if (getSystemWow64Directory(szSysWOW64Directory, sizeof(szSysWOW64Directory)) > 1)
-      {
-        string sSysWOW64Dir(szSysWOW64Directory);
-        sRealFilePath = sSysWOW64Dir + "\\" + s_filepath.substr(slen);
-      }
-    }
-  }
-
-  return sRealFilePath;
 }
 
 
@@ -94,94 +47,23 @@ string CUtils::SysErrorMessage()
 }
 
 
-int64_t CUtils::FileSize(string s_file)
-{
-  WIN32_FIND_DATA fd;
-  int64_t iSize = -1;
-  HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
-  if (hFind != INVALID_HANDLE_VALUE)
-    iSize = (((int64_t)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
-
-  FindClose(hFind);
-
-  return iSize;
-}
-
-
-bool CUtils::FileExists(string s_file)
-{
-  DWORD dwAttrib;
-  dwAttrib = ::GetFileAttributes(s_file.c_str());
-
-  if (dwAttrib == 0xFFFFFFFF)
-    return false;
-  if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
-    return false;
-
-  return true;
-}
-
-
-bool CUtils::DirectoryExists(string s_dir)
-{
-  DWORD dwAttrib;
-  dwAttrib = ::GetFileAttributes(s_dir.c_str());
-  if (dwAttrib == 0xFFFFFFFF)
-    return false;
-  if (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)
-    return true;
-
-  return false;
-}
-
-
 string CUtils::GetFileTimeStamp(string s_file)
 {
-  string sTimeStamp = "";
-  WIN32_FIND_DATA fd;
-  HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
-
-  if (hFind == INVALID_HANDLE_VALUE)
+  std::tm tmUtc;
+  if (!platform::FileModifiedUtc(s_file, tmUtc))
     return "Cannot determine timestamp";
 
-  SYSTEMTIME fTime;
-
-  if (!FileTimeToSystemTime(&fd.ftLastWriteTime, &fTime))
-  {
-    FindClose(hFind);
-    return "Cannot determine timestamp";
-  }
-
-  FindClose(hFind);
-
-  sTimeStamp = StrFormat("%04u-%02u-%02u, %02u:%02u:%02u (UTC)", fTime.wYear, fTime.wMonth, fTime.wDay, fTime.wHour, fTime.wMinute, fTime.wSecond);
-
-  return sTimeStamp;
+  return StrFormat("%04d-%02d-%02d, %02d:%02d:%02d (UTC)", tmUtc.tm_year + 1900, tmUtc.tm_mon + 1, tmUtc.tm_mday, tmUtc.tm_hour, tmUtc.tm_min, tmUtc.tm_sec);
 }
 
 
 string CUtils::GetFileDateStamp(string s_file)
 {
-  string sDateStamp = "";
-  WIN32_FIND_DATA fd;
-  HANDLE hFind = FindFirstFile(s_file.c_str(), &fd);
-
-  if (hFind == INVALID_HANDLE_VALUE)
+  std::tm tmUtc;
+  if (!platform::FileModifiedUtc(s_file, tmUtc))
     return "Cannot determine timestamp";
 
-  SYSTEMTIME fTime;
-
-  if (!FileTimeToSystemTime(&fd.ftLastWriteTime, &fTime))
-  {
-    FindClose(hFind);
-    return "Cannot determine timestamp";
-  }
-
-  FindClose(hFind);
-
-  sDateStamp = StrFormat("%04u-%02u-%02u", fTime.wYear, fTime.wMonth, fTime.wDay);
-
-  return sDateStamp;
+  return StrFormat("%04d-%02d-%02d", tmUtc.tm_year + 1900, tmUtc.tm_mon + 1, tmUtc.tm_mday);
 }
 
 
@@ -246,92 +128,6 @@ string CUtils::StrFormatTPF(double d_frametime)
   else                           sRet = StrFormat("%u", (unsigned int)(d_frametime + 0.5));
 
   return sRet;
-}
-
-
-string CUtils::GetFileVersion(string s_file)
-{
-  string sFileVersion = "n/a";
-  char szFileName[MAX_PATH_LEN + 1];
-
-  if (s_file == "")
-  {
-    if (GetModuleFileName(NULL, szFileName, MAX_PATH_LEN) == 0)
-      return sFileVersion;
-  }
-  else
-  {
-    if (sprintf(szFileName, "%s", s_file.c_str()) < 0)
-      return sFileVersion;
-  }
-
-  DWORD dummy;
-  DWORD dwSize = GetFileVersionInfoSize(&szFileName[0], &dummy);
-  if (dwSize == 0)
-    return sFileVersion;
-
-  BYTE* VersionInfoBuffer = new BYTE[dwSize];
-  if (!GetFileVersionInfo(szFileName, 0, dwSize, (VOID*)VersionInfoBuffer))
-  {
-    delete [] VersionInfoBuffer;
-    return sFileVersion;
-  }
-
-  UINT uiLen;
-  VS_FIXEDFILEINFO* pFixedInfo = 0;
-  if (!VerQueryValue(VersionInfoBuffer, "\\", (LPVOID*)(&pFixedInfo), &uiLen))
-  {
-    delete [] VersionInfoBuffer;
-    return sFileVersion;
-  }
-
-  sFileVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwFileVersionMS), LOWORD(pFixedInfo->dwFileVersionMS), HIWORD(pFixedInfo->dwFileVersionLS), LOWORD(pFixedInfo->dwFileVersionLS));
-  delete [] VersionInfoBuffer;
-
-  return sFileVersion;
-}
-
-
-string CUtils::GetProductVersion(string s_file)
-{
-  string sProductVersion = "n/a";
-  char szFileName[MAX_PATH_LEN + 1];
-
-  if (s_file == "")
-  {
-    if (GetModuleFileName(NULL, szFileName, MAX_PATH_LEN) == 0)
-      return sProductVersion;
-  }
-  else
-  {
-    if (sprintf(szFileName, "%s", s_file.c_str()) < 0)
-      return sProductVersion;
-  }
-
-  DWORD dummy;
-  DWORD dwSize = GetFileVersionInfoSize(&szFileName[0], &dummy);
-  if (dwSize == 0)
-    return sProductVersion;
-
-  BYTE* VersionInfoBuffer = new BYTE[dwSize];
-  if (!GetFileVersionInfo(szFileName, 0, dwSize, (VOID*)VersionInfoBuffer))
-  {
-    delete [] VersionInfoBuffer;
-    return sProductVersion;
-  }
-
-  UINT uiLen;
-  VS_FIXEDFILEINFO* pFixedInfo = 0;
-  if (!VerQueryValue(VersionInfoBuffer, "\\", (LPVOID*)(&pFixedInfo), &uiLen))
-  {
-    delete [] VersionInfoBuffer;
-    return sProductVersion;
-  }
-
-  sProductVersion = StrFormat("%u.%u.%u.%u", HIWORD(pFixedInfo->dwProductVersionMS), LOWORD(pFixedInfo->dwProductVersionMS), HIWORD(pFixedInfo->dwProductVersionLS), LOWORD(pFixedInfo->dwProductVersionLS));
-  delete [] VersionInfoBuffer;
-
-  return sProductVersion;
 }
 
 

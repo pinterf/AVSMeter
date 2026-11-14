@@ -27,6 +27,7 @@
 #include "version.h"
 #include "platform/console.h"
 #include "platform/dynlib.h"
+#include "platform/file_info.h"
 #include "platform/process.h"
 #include "platform/single_instance.h"
 
@@ -746,7 +747,7 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
         if (::GetFullPathName(argv[iArg], MAX_PATH_LEN, szOut, &lpPart))
         {
           cmd.sAVSFile = utils.StrFormat("%s", szOut);
-          if (!utils.FileExists(cmd.sAVSFile))
+          if (!platform::FileExists(cmd.sAVSFile))
           {
             PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: File not found: \"%s\"\n", cmd.sAVSFile.c_str());
             return false;
@@ -767,7 +768,7 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
         if (::GetFullPathName(sTemp.c_str(), MAX_PATH_LEN, szOut, &lpPart))
         {
           cmd.sAVSFile = utils.StrFormat("%s", szOut);
-          if (!utils.FileExists(cmd.sAVSFile))
+          if (!platform::FileExists(cmd.sAVSFile))
           {
             PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: File not found: \"%s\"\n", sTemp.c_str());
             return false;
@@ -1000,7 +1001,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, CGPU
       sLogBuffer += sOutBuf;
       PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
 
-      sPluginVersion = utils.GetFileVersion(sPluginDLL);
+      sPluginVersion = platform::FileVersion(sPluginDLL);
 
       if ((sPluginType.find("32 Bit") != std::string::npos) || (sPluginType.find("64 Bit") != std::string::npos))
         sOutBuf = utils.StrFormat("  [%s, %s]\n", sPluginVersion.c_str(), utils.GetFileDateStamp(sPluginDLL).c_str());
@@ -1868,7 +1869,7 @@ string ParseINIFile()
 
   string sCurrentLine = "";
 
-  if (!utils.FileExists(sINIFile)) //No ini file present, create the file with defaults
+  if (!platform::FileExists(sINIFile)) //No ini file present, create the file with defaults
   {
     if (!WriteINIFile(sINIFile))
    {
@@ -1906,7 +1907,7 @@ string ParseINIFile()
       Settings.sLogDirectory = sOrgLine.substr(13);
       Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of("\\") + 1); //remove trailing bs if present
       utils.StrTrim(Settings.sLogDirectory);
-      if ((!utils.DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
+      if ((!platform::DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
       {
         sRet = utils.StrFormat("\nError: Log directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
         return sRet;
@@ -1917,7 +1918,7 @@ string ParseINIFile()
     {
       Settings.sAVSDLL = sOrgLine.substr(7);
       utils.StrTrim(Settings.sAVSDLL);
-      if ((!utils.FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
+      if ((!platform::FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
       {
         sRet = utils.StrFormat("\nThe file specified in AVSMeter.ini does not exist:\nAVSDLL=%s\n", Settings.sAVSDLL.c_str());
         return sRet;

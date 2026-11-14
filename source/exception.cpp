@@ -17,6 +17,7 @@
 
 
 #include "exception.h"
+#include "platform/file_info.h"
 
 
 string GetExceptionModule(LPVOID address)
@@ -50,7 +51,7 @@ string GetExceptionModule(LPVOID address)
     return "";
 
   string sModule(modulename);
-  sModule = utils.GetWOW64FilePath(sModule);
+  sModule = platform::NativeSystemPath(sModule);
 
   return sModule;
 }
