@@ -30,7 +30,6 @@ public:
   virtual        ~CSysInfo();
   string         GetOSVersion();
   string         GetFormattedSystemDateTime();
-  bool           Is64BitOS();
 
   //CPUID
   void           GetCPUID();

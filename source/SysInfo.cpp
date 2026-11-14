@@ -17,6 +17,9 @@
 
 
 #include "SysInfo.h"
+#include "platform/os_info.h"
+
+#include <ctime>
 
 
 CSysInfo::CSysInfo()
@@ -30,89 +33,21 @@ CSysInfo::~CSysInfo()
 
 string CSysInfo::GetOSVersion()
 {
-  typedef LONG NTSTATUS, *PNTSTATUS;
-  typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOEXW);
-  string sOSVersion = "Unknown OS Version";
-  string sOSAddendum = "";
-
-  string sArchitecture = "(x86)";
-  if (Is64BitOS())
-    sArchitecture = "(x64)";
-
-  HMODULE hMod = ::GetModuleHandle("ntdll.dll");
-  if (!hMod)
-    return "Cannot get module handle to ntdll.dll";
-
-  RtlGetVersionPtr rgvPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
-  if (rgvPtr == NULL)
-    return "Cannot invoke \"RtlGetVersion\"";
-
-  RTL_OSVERSIONINFOEXW osvi = {0};
-  osvi.dwOSVersionInfoSize = sizeof(osvi);
-  if (rgvPtr(&osvi) != 0)
-    return "Cannot invoke \"RtlGetVersion\"";
-
-  if (osvi.dwMajorVersion == 5)
-  {
-    if (osvi.wProductType == VER_NT_WORKSTATION)
-      sOSVersion = utils.StrFormat("Windows XP %s", sArchitecture.c_str());
-    else
-      sOSVersion = utils.StrFormat("Windows Server 2003 %s", sArchitecture.c_str());
-  }
-
-  if (osvi.dwMajorVersion == 6)
-  {
-    if (osvi.dwMinorVersion == 0)
-    {
-      if (osvi.wProductType == VER_NT_WORKSTATION)
-        sOSVersion = utils.StrFormat("Windows Vista %s", sArchitecture.c_str());
-      else
-        sOSVersion = utils.StrFormat("Windows Server 2008 %s", sArchitecture.c_str());
-    }
-    if (osvi.dwMinorVersion == 1)
-    {
-      if (osvi.wProductType == VER_NT_WORKSTATION)
-        sOSVersion = utils.StrFormat("Windows 7 %s", sArchitecture.c_str());
-      else
-        sOSVersion = utils.StrFormat("Windows Server 2008 R2 %s", sArchitecture.c_str());
-    }
-    if (osvi.dwMinorVersion == 2)
-    {
-      if (osvi.wProductType == VER_NT_WORKSTATION)
-        sOSVersion = utils.StrFormat("Windows 8 %s", sArchitecture.c_str());
-      else
-        sOSVersion = utils.StrFormat("Windows Server 2012 %s", sArchitecture.c_str());
-    }
-    if (osvi.dwMinorVersion == 3)
-    {
-      if (osvi.wProductType == VER_NT_WORKSTATION)
-        sOSVersion = utils.StrFormat("Windows 8.1 %s", sArchitecture.c_str());
-      else
-        sOSVersion = utils.StrFormat("Windows Server 2012 R2 %s", sArchitecture.c_str());
-    }
-  }
-
-  if (osvi.dwMajorVersion == 10)
-  {
-    if (osvi.dwMinorVersion == 0)
-      sOSVersion = utils.StrFormat("Windows 10 %s", sArchitecture.c_str());
-  }
-
-  if ((osvi.wServicePackMajor > 0) || (osvi.wServicePackMinor > 0))
-    sOSAddendum = utils.StrFormat(" Service Pack %u.%u (Build %u)", osvi.wServicePackMajor, osvi.wServicePackMinor, osvi.dwBuildNumber);
-  else
-    sOSAddendum = utils.StrFormat(" (Build %u)", osvi.dwBuildNumber);
-
-  return sOSVersion + sOSAddendum;
+  return platform::OsVersion();
 }
 
 
 string CSysInfo::GetFormattedSystemDateTime()
 {
-  SYSTEMTIME st;
-  GetLocalTime(&st);
+  std::time_t t = std::time(nullptr);
+  std::tm tmLocal = {};
+#if defined(_WIN32)
+  localtime_s(&tmLocal, &t);
+#else
+  localtime_r(&t, &tmLocal);
+#endif
 
-  return utils.StrFormat("%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+  return utils.StrFormat("%04d%02d%02d-%02d%02d%02d", tmLocal.tm_year + 1900, tmLocal.tm_mon + 1, tmLocal.tm_mday, tmLocal.tm_hour, tmLocal.tm_min, tmLocal.tm_sec);
 }
 
 
@@ -123,28 +58,6 @@ string CSysInfo::RemoveMultipleWhiteSpaces(string s)
   while((index = s.find(search)) != string::npos) s.erase(index,1);
 
   return s;
-}
-
-
-bool CSysInfo::Is64BitOS()
-{
-  if (sizeof(void*) == 8)
-    return true; //64 on 64
-
-  BOOL bWoW64Process = FALSE;
-  typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-  LPFN_ISWOW64PROCESS fnIsWow64Process;
-  HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-  if (hKernel32 == NULL)
-    return false;
-
-  fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
-  if (fnIsWow64Process != NULL)
-    fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
-  if (bWoW64Process)
-    return true;
-
-  return false;
 }
 
 

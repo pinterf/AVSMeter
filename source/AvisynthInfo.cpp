@@ -18,6 +18,7 @@
 
 #include "AvisynthInfo.h"
 #include "platform/dynlib.h"
+#include "platform/os_info.h"
 
 
 const AVS_Linkage *AVS_linkage = 0;
@@ -1078,7 +1079,7 @@ bool CAvisynthInfo::IsRuntimeInstalled(string s_version)
   vector<string> vSubKeys;
   DWORD dwBytes = 2050;
   DWORD dwIndex = 0;
-  if (Is64BitOS())
+  if (platform::Is64BitOS())
     lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Classes\\Installer\\Products", 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
   else
     lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Classes\\Installer\\Products", 0, KEY_READ, &hKeyResult);
@@ -1099,7 +1100,7 @@ bool CAvisynthInfo::IsRuntimeInstalled(string s_version)
     string sKey = "Software\\Classes\\Installer\\Products\\" + vSubKeys[uiKey];
     hKeyResult = 0;
 
-    if (Is64BitOS())
+    if (platform::Is64BitOS())
       lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, sKey.c_str(), 0, KEY_READ | KEY_WOW64_64KEY, &hKeyResult);
     else
       lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, sKey.c_str(), 0, KEY_READ, &hKeyResult);
@@ -1203,28 +1204,6 @@ int64_t CAvisynthInfo::FileSize(string s_file)
   FindClose(hFind);
 
   return iSize;
-}
-
-
-bool CAvisynthInfo::Is64BitOS()
-{
-  if (sizeof(void*) == 8)
-    return true; //64 on 64
-
-  BOOL bWoW64Process = FALSE;
-  typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-  LPFN_ISWOW64PROCESS fnIsWow64Process;
-  HMODULE hKernel32 = GetModuleHandle("kernel32.dll");
-  if (hKernel32 == NULL)
-    return false;
-
-  fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(hKernel32, "IsWow64Process");
-  if (fnIsWow64Process != NULL)
-    fnIsWow64Process(GetCurrentProcess(), &bWoW64Process);
-  if (bWoW64Process)
-    return true;
-
-  return false;
 }
 
 

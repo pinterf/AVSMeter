@@ -64,7 +64,6 @@ private:
   bool                CheckFFTW(string s_dll, string &s_failed_deps);
   bool                IsRuntimeInstalled(string s_version);
   int64_t             FileSize(string s_file);
-  bool                Is64BitOS();
   typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
 
