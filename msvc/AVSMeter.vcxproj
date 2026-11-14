@@ -84,9 +84,27 @@
     <ClCompile Include="..\source\AVSMeter.cpp" />
     <ResourceCompile Include="..\source\AVSMeter.rc" />
     <Image Include="..\source\AVSMeter.ico" />
-    <ClInclude Include="..\source\*.h" />
-    <ClInclude Include="..\source\avs_headers\*.h" />
-    <ClInclude Include="..\source\cpuid\*.h" />
+    <ClInclude Include="..\source\AvisynthInfo.h" />
+    <ClInclude Include="..\source\common.h" />
+    <ClInclude Include="..\source\exception.h" />
+    <ClInclude Include="..\source\GPUInfo.h" />
+    <ClInclude Include="..\source\ProcessInfo.h" />
+    <ClInclude Include="..\source\SysInfo.h" />
+    <ClInclude Include="..\source\Timer.h" />
+    <ClInclude Include="..\source\Utility.h" />
+    <ClInclude Include="..\source\version.h" />
+    <ClInclude Include="..\source\avs_headers\alignment.h" />
+    <ClInclude Include="..\source\avs_headers\avisynth.h" />
+    <ClInclude Include="..\source\avs_headers\capi.h" />
+    <ClInclude Include="..\source\avs_headers\config.h" />
+    <ClInclude Include="..\source\avs_headers\cpuid.h" />
+    <ClInclude Include="..\source\avs_headers\filesystem.h" />
+    <ClInclude Include="..\source\avs_headers\minmax.h" />
+    <ClInclude Include="..\source\avs_headers\types.h" />
+    <ClInclude Include="..\source\avs_headers\win.h" />
+    <ClInclude Include="..\source\cpuid\libcpuid.h" />
+    <ClInclude Include="..\source\cpuid\libcpuid_constants.h" />
+    <ClInclude Include="..\source\cpuid\libcpuid_types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

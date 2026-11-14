@@ -27,13 +27,67 @@
     <Image Include="..\source\AVSMeter.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <ClInclude Include="..\source\*.h">
+    <ClInclude Include="..\source\AvisynthInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\avs_headers\*.h">
+    <ClInclude Include="..\source\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\exception.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\GPUInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\ProcessInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\SysInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\Utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\alignment.h">
       <Filter>Header Files\AviSynth</Filter>
     </ClInclude>
-    <ClInclude Include="..\source\cpuid\*.h">
+    <ClInclude Include="..\source\avs_headers\avisynth.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\capi.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\config.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\cpuid.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\filesystem.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\minmax.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\types.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\avs_headers\win.h">
+      <Filter>Header Files\AviSynth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\cpuid\libcpuid.h">
+      <Filter>Header Files\libcpuid</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\cpuid\libcpuid_constants.h">
+      <Filter>Header Files\libcpuid</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\cpuid\libcpuid_types.h">
       <Filter>Header Files\libcpuid</Filter>
     </ClInclude>
   </ItemGroup>
