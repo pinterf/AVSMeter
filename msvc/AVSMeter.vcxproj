@@ -94,6 +94,7 @@
     <ClCompile Include="..\source\Utility.cpp" />
     <ClCompile Include="..\source\platform\win32\console_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp" />
+    <ClCompile Include="..\source\platform\win32\process_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_stats_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\single_instance_win32.cpp" />
     <ResourceCompile Include="..\source\AVSMeter.rc" />
@@ -109,6 +110,7 @@
     <ClInclude Include="..\source\version.h" />
     <ClInclude Include="..\source\platform\console.h" />
     <ClInclude Include="..\source\platform\dynlib.h" />
+    <ClInclude Include="..\source\platform\process.h" />
     <ClInclude Include="..\source\platform\win32\utf_win32.h" />
     <ClInclude Include="..\source\platform\process_stats.h" />
     <ClInclude Include="..\source\platform\single_instance.h" />

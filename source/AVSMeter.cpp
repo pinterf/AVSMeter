@@ -27,6 +27,7 @@
 #include "version.h"
 #include "platform/console.h"
 #include "platform/dynlib.h"
+#include "platform/process.h"
 #include "platform/single_instance.h"
 
 
@@ -208,7 +209,7 @@ int main(int argc, char* argv[])
 
 
   if (cmd.bHighPriority)
-    ::SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+    platform::SetHighPriority();
 
   if (cmd.bCustomAVSDLLFromCL)
   {
