@@ -1387,7 +1387,7 @@ int main(int argc, char* argv[])
 
 				dGPUPowerConsumptionCur = gpuinfo.sensors.PowerConsumption;
 				dGPUPowerConsumptionAcc += dGPUPowerConsumptionCur;
-				dGPUPowerConsumptionAvg = (dGPUPowerConsumptionAcc / (double)uiIntervalCounter) + 0.5;
+				dGPUPowerConsumptionAvg = dGPUPowerConsumptionAcc / (double)uiIntervalCounter;
 			}
 
 			iElapsedMS = (__int64)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
