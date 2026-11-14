@@ -21,6 +21,8 @@
 
 #include "ProcessInfo.h"
 
+#include <chrono>
+
 
 CProcessInfo::CProcessInfo()
 {
@@ -164,5 +166,6 @@ WORD CProcessInfo::GetCurrentThreadCount()
 
 uint64_t CProcessInfo::GetSTDTimer()
 {
-  return (uint64_t)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
+  using namespace std::chrono;
+  return (uint64_t)duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
 }

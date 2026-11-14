@@ -30,9 +30,6 @@ public:
   double           GetSTDTimer();
   uint64_t         GetSTDTimerMS();
   string           FormatTimeString(int64_t i_milliseconds, bool b_rightaligned);
-  LARGE_INTEGER    liPerfFreq;
-  double           dPerfFreq;
-  bool             supported;
 };
 
 

@@ -18,15 +18,18 @@
 
 #include "Timer.h"
 
+#include <chrono>
+
+
+static uint64_t SteadyNowMS()
+{
+  using namespace std::chrono;
+  return (uint64_t)duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+}
+
 
 CTimer::CTimer()
 {
-  liPerfFreq.QuadPart = 0;
-  supported = true;
-  if (::QueryPerformanceFrequency(&liPerfFreq) == 0)
-    supported = false;
-
-  dPerfFreq = (double)liPerfFreq.QuadPart;
 }
 
 CTimer::~CTimer()
@@ -37,15 +40,19 @@ CTimer::~CTimer()
 
 double CTimer::GetTimer()
 {
-  LARGE_INTEGER liPerfCounter = {0,0};
+#ifdef _WIN32
   DWORD_PTR dwpOldMask = ::SetThreadAffinityMask(::GetCurrentThread(), 0x1);
   Sleep(0);
-  ::QueryPerformanceCounter(&liPerfCounter);
+#endif
+  using namespace std::chrono;
+  double dNow = duration<double>(steady_clock::now().time_since_epoch()).count();
 
+#ifdef _WIN32
   if (dwpOldMask != 0)
     ::SetThreadAffinityMask(::GetCurrentThread(), dwpOldMask);
+#endif
 
-  return (double)liPerfCounter.QuadPart / dPerfFreq;
+  return dNow;
 }
 
 
@@ -57,7 +64,7 @@ double CTimer::GetSTDTimer()
 
 uint64_t CTimer::GetSTDTimerMS()
 {
-  return (uint64_t)GetTickCount64(); // Vista+ (no 49.7-day wrap); fine for the Win7 minimum
+  return SteadyNowMS();
 }
 
 

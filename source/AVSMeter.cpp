@@ -544,14 +544,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (!timer.supported)
-  {
-    PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-    PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: QueryPerformanceCounter() is not supported\n");
-    PollKeys();
-    return -1;
-  }
-
   PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
 
   if (bModeAVSInfo)
