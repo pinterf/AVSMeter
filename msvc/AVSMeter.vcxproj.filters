@@ -57,6 +57,9 @@
     <ClCompile Include="..\source\platform\win32\os_info_win32.cpp">
       <Filter>Source Files\platform</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\platform\win32\avs_registry_win32.cpp">
+      <Filter>Source Files\platform</Filter>
+    </ClCompile>
     <ClCompile Include="..\source\platform\win32\binary_info_win32.cpp">
       <Filter>Source Files\platform</Filter>
     </ClCompile>
@@ -109,6 +112,9 @@
       <Filter>Header Files\platform</Filter>
     </ClInclude>
     <ClInclude Include="..\source\platform\os_info.h">
+      <Filter>Header Files\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\platform\avs_registry.h">
       <Filter>Header Files\platform</Filter>
     </ClInclude>
     <ClInclude Include="..\source\platform\binary_info.h">

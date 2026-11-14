@@ -92,6 +92,7 @@
     <ClCompile Include="..\source\SysInfo.cpp" />
     <ClCompile Include="..\source\Timer.cpp" />
     <ClCompile Include="..\source\Utility.cpp" />
+    <ClCompile Include="..\source\platform\win32\avs_registry_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\binary_info_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\console_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="..\source\Timer.h" />
     <ClInclude Include="..\source\Utility.h" />
     <ClInclude Include="..\source\version.h" />
+    <ClInclude Include="..\source\platform\avs_registry.h" />
     <ClInclude Include="..\source\platform\binary_info.h" />
     <ClInclude Include="..\source\platform\console.h" />
     <ClInclude Include="..\source\platform\dynlib.h" />

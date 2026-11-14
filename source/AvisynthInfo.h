@@ -53,6 +53,8 @@ public:
 private:
   CUtils              utils;
   string              sAVSDLL;
+  vector<string>      vAutoloadDirs;
+  bool                bAutoloadDirsKnown;
   bool                IsGruntFunc(string s_function);
   void                EnumPluginDirs();
   void                EnumPluginDLLs();

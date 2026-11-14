@@ -17,6 +17,7 @@
 
 
 #include "AvisynthInfo.h"
+#include "platform/avs_registry.h"
 #include "platform/binary_info.h"
 #include "platform/dynlib.h"
 #include "platform/file_info.h"
@@ -45,6 +46,8 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
   sFileVersion = "";
   sProductVersion = "";
   sVersionString = "Unknown Avisynth Version";
+  bAutoloadDirsKnown = false;
+  vAutoloadDirs.clear();
   bool bAVSLinkage = false;
   bool bSuccess = true;
   s_ErrorMsg = "";
@@ -212,6 +215,23 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
       sVersionString = "Error: Cannot invoke \"VersionString\"";
     }
 
+    if (AVS_env->FunctionExists("ListAutoloadDirs")) //Avisynth+ 3.7.4 and later
+    {
+      try
+      {
+        utils.StrTokenize(AVS_env->Invoke("ListAutoloadDirs", AVSValue(&foo, 0)).AsString(""), vAutoloadDirs, "\n", false);
+        bAutoloadDirsKnown = true;
+      }
+      catch (IScriptEnvironment::NotFound)
+      {
+        vAutoloadDirs.clear();
+      }
+      catch (AvisynthError)
+      {
+        vAutoloadDirs.clear();
+      }
+    }
+
     string sInternalFunctions = "";
     try
     {
@@ -295,106 +315,79 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
 }
 
 
+static string TrimDirSeparators(string s_dir)
+{
+  //keep the separator of a drive root ("C:\\")
+  while ((s_dir.length() > 1) && ((s_dir.back() == '/') || (s_dir.back() == '\\')) && (s_dir[s_dir.length() - 2] != ':'))
+    s_dir.pop_back();
+
+  return s_dir;
+}
+
+
+static string ComparableDir(string s_dir)
+{
+#ifdef _WIN32
+  replace(s_dir.begin(), s_dir.end(), '/', '\\');
+  transform(s_dir.begin(), s_dir.end(), s_dir.begin(), [](unsigned char c) { return (char)(((c >= 'A') && (c <= 'Z')) ? c + ('a' - 'A') : c); });
+#endif
+  return TrimDirSeparators(s_dir);
+}
+
+
 void CAvisynthInfo::EnumPluginDirs()
 {
   vPluginDirs.clear();
+  const char *pszArch = PROCESS_64 ? "x64" : "x86";
 
-  //- PluginDir+ in Software/Avisynth in HKEY_CURRENT_USER
-  //- PluginDir+ in Software/Avisynth in HKEY_LOCAL_MACHINE
-  //- PluginDir2_5 in Software/Avisynth in HKEY_CURRENT_USER
-  //- PluginDir2_5 in Software/Avisynth in HKEY_LOCAL_MACHINE
-
-  LONG lRes;
-  HKEY hKeyResult;
-  char szPlugDir[2050];
-  DWORD dwType;
-  DWORD dwBytes;
-
-  hKeyResult = 0;
-  lRes = RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Avisynth", 0, KEY_READ, &hKeyResult);
-  if (lRes == ERROR_SUCCESS)
+  vector<string> vRegLabels;
+  vector<string> vRegDirs;
+  for (const platform::RegisteredPluginDir &regDir : platform::RegisteredPluginDirs())
   {
-    memset(szPlugDir, 0, 2048);
-    dwType = REG_SZ;
-    dwBytes = 2048;
-    if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-    {
-      string sPluginDir(szPlugDir);
-      utils.StrTrim(sPluginDir);
+    string sPluginDir = regDir.path;
+    utils.StrTrim(sPluginDir);
 
-      if (sPluginDir != "")
-      {
-        if (PROCESS_64)
-          vPluginDirs.push_back("PluginDir2_5 (HKCU, x64):\t" + sPluginDir);
-        else
-          vPluginDirs.push_back("PluginDir2_5 (HKCU, x86):\t" + sPluginDir);
-      }
-    }
+    if ((sPluginDir == "") || ((regDir.valueName == "PluginDir+") && !bIsAVSPlus))
+      continue;
 
-    memset(szPlugDir, 0, 2048);
-    dwType = REG_SZ;
-    dwBytes = 2048;
-    if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-    {
-      string sPluginDir(szPlugDir);
-      utils.StrTrim(sPluginDir);
-
-      if ((sPluginDir != "") && (bIsAVSPlus))
-      {
-        if (PROCESS_64)
-          vPluginDirs.push_back("PluginDir+   (HKCU, x64):\t" + sPluginDir);
-        else
-          vPluginDirs.push_back("PluginDir+   (HKCU, x86):\t" + sPluginDir);
-      }
-    }
-
-    RegCloseKey(hKeyResult);
+    vRegLabels.push_back(utils.StrFormat("%-12s (%s, %s)", regDir.valueName.c_str(), regDir.hive.c_str(), pszArch));
+    vRegDirs.push_back(sPluginDir);
   }
 
-
-  hKeyResult = 0;
-  lRes = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Avisynth", 0, KEY_READ, &hKeyResult);
-  if (lRes == ERROR_SUCCESS)
+  if (!bAutoloadDirsKnown)
   {
-    memset(szPlugDir, 0, 2048);
-    dwType = REG_SZ;
-    dwBytes = 2048;
-    if (RegQueryValueEx(hKeyResult, "PluginDir2_5", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-    {
-      string sPluginDir(szPlugDir);
-      utils.StrTrim(sPluginDir);
+    for (size_t i = 0; i < vRegDirs.size(); i++)
+      vPluginDirs.push_back(vRegLabels[i] + ":\t" + vRegDirs[i]);
 
-      if (sPluginDir != "")
+    if (vPluginDirs.size() < 1)
+      vPluginErrors.push_back("No plugin directory references found in the registry.\nPlugin auto-loading disabled.");
+
+    return;
+  }
+
+  //Avisynth+ reports the directories it actually searches, in search order.
+  //Show the registry label and spelling where a directory comes from the registry.
+  for (const string &sDir : vAutoloadDirs)
+  {
+    string sLabel = utils.StrFormat("Autoload dir (AVS+, %s)", pszArch);
+    string sShownDir = TrimDirSeparators(sDir);
+
+    for (size_t i = 0; i < vRegDirs.size(); i++)
+    {
+      if ((vRegDirs[i] != "") && (ComparableDir(vRegDirs[i]) == ComparableDir(sDir)))
       {
-        if (PROCESS_64)
-          vPluginDirs.push_back("PluginDir2_5 (HKLM, x64):\t" + sPluginDir);
-        else
-          vPluginDirs.push_back("PluginDir2_5 (HKLM, x86):\t" + sPluginDir);
+        sLabel = vRegLabels[i];
+        sShownDir = vRegDirs[i];
+        vRegDirs[i] = "";
+        break;
       }
     }
 
-    memset(szPlugDir, 0, 2048);
-    dwType = REG_SZ;
-    dwBytes = 2048;
-    if (RegQueryValueEx(hKeyResult, "PluginDir+", NULL, &dwType, (LPBYTE)szPlugDir, &dwBytes) == 0)
-    {
-      string sPluginDir(szPlugDir);
-      utils.StrTrim(sPluginDir);
-
-      if ((sPluginDir != "") && (bIsAVSPlus))
-      {
-        if (PROCESS_64)
-          vPluginDirs.push_back("PluginDir+   (HKLM, x64):\t" + sPluginDir);
-        else
-          vPluginDirs.push_back("PluginDir+   (HKLM, x86):\t" + sPluginDir);
-      }
-    }
-
-    RegCloseKey(hKeyResult);
+    vPluginDirs.push_back(sLabel + ":\t" + sShownDir);
   }
 
   if (vPluginDirs.size() < 1)
-    vPluginErrors.push_back("No plugin directory references found in the registry.\nPlugin auto-loading disabled.");
+    vPluginErrors.push_back("Avisynth+ reports no plugin autoload directories.\nPlugin auto-loading disabled.");
 
   return;
 }
