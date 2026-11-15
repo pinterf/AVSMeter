@@ -1403,7 +1403,7 @@ static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_
   sLogBuffer += sOutBuf;
 
   if (!AVS_vidinfo.HasVideo())
-    sOutBuf = "           n/a";
+    sOutBuf = "       n/a";
   else
   {
     switch (AVS_vidinfo.pixel_type)

@@ -6,7 +6,7 @@ Length (hh:mm:ss.ms):                  n/a
 Frame width:                           n/a
 Frame height:                          n/a
 Framerate:                             n/a
-Colorspace:                                n/a
+Colorspace:                            n/a
 Audio channels:                          8
 Audio channel layout:                  7.1
 Audio bits/sample:                      32
