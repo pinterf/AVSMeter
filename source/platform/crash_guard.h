@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -24,6 +24,11 @@ namespace platform
   // From now on, a hardware exception (access violation, division by zero, ...)
   // on the calling thread throws a std::exception describing the fault and the
   // module it happened in. Per thread; no-op where unsupported.
+  //
+  // POSIX: signals cannot be turned into exceptions. Process-wide handlers for
+  // SIGSEGV/SIGBUS/SIGFPE/SIGILL/SIGABRT print a report (signal, module, file
+  // offset for addr2line) to stderr and re-raise, so the process ends with the
+  // default status (128+signal). Stack overflow is reported on the calling thread only.
   //
   // test STATUS_FLOAT_DIVIDE_BY_ZERO:
   //   int a = 0;

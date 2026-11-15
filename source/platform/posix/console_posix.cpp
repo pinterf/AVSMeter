@@ -17,6 +17,7 @@
 
 
 #include "platform/console.h"
+#include "platform/posix/console_posix.h"
 
 #include <csignal>
 #include <cstdio>
@@ -125,6 +126,12 @@ namespace
     struct pollfd pfd = { STDIN_FILENO, POLLIN, 0 };
     return poll(&pfd, 1, i_timeout_ms) > 0;
   }
+}
+
+
+void platform::posix::RestoreConsoleInput()
+{
+  RestoreInput();
 }
 
 

@@ -110,6 +110,7 @@ if(WIN32)
 else()
   list(APPEND AVSMeter_Sources
     "${SRC}/platform/posix/console_posix.cpp"
+    "${SRC}/platform/posix/console_posix.h"
     "${SRC}/platform/posix/dynlib_posix.cpp"
     "${SRC}/platform/posix/os_info_posix.cpp"
     "${SRC}/platform/posix/avs_registry_posix.cpp"
