@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -1096,24 +1096,24 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
         if (Settings.bLogFileDateTimeSuffix)
         {
           if (PROCESS_64)
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", sCurrentDir.c_str(), Settings.sSystemDateTime.c_str());
+            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x64 [%s].log", sCurrentDir.c_str(), platform::kPathSep, Settings.sSystemDateTime.c_str());
           else
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", sCurrentDir.c_str(), Settings.sSystemDateTime.c_str());
+            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x86 [%s].log", sCurrentDir.c_str(), platform::kPathSep, Settings.sSystemDateTime.c_str());
         }
         else
         {
           if (PROCESS_64)
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", sCurrentDir.c_str());
+            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x64.log", sCurrentDir.c_str(), platform::kPathSep);
           else
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", sCurrentDir.c_str());
+            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x86.log", sCurrentDir.c_str(), platform::kPathSep);
         }
       }
       else
       {
         if (Settings.bLogFileDateTimeSuffix)
-          sAVSInfoFile = utils.StrFormat("%s\\avsinfo [%s].log", Settings.sLogDirectory.c_str(), Settings.sSystemDateTime.c_str());
+          sAVSInfoFile = utils.StrFormat("%s%cavsinfo [%s].log", Settings.sLogDirectory.c_str(), platform::kPathSep, Settings.sSystemDateTime.c_str());
         else
-          sAVSInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
+          sAVSInfoFile = utils.StrFormat("%s%cavsinfo.log", Settings.sLogDirectory.c_str(), platform::kPathSep);
       }
 
       std::ofstream hAVSInfoFile(platform::PathFromUtf8(sAVSInfoFile));
@@ -1813,18 +1813,13 @@ std::string ParseINIFile()
   sProgramPath = platform::ExecutablePath();
   if (sProgramPath != "")
   {
-    size_t i = 0;
-    for (i = (sProgramPath.length() - 1); i > 0; i--)
-    {
-      if (sProgramPath[i] == '\\')
-        break;
-    }
-    sProgramPath = sProgramPath.substr(0, i);
+    size_t nPos = sProgramPath.find_last_of(platform::kPathSeparators);
+    sProgramPath = sProgramPath.substr(0, (nPos == std::string::npos) ? 0 : nPos);
 
     if (PROCESS_64)
-      sINIFile = sProgramPath + "\\AVSMeter64.ini";
+      sINIFile = sProgramPath + platform::kPathSep + "AVSMeter64.ini";
     else
-      sINIFile = sProgramPath + "\\AVSMeter.ini";
+      sINIFile = sProgramPath + platform::kPathSep + "AVSMeter.ini";
   }
 
   std::string sCurrentLine = "";
@@ -1866,7 +1861,7 @@ std::string ParseINIFile()
     if (sCurrentLine.substr(0, 12) == "logdirectory")
     {
       Settings.sLogDirectory = sOrgLine.substr(13);
-      Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of("\\") + 1); //remove trailing bs if present
+      Settings.sLogDirectory.erase(Settings.sLogDirectory.find_last_not_of(platform::kPathSeparators) + 1); //remove trailing separators
       utils.StrTrim(Settings.sLogDirectory);
       if ((!platform::DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
       {
@@ -2058,15 +2053,9 @@ std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std:
 
   if (Settings.sLogDirectory != "")
   {
-    size_t sLen = sLogFile.length();
-    for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
-    {
-      if (sLogFile[nPos] == '\\')
-      {
-        sLogFile = Settings.sLogDirectory + "\\" + sLogFile.substr(nPos + 1);
-        break;
-      }
-    }
+    size_t nPos = sLogFile.find_last_of(platform::kPathSeparators);
+    if (nPos != std::string::npos)
+      sLogFile = Settings.sLogDirectory + platform::kPathSep + sLogFile.substr(nPos + 1);
   }
 
   hLogFile.open(platform::PathFromUtf8(sLogFile));
@@ -2160,15 +2149,9 @@ std::string CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pd
 
   if (Settings.sLogDirectory != "")
   {
-    size_t sLen = sCSVFile.length();
-    for (size_t nPos = (sLen - 1); nPos > 0; nPos--)
-    {
-      if (sCSVFile[nPos] == '\\')
-      {
-        sCSVFile = Settings.sLogDirectory + "\\" + sCSVFile.substr(nPos + 1);
-        break;
-      }
-    }
+    size_t nPos = sCSVFile.find_last_of(platform::kPathSeparators);
+    if (nPos != std::string::npos)
+      sCSVFile = Settings.sLogDirectory + platform::kPathSep + sCSVFile.substr(nPos + 1);
   }
 
   hCSVFile.open(platform::PathFromUtf8(sCSVFile));

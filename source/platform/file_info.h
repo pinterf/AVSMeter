@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -26,6 +26,15 @@
 
 namespace platform
 {
+  // kPathSep builds paths; kPathSeparators lists every separator the OS accepts.
+#ifdef _WIN32
+  inline constexpr char        kPathSep = '\\';
+  inline constexpr const char *kPathSeparators = "\\/";
+#else
+  inline constexpr char        kPathSep = '/';
+  inline constexpr const char *kPathSeparators = "/";
+#endif
+
   int64_t     FileSize(const std::string &s_path); // -1: not found
   bool        FileExists(const std::string &s_path); // regular file, not a directory
   bool        DirectoryExists(const std::string &s_path);
