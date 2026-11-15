@@ -1,12 +1,16 @@
-# AVSMeter CMake build: MSVC for now; Linux (GCC, Clang) and aarch64 follow with the POSIX port.
+# AVSMeter CMake build: Windows (MSVC) and Linux (GCC, Clang).
 # The hand-maintained Visual Studio 2026 project is msvc/AVSMeter.slnx; a CMake generated
 # solution lives in the (gitignored) build folder only.
 #
-# Examples:
-#   cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release   (from a VS developer prompt)
+# Examples (or see CMakePresets.json: cmake --preset linux-gcc && cmake --build --preset linux-gcc):
+#   cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release   (Linux, or from a VS developer prompt)
 #   cmake -B build\vs64 -S . -G "Visual Studio 18 2026" -A x64
 #   cmake -B build\vs32 -S . -G "Visual Studio 18 2026" -A Win32
-cmake_minimum_required(VERSION 3.16...3.31)
+#
+# libcpuid: MSVC links the prebuilt static libraries in source/cpuid. Elsewhere libcpuid 0.8.2 is
+# downloaded at configure time and built as a static library; -DAVSMETER_SYSTEM_LIBCPUID=ON uses
+# the system's libcpuid (pkg-config) instead.
+cmake_minimum_required(VERSION 3.22...3.31)
 
 # Before project(): CMake's MSVC default for single-config generators would be Debug
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_GENERATOR MATCHES "Visual Studio|Multi-Config|Xcode")
@@ -25,26 +29,34 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS FALSE)
 
-if(NOT MSVC)
-  message(FATAL_ERROR "AVSMeter builds with MSVC only, until the POSIX port is done")
+option(AVSMETER_SYSTEM_LIBCPUID "Use the system's libcpuid (pkg-config) instead of downloading 0.8.2" OFF)
+
+if(MSVC)
+  # Static runtime (/MT, /MTd), same as msvc/AVSMeter.vcxproj
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+  # /EHa: the SEH translator in platform/win32/crash_guard_win32.cpp turns access violations etc. into C++ exceptions.
+  # CMake's default /EHsc must go, else Ninja gives D9025 (overriding '/EHs' with '/EHa');
+  # the VS generator hides the conflict.
+  string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  add_compile_options(/permissive- /Zc:__cplusplus /W3 /EHa /Gy)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# Static runtime (/MT, /MTd), same as msvc/AVSMeter.vcxproj
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-# /EHa: the SEH translator in platform/win32/crash_guard_win32.cpp turns access violations etc. into C++ exceptions.
-# CMake's default /EHsc must go, else Ninja gives D9025 (overriding '/EHs' with '/EHa');
-# the VS generator hides the conflict.
-string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-add_compile_options(/permissive- /Zc:__cplusplus /W3 /EHa /Gy)
-add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-
-set(ProgramName "AVSMeter")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ArchBits 64)
-  set(ProgramName "AVSMeter64")
 else()
   set(ArchBits 32)
+endif()
+
+if(WIN32)
+  if(ArchBits EQUAL 64)
+    set(ProgramName "AVSMeter64")
+  else()
+    set(ProgramName "AVSMeter")
+  endif()
+else()
+  set(ProgramName "avsmeter")
 endif()
 
 set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/source")
@@ -95,6 +107,22 @@ if(WIN32)
     "${SRC}/platform/win32/process_stats_win32.cpp"
     "${SRC}/platform/win32/single_instance_win32.cpp"
   )
+else()
+  list(APPEND AVSMeter_Sources
+    "${SRC}/platform/posix/console_posix.cpp"
+    "${SRC}/platform/posix/dynlib_posix.cpp"
+    "${SRC}/platform/posix/os_info_posix.cpp"
+    "${SRC}/platform/posix/avs_registry_posix.cpp"
+    "${SRC}/platform/posix/crash_guard_posix.cpp"
+    "${SRC}/platform/posix/gpu_sensors_posix.cpp"
+    "${SRC}/platform/posix/binary_info_posix.cpp"
+    "${SRC}/platform/posix/file_info_posix.cpp"
+    "${SRC}/platform/posix/process_posix.cpp"
+    "${SRC}/platform/posix/text_posix.cpp"
+    "${SRC}/platform/posix/last_error_posix.h"
+    "${SRC}/platform/posix/process_stats_posix.cpp"
+    "${SRC}/platform/posix/single_instance_posix.cpp"
+  )
 endif()
 
 add_executable(AVSMeter ${AVSMeter_Sources} ${AVSMeter_Headers})
@@ -119,11 +147,56 @@ if(WIN32)
     target_link_options(AVSMeter PRIVATE "/LARGEADDRESSAWARE")
   endif()
 
+  target_link_libraries(AVSMeter PRIVATE kernel32 user32 advapi32 shell32 psapi version)
+else()
+  find_package(Threads REQUIRED)
+  target_link_libraries(AVSMeter PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
+endif()
+
+if(MSVC)
   # prebuilt libcpuid 0.8.2 static libraries
-  target_link_libraries(AVSMeter PRIVATE
-    "${SRC}/cpuid/libcpuid${ArchBits}$<$<CONFIG:Debug>:d>.lib"
-    kernel32 user32 advapi32 shell32 psapi version
+  target_include_directories(AVSMeter PRIVATE "${SRC}/cpuid")
+  target_link_libraries(AVSMeter PRIVATE "${SRC}/cpuid/libcpuid${ArchBits}$<$<CONFIG:Debug>:d>.lib")
+elseif(AVSMETER_SYSTEM_LIBCPUID)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(LIBCPUID REQUIRED IMPORTED_TARGET libcpuid)
+  target_link_libraries(AVSMeter PRIVATE PkgConfig::LIBCPUID)
+else()
+  # Only the sources are fetched (SOURCE_SUBDIR has no CMakeLists.txt): libcpuid's own CMake
+  # would also build cpuid_tool and add its install rules.
+  enable_language(C)
+  include(FetchContent)
+  FetchContent_Declare(libcpuid
+    GIT_REPOSITORY https://github.com/anrieff/libcpuid.git
+    GIT_TAG        v0.8.2
+    GIT_SHALLOW    TRUE
+    SOURCE_SUBDIR  no-cmake
   )
+  FetchContent_MakeAvailable(libcpuid)
+
+  set(CPUID_SRC "${libcpuid_SOURCE_DIR}/libcpuid")
+  add_library(cpuid STATIC
+    "${CPUID_SRC}/cpuid_main.c"
+    "${CPUID_SRC}/recog_amd.c"
+    "${CPUID_SRC}/recog_arm.c"
+    "${CPUID_SRC}/recog_centaur.c"
+    "${CPUID_SRC}/recog_intel.c"
+    "${CPUID_SRC}/rdtsc.c"
+    "${CPUID_SRC}/libcpuid_util.c"
+    "${CPUID_SRC}/rdmsr.c"
+    "${CPUID_SRC}/asm-bits.c"
+    "${CPUID_SRC}/rdcpuid.c"
+  )
+  set_target_properties(cpuid PROPERTIES C_STANDARD 99 POSITION_INDEPENDENT_CODE ON)
+  target_include_directories(cpuid SYSTEM PUBLIC "${CPUID_SRC}")
+  target_compile_definitions(cpuid PRIVATE VERSION="0.8.2" _GNU_SOURCE)
+  include(CheckSymbolExists)
+  check_symbol_exists(getauxval "sys/auxv.h" HAVE_GETAUXVAL)
+  if(HAVE_GETAUXVAL)
+    target_compile_definitions(cpuid PRIVATE HAVE_GETAUXVAL)
+  endif()
+  target_link_libraries(cpuid PRIVATE Threads::Threads)
+  target_link_libraries(AVSMeter PRIVATE cpuid)
 endif()
 
 install(TARGETS AVSMeter

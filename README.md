@@ -48,7 +48,9 @@ group APIs (`GetActiveProcessorCount`, `GetActiveProcessorGroupCount`,
 use them. In addition, the prebuilt libcpuid 0.8.2 libraries could not be linked
 with the `v141_xp` linker (IL mismatch), and the maintainer (pinterf) did not
 want to build libcpuid from source.
-Audio benchmarking and POSIX builds remain planned. Audio metadata reporting
+Audio benchmarking remains planned. A Linux (x86_64) CMake build compiles and
+links, but it is work in progress: several platform modules are still stubs, so
+it cannot benchmark yet. Audio metadata reporting
 is already present; processing audio samples for benchmarking is not.
 
 ## Links and documentation
@@ -314,6 +316,27 @@ under `Intermediate32` / `Intermediate64`. The original x64 makefile names its
 target `AVSMeter.exe` while the linker produces `AVSMeter64.exe`; this known
 inconsistency must be corrected before relying on incremental builds. These
 commands describe the supplied entry points, not successful builds.
+
+## Building with CMake (Windows, Linux)
+
+CMake 3.22 or later, C++17. Presets are in `CMakePresets.json`:
+
+```sh
+# Linux (GCC or Clang, Ninja): build/linux-gcc/avsmeter
+cmake --preset linux-gcc && cmake --build --preset linux-gcc
+cmake --preset linux-clang && cmake --build --preset linux-clang
+```
+
+```bat
+rem Windows (Visual Studio 2026): build\vs64\Release\AVSMeter64.exe, build\vs32\Release\AVSMeter.exe
+cmake --preset vs64 && cmake --build --preset vs64
+cmake --preset vs32 && cmake --build --preset vs32
+```
+
+MSVC links the prebuilt libcpuid libraries from `source\cpuid`. Other compilers
+download libcpuid 0.8.2 at configure time (Git, network access) and build it as a
+static library; `-DAVSMETER_SYSTEM_LIBCPUID=ON` uses the system's libcpuid via
+pkg-config instead. Linux needs AviSynth+ (`libavisynth.so`) at run time.
 
 ## License
 
