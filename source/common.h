@@ -48,9 +48,9 @@ inline bool CompareNoCase(std::string first, std::string second)
   size_t i = 0;
   while ((i < first.length()) && (i < second.length()))
   {
-    if (tolower (first[i]) < tolower (second[i]))
+    if (tolower((unsigned char)first[i]) < tolower((unsigned char)second[i]))
       return true;
-    else if (tolower (first[i]) > tolower (second[i]))
+    else if (tolower((unsigned char)first[i]) > tolower((unsigned char)second[i]))
       return false;
 
    i++;

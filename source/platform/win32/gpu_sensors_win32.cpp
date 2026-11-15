@@ -18,6 +18,7 @@
 
 #include "platform/gpu_sensors.h"
 #include "Utility.h"
+#include "platform/win32/utf_win32.h"
 
 #include <algorithm>
 #include <cctype>
@@ -152,18 +153,15 @@ void platform::GpuSensors::ReadData()
 
   for (int i = 0; i < MAX_RECORDS; i++)
   {
-    char DefChar = ' ';
-    char szkey[512];
-    char szvalue[512];
-    WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].key, -1, szkey, 511, &DefChar, NULL);
-    WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 511, &DefChar, NULL);
-    std::string sKey(szkey);
-    std::string sValue(szvalue);
+    std::wstring wsKey(lpMem->data[i].key, wcsnlen(lpMem->data[i].key, 256));
+    std::wstring wsValue(lpMem->data[i].value, wcsnlen(lpMem->data[i].value, 256));
+    std::string sKey = platform::win32::WideToUtf8(wsKey.c_str());
+    std::string sValue = platform::win32::WideToUtf8(wsValue.c_str());
     sKey.erase(sKey.find_last_not_of(" \t\n\r") + 1);
     sKey.erase(0, sKey.find_first_not_of(" \t\n\r"));
     sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
     sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
-    std::transform(sKey.begin(), sKey.end(), sKey.begin(), ::toupper);
+    std::transform(sKey.begin(), sKey.end(), sKey.begin(), [](unsigned char c) { return (char)toupper(c); });
 
     if ((sValue == "") || (sValue == "0"))
       sValue = "n/a";

@@ -17,6 +17,7 @@
 
 
 #include "platform/os_info.h"
+#include "platform/win32/utf_win32.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -38,22 +39,22 @@ namespace
     return szBuf;
   }
 
-  const char *pszCurrentVersionKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+  const wchar_t *pwszCurrentVersionKey = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
 
-  std::string RegString(const char *psz_value)
+  std::string RegString(const wchar_t *pwsz_value)
   {
-    char szBuf[64] = "";
-    DWORD dwSize = sizeof(szBuf);
-    if (::RegGetValueA(HKEY_LOCAL_MACHINE, pszCurrentVersionKey, psz_value, RRF_RT_REG_SZ, NULL, szBuf, &dwSize) != ERROR_SUCCESS)
+    wchar_t wszBuf[64] = L"";
+    DWORD dwSize = sizeof(wszBuf);
+    if (::RegGetValueW(HKEY_LOCAL_MACHINE, pwszCurrentVersionKey, pwsz_value, RRF_RT_REG_SZ, NULL, wszBuf, &dwSize) != ERROR_SUCCESS)
       return "";
 
-    return szBuf;
+    return platform::win32::WideToUtf8(wszBuf);
   }
 
-  bool RegDword(const char *psz_value, DWORD &dw_value)
+  bool RegDword(const wchar_t *pwsz_value, DWORD &dw_value)
   {
     DWORD dwSize = sizeof(dw_value);
-    return ::RegGetValueA(HKEY_LOCAL_MACHINE, pszCurrentVersionKey, psz_value, RRF_RT_REG_DWORD, NULL, &dw_value, &dwSize) == ERROR_SUCCESS;
+    return ::RegGetValueW(HKEY_LOCAL_MACHINE, pwszCurrentVersionKey, pwsz_value, RRF_RT_REG_DWORD, NULL, &dw_value, &dwSize) == ERROR_SUCCESS;
   }
 }
 
@@ -152,16 +153,16 @@ std::string platform::OsVersion()
   // DisplayVersion since 20H2; ReleaseId before (it stays "2009" after).
   if (osvi.dwMajorVersion == 10)
   {
-    std::string sDisplayVersion = RegString("DisplayVersion");
+    std::string sDisplayVersion = RegString(L"DisplayVersion");
     if (sDisplayVersion == "")
-      sDisplayVersion = RegString("ReleaseId");
+      sDisplayVersion = RegString(L"ReleaseId");
     if (sDisplayVersion != "")
       sOSVersion += " " + sDisplayVersion;
   }
 
   std::string sBuild = StrFormat("%u", (unsigned int)osvi.dwBuildNumber);
   DWORD dwUBR = 0;
-  if (RegDword("UBR", dwUBR))
+  if (RegDword(L"UBR", dwUBR))
     sBuild += StrFormat(".%u", (unsigned int)dwUBR);
 
   if ((osvi.wServicePackMajor > 0) || (osvi.wServicePackMinor > 0))

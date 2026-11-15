@@ -47,6 +47,8 @@ public:
   bool                     bIs64BitAVSDLL;
   bool                     bIsAVSPlus;
   bool                     bIsMTVersion;
+  bool                     bImportUtf8;      // Import(utf8=true): AviSynth+ r2487+
+  bool                     bLoadPluginUtf8;  // LoadPlugin(utf8=true): AviSynth+ 3.7.6+
   size_t                   nLoadPlugInterval;
 
 private:
@@ -65,6 +67,11 @@ private:
   bool                CheckFFTW(std::string s_dll, std::string &s_failed_deps);
   typedef             IScriptEnvironment * __stdcall CREATE_ENV(int);
 };
+
+
+// Invokes a function taking a UTF-8 file name (Import, LoadPlugin): ASCII as is, else
+// with utf8=true if b_utf8, else the ANSI path if representable (ThrowError if not).
+AVSValue InvokeWithPath(IScriptEnvironment *AVS_env, const char *psz_function, const std::string &s_path, bool b_utf8);
 
 
 #endif //_AVISYNTHINFO_H

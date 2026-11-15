@@ -71,8 +71,7 @@ namespace platform::win32
   inline std::string  WideToAnsi(const wchar_t *pwsz) { return WideToCodePage(AnsiCodePage(), pwsz); }
 
   // Platform API strings are UTF-8, as in AviSynth+. Input that is not valid
-  // UTF-8 is read as ANSI: AVSMeter still has ANSI strings (main(), INI,
-  // file scans) until it switches to UTF-8 internally.
+  // UTF-8 is read as ANSI (lenient for text from outside).
   inline std::wstring ToWide(const char *psz)
   {
     if (*psz == 0)
@@ -80,15 +79,6 @@ namespace platform::win32
 
     std::wstring ws = Utf8ToWide(psz);
     return ws.empty() ? AnsiToWide(psz) : ws;
-  }
-
-  // Back to the encoding ToWide() detected on psz_like.
-  inline std::string FromWideAs(const wchar_t *pwsz, const char *psz_like)
-  {
-    if ((*psz_like != 0) && Utf8ToWide(psz_like).empty())
-      return WideToAnsi(pwsz);
-
-    return WideToUtf8(pwsz);
   }
 
   // Full path of a loaded module (NULL: own exe), empty on error. The buffer grows,

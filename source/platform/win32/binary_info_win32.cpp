@@ -264,7 +264,7 @@ bool platform::InspectBinary(const std::string &s_name, BinaryInfo &info)
     return false;
   }
 
-  info.path = win32::FromWideAs(wsPath.c_str(), s_name.c_str());
+  info.path = win32::WideToUtf8(wsPath.c_str());
   info.is64Bit = pe.Is64Bit();
   ReadExports(pe, info.exports);
   ReadImports(pe, info.imports);
@@ -275,35 +275,35 @@ bool platform::InspectBinary(const std::string &s_name, BinaryInfo &info)
 
 bool platform::IsVCRuntimeInstalled(const std::string &s_year, bool b_64bit)
 {
-  const char szProducts[] = "Software\\Classes\\Installer\\Products";
+  const wchar_t wszProducts[] = L"Software\\Classes\\Installer\\Products";
   REGSAM samView = Is64BitOS() ? KEY_WOW64_64KEY : 0;
 
-  std::vector<std::string> vSubKeys;
+  std::vector<std::wstring> vSubKeys;
   HKEY hKey = NULL;
-  if (::RegOpenKeyExA(HKEY_LOCAL_MACHINE, szProducts, 0, KEY_READ | samView, &hKey) == ERROR_SUCCESS)
+  if (::RegOpenKeyExW(HKEY_LOCAL_MACHINE, wszProducts, 0, KEY_READ | samView, &hKey) == ERROR_SUCCESS)
   {
-    char szSubKey[256];
-    DWORD dwChars = sizeof(szSubKey);
-    for (DWORD dwIndex = 0; ::RegEnumKeyExA(hKey, dwIndex, szSubKey, &dwChars, NULL, NULL, NULL, NULL) == ERROR_SUCCESS; dwIndex++)
+    wchar_t wszSubKey[256];
+    DWORD dwChars = 256;
+    for (DWORD dwIndex = 0; ::RegEnumKeyExW(hKey, dwIndex, wszSubKey, &dwChars, NULL, NULL, NULL, NULL) == ERROR_SUCCESS; dwIndex++)
     {
-      vSubKeys.push_back(szSubKey);
-      dwChars = sizeof(szSubKey);
+      vSubKeys.push_back(wszSubKey);
+      dwChars = 256;
     }
     ::RegCloseKey(hKey);
   }
 
   bool bInstalled = false;
-  for (const std::string &sSubKey : vSubKeys)
+  for (const std::wstring &wsSubKey : vSubKeys)
   {
-    std::string sKey = std::string(szProducts) + "\\" + sSubKey;
-    if (::RegOpenKeyExA(HKEY_LOCAL_MACHINE, sKey.c_str(), 0, KEY_READ | samView, &hKey) != ERROR_SUCCESS)
+    std::wstring wsKey = std::wstring(wszProducts) + L"\\" + wsSubKey;
+    if (::RegOpenKeyExW(HKEY_LOCAL_MACHINE, wsKey.c_str(), 0, KEY_READ | samView, &hKey) != ERROR_SUCCESS)
       continue;
 
-    char szValue[2048] = "";
-    DWORD dwBytes = sizeof(szValue) - 1;
-    if (::RegQueryValueExA(hKey, "ProductName", NULL, NULL, (LPBYTE)szValue, &dwBytes) == ERROR_SUCCESS)
+    wchar_t wszValue[2048] = L"";
+    DWORD dwBytes = sizeof(wszValue) - sizeof(wchar_t);
+    if (::RegQueryValueExW(hKey, L"ProductName", NULL, NULL, (LPBYTE)wszValue, &dwBytes) == ERROR_SUCCESS)
     {
-      std::string sValue = AsciiLower(szValue);
+      std::string sValue = AsciiLower(win32::WideToUtf8(wszValue));
 
       bool bVersion = (sValue.find(s_year) != std::string::npos);
       bool bVC = (sValue.find("visual c++") != std::string::npos);

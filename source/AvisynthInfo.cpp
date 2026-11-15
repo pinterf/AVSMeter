@@ -23,8 +23,12 @@
 #include "platform/dynlib.h"
 #include "platform/file_info.h"
 #include "platform/os_info.h"
+#include "platform/text.h"
 
+#include <algorithm>
+#include <cstdlib>
 #include <filesystem>
+#include <iterator>
 #include <system_error>
 
 namespace
@@ -34,6 +38,27 @@ namespace
 
 
 const AVS_Linkage *AVS_linkage = 0;
+
+
+AVSValue InvokeWithPath(IScriptEnvironment *AVS_env, const char *psz_function, const std::string &s_path, bool b_utf8)
+{
+  bool bAscii = std::all_of(s_path.begin(), s_path.end(), [](char c) { return (unsigned char)c < 0x80; });
+  if (bAscii)
+    return AVS_env->Invoke(psz_function, s_path.c_str());
+
+  if (b_utf8)
+  {
+    AVSValue avsArgs[2] = { s_path.c_str(), true };
+    const char *pszNames[2] = { NULL, "utf8" };
+    return AVS_env->Invoke(psz_function, AVSValue(avsArgs, 2), pszNames);
+  }
+
+  std::string sLegacy;
+  if (!platform::LegacyPath(s_path, sLegacy))
+    AVS_env->ThrowError("%s: \"%s\":\nPath not supported by this AviSynth version (not UTF-8 capable)", psz_function, s_path.c_str());
+
+  return AVS_env->Invoke(psz_function, sLegacy.c_str());
+}
 
 
 CAvisynthInfo::CAvisynthInfo()
@@ -51,6 +76,8 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   bIs64BitAVSDLL = false;
   bIsMTVersion = false;
   bIsAVSPlus = false;
+  bImportUtf8 = false;
+  bLoadPluginUtf8 = false;
   iInterfaceVersion = 0;
   sFileVersion = "";
   sProductVersion = "";
@@ -224,11 +251,30 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
       sVersionString = "Error: Cannot invoke \"VersionString\"";
     }
 
+    if (bIsAVSPlus)
+    {
+      // Revision as in "AviSynth+ 3.7.6 (r4929, ...)"; release branches are numbered differently, use the file version where possible
+      size_t pos = sVersionString.find("(r");
+      bImportUtf8 = (pos != std::string::npos) && (atoi(sVersionString.c_str() + pos + 2) >= 2487);
+
+      int iMajor = 0, iMinor = 0, iPatch = 0;
+      sscanf(sFileVersion.c_str(), "%d.%d.%d", &iMajor, &iMinor, &iPatch);
+      bLoadPluginUtf8 = (iMajor * 10000 + iMinor * 100 + iPatch) >= 30706;
+    }
+
     if (AVS_env->FunctionExists("ListAutoloadDirs")) //Avisynth+ 3.7.4 and later
     {
       try
       {
-        utils.StrTokenize(AVS_env->Invoke("ListAutoloadDirs", AVSValue(&foo, 0)).AsString(""), vAutoloadDirs, "\n", false);
+        // AviSynth+ 3.7.6+: ANSI by default ('?' for unmappable chars), UTF-8 on request
+        AVSValue utf8_arg = true;
+        const char *utf8_name = "utf8";
+        AVSValue sDirs = bLoadPluginUtf8 ?
+          AVS_env->Invoke("ListAutoloadDirs", AVSValue(&utf8_arg, 1), &utf8_name) :
+          AVS_env->Invoke("ListAutoloadDirs", AVSValue(&foo, 0));
+        utils.StrTokenize(sDirs.AsString(""), vAutoloadDirs, "\n", false);
+        for (std::string &sDir : vAutoloadDirs)
+          sDir = platform::ToUtf8(sDir); // ANSI before AviSynth+ 3.7.6
         bAutoloadDirsKnown = true;
       }
       catch (IScriptEnvironment::NotFound)
@@ -275,7 +321,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   catch (AvisynthError err)
   {
     bSuccess = false;
-    s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
+    s_ErrorMsg = platform::ToUtf8(err.msg);
   }
   catch (std::exception& ex)
   {
@@ -420,21 +466,13 @@ void CAvisynthInfo::EnumPluginDLLs()
       std::string sCurrentFile = "";
       std::string sCurrentFileLC = "";
       std::error_code ec;
-      for (std::filesystem::directory_iterator it(sDir, ec), end; !ec && it != end; it.increment(ec))
+      for (std::filesystem::directory_iterator it(platform::PathFromUtf8(sDir), ec), end; !ec && it != end; it.increment(ec))
       {
         std::error_code ecType;
         if (it->is_directory(ecType))
           continue;
 
-        std::string sName;
-        try
-        {
-          sName = it->path().filename().string();
-        }
-        catch (const std::system_error &)
-        {
-          continue; // name not representable in the narrow (ANSI) encoding
-        }
+        std::string sName = platform::PathToUtf8(it->path().filename());
 
         sCurrentFile = sDir + PATH_SEP + sName;
         sCurrentFileLC = sCurrentFile;
@@ -514,12 +552,13 @@ void CAvisynthInfo::AddScriptFunctions(std::string s_avsi_file)
   std::string sFunctionNameLC = "";
   std::string sAVSIError = "";
 
-  std::ifstream h_avsi_file(s_avsi_file.c_str());
+  std::ifstream h_avsi_file(platform::PathFromUtf8(s_avsi_file));
   if (!h_avsi_file.is_open())
     return;
 
   while (std::getline(h_avsi_file, sCurrentLine))
   {
+    sCurrentLine = platform::ToUtf8(sCurrentLine);
     utils.StrTrim(sCurrentLine);
     sOrgLine = sCurrentLine;
     utils.StrToLC(sCurrentLine);
@@ -768,11 +807,11 @@ void CAvisynthInfo::TestLoadPlugins()
         sNote = "";
       }
 
-      AVS_env->Invoke("LoadPlugin", sPlugin.c_str());
+      InvokeWithPath(AVS_env, "LoadPlugin", sPlugin, bLoadPluginUtf8);
     }
     catch (AvisynthError err)
     {
-      sPlugLoadError = utils.StrFormat("%s", (PCSTR)err.msg);
+      sPlugLoadError = platform::ToUtf8(err.msg);
       utils.StrTrim(sPlugLoadError);
       sPlugLoadErrorLC = sPlugLoadError;
       utils.StrToLC(sPlugLoadErrorLC);
@@ -938,17 +977,13 @@ bool CAvisynthInfo::CheckFFTW(std::string s_dll, std::string &s_failed_deps)
 
   if ((fsize < (20 * 1024 * 1024)) && (fsize > 1024 ))
   {
-    FILE *fp = fopen(s_dll.c_str(), "rb");
-    if (fp)
+    std::ifstream hDLLFile(platform::PathFromUtf8(s_dll), std::ios::binary);
+    if (hDLLFile.is_open())
     {
-      std::string filedata;
-      fseek(fp, 0, SEEK_END);
-      filedata.resize(ftell(fp));
-      rewind(fp);
-      fread(&filedata[0], 1, filedata.size(), fp);
-      fclose(fp);
+      std::string filedata((std::istreambuf_iterator<char>(hDLLFile)), std::istreambuf_iterator<char>());
+      hDLLFile.close();
 
-      std::transform(filedata.begin(), filedata.end(), filedata.begin(), ::tolower);
+      std::transform(filedata.begin(), filedata.end(), filedata.begin(), [](unsigned char c) { return (char)tolower(c); });
 
       if (filedata.find("libfftw3f-3.dll") != std::string::npos)
       {

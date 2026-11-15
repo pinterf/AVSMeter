@@ -150,22 +150,21 @@ std::string platform::NativeSystemPath(const std::string &s_path)
   if (!::IsWow64Process(::GetCurrentProcess(), &bWoW64Process) || !bWoW64Process)
     return s_path;
 
-  // ANSI API: the path keeps the encoding of the caller, only the system folder prefix is replaced.
-  char szWinDir[MAX_PATH + 1];
-  UINT uiLen = ::GetWindowsDirectoryA(szWinDir, sizeof(szWinDir));
-  if ((uiLen == 0) || (uiLen >= sizeof(szWinDir)))
+  wchar_t wszWinDir[MAX_PATH + 1];
+  UINT uiLen = ::GetWindowsDirectoryW(wszWinDir, MAX_PATH + 1);
+  if ((uiLen == 0) || (uiLen > MAX_PATH))
     return s_path;
 
-  std::string sSystem32 = AsciiLower(std::string(szWinDir) + "\\system32\\");
+  std::string sSystem32 = AsciiLower(win32::WideToUtf8(wszWinDir) + "\\system32\\");
   if (AsciiLower(s_path.substr(0, sSystem32.length())) != sSystem32)
     return s_path;
 
-  char szSysWOW64Dir[MAX_PATH + 1];
-  uiLen = ::GetSystemWow64DirectoryA(szSysWOW64Dir, sizeof(szSysWOW64Dir));
-  if ((uiLen <= 1) || (uiLen >= sizeof(szSysWOW64Dir)))
+  wchar_t wszSysWOW64Dir[MAX_PATH + 1];
+  uiLen = ::GetSystemWow64DirectoryW(wszSysWOW64Dir, MAX_PATH + 1);
+  if ((uiLen <= 1) || (uiLen > MAX_PATH))
     return s_path;
 
-  return std::string(szSysWOW64Dir) + "\\" + s_path.substr(sSystem32.length());
+  return win32::WideToUtf8(wszSysWOW64Dir) + "\\" + s_path.substr(sSystem32.length());
 }
 
 

@@ -136,7 +136,6 @@ void         PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt
 std::string  Pad(std::string s_line);
 static void  SetDefaultSettings();
 static bool  ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cmd);
-static AVSValue ImportScript(IScriptEnvironment *AVS_env, const std::string &s_avsfile);
 static void  AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpuinfo);
 static int   RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
 static void  AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
@@ -327,7 +326,7 @@ int main(int argc, char* argv[])
     PClip AVS_clip;
     VideoInfo   AVS_vidinfo;
 
-    AVS_main = ImportScript(AVS_env, cmd.sAVSFile);
+    AVS_main = InvokeWithPath(AVS_env, "Import", cmd.sAVSFile, AvisynthInfo.bImportUtf8);
 
     if (!AVS_main.IsClip())
       AVS_env->ThrowError("\"%s\":\nScript did not return a clip", cmd.sAVSFile.c_str());
@@ -440,7 +439,7 @@ int main(int argc, char* argv[])
   catch (AvisynthError err)
   {
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-    sAVSError = utils.StrFormat("%s", (PCSTR)err.msg);
+    sAVSError = platform::ToUtf8(err.msg);
     iRet = -1;
 
     if (bEarlyExit == false)
@@ -2017,30 +2016,6 @@ bool WriteINIFile(std::string &s_inifile)
 }
 
 
-// Non-ASCII paths are UTF-8: Import(utf8=true) on AviSynth+ r2487+, the ANSI path on
-// older versions (an unknown named argument is a script error there, not NotFound).
-static AVSValue ImportScript(IScriptEnvironment *AVS_env, const std::string &s_avsfile)
-{
-  bool bAscii = std::all_of(s_avsfile.begin(), s_avsfile.end(), [](char c) { return (unsigned char)c < 0x80; });
-  if (bAscii)
-    return AVS_env->Invoke("Import", s_avsfile.c_str());
-
-  size_t pos = AvisynthInfo.sVersionString.find("(r");
-  if (AvisynthInfo.bIsAVSPlus && (pos != std::string::npos) && (atoi(AvisynthInfo.sVersionString.c_str() + pos + 2) >= 2487))
-  {
-    AVSValue avsArgs[2] = { s_avsfile.c_str(), true };
-    const char *pszNames[2] = { NULL, "utf8" };
-    return AVS_env->Invoke("Import", AVSValue(avsArgs, 2), pszNames);
-  }
-
-  std::string sLegacy;
-  if (!platform::LegacyPath(s_avsfile, sLegacy))
-    AVS_env->ThrowError("\"%s\":\nPath not supported by this AviSynth version (not UTF-8 capable)", s_avsfile.c_str());
-
-  return AVS_env->Invoke("Import", sLegacy.c_str());
-}
-
-
 std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData)
 {
   std::string sRet = "";
@@ -2348,7 +2323,7 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
     PClip AVS_clip;
     VideoInfo   AVS_vidinfo;
 
-    AVS_main = ImportScript(AVS_env, s_avsfile);
+    AVS_main = InvokeWithPath(AVS_env, "Import", s_avsfile, AvisynthInfo.bImportUtf8);
 
     if (!AVS_main.IsClip()) //not a clip
       AVS_env->ThrowError("Script did not return a video clip:\n%s", s_avsfile.c_str());
@@ -2424,7 +2399,7 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
   catch (AvisynthError err)
   {
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-    s_error = utils.StrFormat("%s", (PCSTR)err.msg);
+    s_error = platform::ToUtf8(err.msg);
     uiFrameInterval = 10;
   }
   catch (std::exception& ex)

@@ -18,6 +18,7 @@
 
 #include "Utility.h"
 #include "platform/file_info.h"
+#include "platform/text.h"
 
 
 CUtils::CUtils()
@@ -39,7 +40,7 @@ std::string CUtils::SysErrorMessage()
   memset(msgBuf, 0, sizeof(msgBuf));
   FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msgBuf, 2046, NULL);
 
-  std::string sRet(msgBuf);
+  std::string sRet = platform::ToUtf8(msgBuf); // ANSI
   sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
   sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
 
@@ -91,14 +92,14 @@ void CUtils::StrTrim(std::string &s_string)
 
 void CUtils::StrToUC(std::string &s_string)
 {
-  std::transform(s_string.begin(), s_string.end(), s_string.begin(), ::toupper);
+  std::transform(s_string.begin(), s_string.end(), s_string.begin(), [](unsigned char c) { return (char)toupper(c); });
   return;
 }
 
 
 void CUtils::StrToLC(std::string &s_string)
 {
-  std::transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
+  std::transform(s_string.begin(), s_string.end(), s_string.begin(), [](unsigned char c) { return (char)tolower(c); });
   return;
 }
 

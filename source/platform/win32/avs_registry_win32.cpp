@@ -17,6 +17,7 @@
 
 
 #include "platform/avs_registry.h"
+#include "platform/win32/utf_win32.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -27,21 +28,20 @@ std::vector<platform::RegisteredPluginDir> platform::RegisteredPluginDirs()
   std::vector<RegisteredPluginDir> vDirs;
 
   const struct { HKEY hRoot; const char *pszHive; } roots[] = { { HKEY_CURRENT_USER, "HKCU" }, { HKEY_LOCAL_MACHINE, "HKLM" } };
-  const char *values[] = { "PluginDir2_5", "PluginDir+" };
+  const struct { const wchar_t *pwszValue; const char *pszValue; } values[] = { { L"PluginDir2_5", "PluginDir2_5" }, { L"PluginDir+", "PluginDir+" } };
 
   for (const auto &root : roots)
   {
     HKEY hKey = NULL;
-    if (::RegOpenKeyExA(root.hRoot, "Software\\Avisynth", 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+    if (::RegOpenKeyExW(root.hRoot, L"Software\\Avisynth", 0, KEY_READ, &hKey) != ERROR_SUCCESS)
       continue;
 
-    for (const char *pszValue : values)
+    for (const auto &value : values)
     {
-      // ANSI: the plugin scan still uses ANSI paths
-      char szDir[2050] = "";
-      DWORD dwBytes = 2048;
-      if (::RegQueryValueExA(hKey, pszValue, NULL, NULL, (LPBYTE)szDir, &dwBytes) == ERROR_SUCCESS)
-        vDirs.push_back({ pszValue, root.pszHive, szDir });
+      wchar_t wszDir[2050] = L"";
+      DWORD dwBytes = 2048 * sizeof(wchar_t);
+      if (::RegQueryValueExW(hKey, value.pwszValue, NULL, NULL, (LPBYTE)wszDir, &dwBytes) == ERROR_SUCCESS)
+        vDirs.push_back({ value.pszValue, root.pszHive, win32::WideToUtf8(wszDir) });
     }
 
     ::RegCloseKey(hKey);

@@ -60,8 +60,7 @@ std::string GetExceptionModule(LPVOID address)
   if (wsModule.empty())
     return "";
 
-  //ANSI, as the module paths of the plugin scan
-  return platform::NativeSystemPath(platform::win32::WideToAnsi(wsModule.c_str()));
+  return platform::NativeSystemPath(platform::win32::WideToUtf8(wsModule.c_str()));
 }
 
 
