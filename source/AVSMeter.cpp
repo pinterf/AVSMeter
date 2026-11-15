@@ -139,6 +139,7 @@ static void  SetDefaultSettings();
 static bool  ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cmd);
 static void  AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpuinfo);
 static int   RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
+static std::string FormatPluginDirLine(const std::string &sPluginDir);
 static void  AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
 static void  ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, std::string &sLogBuffer);
 static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs);
@@ -160,11 +161,7 @@ int main(int argc, char* argv[])
   int iRet = 0;
 
   std::string sAVSMVersion = VERSION_STR;
-
-  if (PROCESS_64)
-    sAVSMVersion += " (x64)";
-  else
-    sAVSMVersion += " (x86)";
+  sAVSMVersion += utils.StrFormat(" (%s)", kArchName);
 
   PrintConsole(Settings.bConUseStdOut, COLOR_AVSM_VERSION, "\nAVSMeter %s, %s\n", sAVSMVersion.c_str(), COPYRIGHT_STR);
 
@@ -907,10 +904,7 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
       sPluginDir = AvisynthInfo.vPluginDirs[uiPlugDir];
       if (sPluginDir != "")
       {
-        size_t spos = sPluginDir.find(":\t");
-        sPluginDir = sPluginDir.substr(0, spos + 1) + "   " + sPluginDir.substr(spos + 2);
-
-        sOutBuf = utils.StrFormat("%s\n", sPluginDir.c_str());
+        sOutBuf = FormatPluginDirLine(sPluginDir) + "\n";
         sLogBuffer += sOutBuf;
         PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
       }
@@ -1111,19 +1105,9 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
       if (Settings.sLogDirectory == "")
       {
         if (Settings.bLogFileDateTimeSuffix)
-        {
-          if (PROCESS_64)
-            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x64 [%s].log", sCurrentDir.c_str(), platform::kPathSep, Settings.sSystemDateTime.c_str());
-          else
-            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x86 [%s].log", sCurrentDir.c_str(), platform::kPathSep, Settings.sSystemDateTime.c_str());
-        }
+          sAVSInfoFile = utils.StrFormat("%s%cavsinfo_%s [%s].log", sCurrentDir.c_str(), platform::kPathSep, kArchName, Settings.sSystemDateTime.c_str());
         else
-        {
-          if (PROCESS_64)
-            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x64.log", sCurrentDir.c_str(), platform::kPathSep);
-          else
-            sAVSInfoFile = utils.StrFormat("%s%cavsinfo_x86.log", sCurrentDir.c_str(), platform::kPathSep);
-        }
+          sAVSInfoFile = utils.StrFormat("%s%cavsinfo_%s.log", sCurrentDir.c_str(), platform::kPathSep, kArchName);
       }
       else
       {
@@ -1201,13 +1185,22 @@ static void AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sA
     std::string sTemp = AvisynthInfo.vPluginDirs[uiPlugDir];
     if (sTemp != "")
     {
-      size_t spos = sTemp.find(":\t");
-      sTemp = sTemp.substr(0, spos + 1) + "   " + sTemp.substr(spos + 2);
-
-      sOutBuf = utils.StrFormat("%s", sTemp.c_str());
-      sLogBuffer += sOutBuf + "\n";
+      sLogBuffer += FormatPluginDirLine(sTemp) + "\n";
     }
   }
+}
+
+
+// "label:\tdir" -> value aligned at column 28 like the other info lines, at least one space
+static std::string FormatPluginDirLine(const std::string &sPluginDir)
+{
+  size_t spos = sPluginDir.find(":\t");
+  if (spos == std::string::npos)
+    return sPluginDir;
+
+  std::string sLabel = sPluginDir.substr(0, spos + 1);
+  sLabel.resize(std::max<size_t>(sLabel.size() + 1, 28), ' ');
+  return sLabel + sPluginDir.substr(spos + 2);
 }
 
 

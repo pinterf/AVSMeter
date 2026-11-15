@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, Copyright(C) Groucho2004.
+  This file is part of AVSMeter, Copyright(C) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -31,6 +31,19 @@
 #define MAX_PATH_LEN 32768
 #define DSE_DELAY 500
 const bool PROCESS_64 = (sizeof(void*) == 8);
+
+// Process architecture for banners, labels and file names
+#if defined(_M_X64) || defined(__x86_64__)
+constexpr const char *kArchName = "x64";
+#elif defined(_M_IX86) || defined(__i386__)
+constexpr const char *kArchName = "x86";
+#elif defined(_M_ARM64) || defined(__aarch64__)
+constexpr const char *kArchName = "aarch64";
+#elif defined(_M_ARM) || defined(__arm__)
+constexpr const char *kArchName = "arm";
+#else
+constexpr const char *kArchName = PROCESS_64 ? "64 Bit" : "32 Bit";
+#endif
 
 inline bool CompareNoCase(std::string first, std::string second)
 {

@@ -116,7 +116,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   {
     s_ErrorMsg = utils.SysErrorMessage();
     if (s_ErrorMsg != "")
-      s_ErrorMsg = utils.StrFormat("Error: Cannot load %s.\nThe system returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", platform::kAvsLibFileName, s_ErrorMsg.c_str(), PROCESS_64 ? "x64" : "x86");
+      s_ErrorMsg = utils.StrFormat("Error: Cannot load %s.\nThe system returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", platform::kAvsLibFileName, s_ErrorMsg.c_str(), kArchName);
     else
       s_ErrorMsg = std::string("Error: Cannot load ") + platform::kAvsLibFileName;
 
@@ -130,7 +130,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
     bIs64BitAVSDLL = true;
     if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
     {
-      s_ErrorMsg = utils.StrFormat("Error: AVSMeter (x86) cannot load a 64 Bit %s.", platform::kAvsLibFileName);
+      s_ErrorMsg = utils.StrFormat("Error: AVSMeter (%s) cannot load a 64 Bit %s.", kArchName, platform::kAvsLibFileName);
       return false;
     }
   }
@@ -138,7 +138,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   {
     if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
     {
-      s_ErrorMsg = utils.StrFormat("Error: AVSMeter (x64) cannot load a 32 Bit %s.", platform::kAvsLibFileName);
+      s_ErrorMsg = utils.StrFormat("Error: AVSMeter (%s) cannot load a 32 Bit %s.", kArchName, platform::kAvsLibFileName);
       return false;
     }
   }
@@ -426,7 +426,7 @@ static std::string ComparableDir(std::string s_dir)
 void CAvisynthInfo::EnumPluginDirs()
 {
   vPluginDirs.clear();
-  const char *pszArch = PROCESS_64 ? "x64" : "x86";
+  const char *pszArch = kArchName;
 
   std::vector<std::string> vRegLabels;
   std::vector<std::string> vRegDirs;
