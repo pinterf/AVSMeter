@@ -1,13 +1,16 @@
 # AVSMeter
 
-AVSMeter is a Windows command-line tool for benchmarking AviSynth scripts and
+AVSMeter is a command-line tool for benchmarking AviSynth scripts and
 diagnosing AviSynth installations and plugins. Originally developed by
-**Groucho2004**, it measures how quickly a script delivers video frames without
-encoding them, helping identify slow filters, bottlenecks, and crashes.
+**Groucho2004** for Windows, it measures how quickly a script delivers video
+frames and/or audio samples without encoding them, helping identify slow
+filters, bottlenecks, and crashes. This continuation runs on Windows (x86, x64)
+and Linux (x86_64, aarch64).
 
-It reports clip information, minimum/maximum/average processing speed, CPU and
-memory usage, and optional GPU/VPU sensor data. It can inspect the installed
-AviSynth environment and plugin dependencies, and export logs and CSV data.
+It reports clip information, minimum/maximum/average processing speed, audio
+speed relative to realtime, CPU and memory usage, and optional GPU/VPU sensor
+data (Windows). It can inspect the installed AviSynth environment and plugin
+dependencies, and export logs and CSV data.
 
 ## History and resurrection
 
@@ -48,10 +51,13 @@ group APIs (`GetActiveProcessorCount`, `GetActiveProcessorGroupCount`,
 use them. In addition, the prebuilt libcpuid 0.8.2 libraries could not be linked
 with the `v141_xp` linker (IL mismatch), and the maintainer (pinterf) did not
 want to build libcpuid from source.
-Audio benchmarking remains planned. A Linux (x86_64) CMake build compiles and
-links, but it is work in progress: several platform modules are still stubs, so
-it cannot benchmark yet. Audio metadata reporting
-is already present; processing audio samples for benchmarking is not.
+
+Since then, AVSMeter builds with CMake as well and runs natively on Linux
+x86_64 and aarch64 against AviSynth+ (`libavisynth.so`); see
+[Building with CMake](#building-with-cmake-windows-linux) and
+[Linux notes](#linux-notes). Audio can be benchmarked with `-audio` / `-av`; see
+[Audio benchmarking](#audio-benchmarking). Not yet released: binaries, version
+number and changelog still show 3.0.9.0.
 
 ## Links and documentation
 
@@ -77,11 +83,15 @@ AVSMeter.exe script.avs -log
 AVSMeter.exe -avsinfo -log
 AVSMeter64.exe script.avs -csv
 AVSMeter64.exe script.avs -gpu
+AVSMeter64.exe script.avs -av
+./avsmeter script.avs -audio -chunk=1 -log
 ```
 
 Use the executable matching the **AviSynth DLL and plugins' architecture**:
 `AVSMeter.exe` is x86; `AVSMeter64.exe` is x64. A 64-bit Windows installation
 can run the x86 executable, but that process still needs x86 AviSynth/plugins.
+`-avsinfo` names plugins built for another CPU (e.g. ARM64 DLLs next to x64
+ones) instead of trying to load them. On Linux the executable is `avsmeter`.
 
 The original author specifies AviSynth 2.6.x or AviSynth+. By default AVSMeter
 loads `avisynth.dll` through Windows DLL search rules. The `AVSDLL` entry in
@@ -97,10 +107,32 @@ The author's Doom9 announcement recommends administrative rights for full diagno
 functionality. Be aware that script/plugin checks load third-party DLLs; use
 trusted scripts and plugins, and elevate only when necessary.
 
+### Audio benchmarking
+
+By default only video frames are requested (`GetFrame`), as in the original
+releases. Audio needs one of these switches:
+
+| Switch | Requests | Unit |
+|---|---|---|
+| `-audio` | `GetAudio` only | frame, or 1000-sample chunk for clips without video |
+| `-av` | `GetFrame`, then `GetAudio` for the same frame | frame |
+| `-chunk=n` | at most n samples per `GetAudio` call (1..1000000); with `-audio` / `-av` only | chunk for clips without video |
+
+For each frame, the samples belonging to exactly that frame are requested, as
+ffmpeg does: no gaps or overlaps, even at NTSC rates. `-chunk=1` requests every
+sample separately, a stress test for audio filters. The results add the samples
+processed (first - last) and the audio speed relative to realtime; the clip info
+shows the channel layout when the clip has a channel mask (AviSynth+ interface
+v10.1 or later; e.g. `SetChannelMask("5.1")`). Clips without video report chunks
+(CPS, TPC) instead of frames, also in the log and CSV. Fast audio filters often
+finish under the 0.5 s minimum runtime; then a hint and an imprecise realtime
+factor are shown. Details: [manual](doc/AVSMeter.html).
+
 ### Operating systems
 
-The imported implementation is **Windows-only, x86 and x64**. POSIX support in
-some bundled AviSynth headers does not make AVSMeter itself portable.
+The original releases were **Windows-only, x86 and x64**. This continuation
+also supports Linux x86_64 and aarch64 (see [Linux notes](#linux-notes)); the
+rest of this section describes the original executables.
 
 Static inspection of the original 3.0.9.0 executables found these PE targets:
 
@@ -319,7 +351,9 @@ commands describe the supplied entry points, not successful builds.
 
 ## Building with CMake (Windows, Linux)
 
-CMake 3.22 or later, C++17. Presets are in `CMakePresets.json`:
+CMake 3.22 or later, C++17. Presets are in `CMakePresets.json`. On Linux
+(Ubuntu) install `sudo apt install build-essential cmake ninja-build git`, plus
+`clang` for the Clang preset:
 
 ```sh
 # Linux (GCC or Clang, Ninja): build/linux-gcc/avsmeter
@@ -353,6 +387,34 @@ On Linux the settings file is `avsmeter.ini`: next to the executable if one exis
 there (portable use), otherwise `$XDG_CONFIG_HOME/avsmeter/avsmeter.ini`
 (default `~/.config/avsmeter/`). If the INI file cannot be created, AVSMeter warns and
 uses the defaults.
+
+### Linux notes
+
+- AviSynth+ is loaded as `libavisynth.so` through the normal library search
+  (`LD_LIBRARY_PATH`, system paths); `AVSDLL` in the INI selects a specific file.
+- `-avsinfo` reads plugin details from ELF headers: architecture, version from
+  the `.so` name, dependencies. Plugins built for another CPU are named, not loaded.
+- Memory usage is the resident set size (RSS) from `/proc/self/statm`; CPU usage
+  comes from `/proc/self/stat` and `/proc/stat` in clock ticks (typically 10 ms),
+  so values differ from Windows.
+- `-gpu` is not available (GPU-Z is Windows only).
+- A crash in a plugin prints a short signal report and exits with a nonzero code.
+
+## Tests
+
+`tests\run-characterization.ps1` (PowerShell 7) runs the executable on the
+scripts in `tests\scripts` and compares normalized console output, logs, CSV and
+INI files with `tests\golden`. It needs AviSynth+ installed; volatile values
+(times, rates, memory) are masked.
+
+```bat
+pwsh -File tests\run-characterization.ps1
+pwsh -File tests\run-characterization.ps1 -Exe msvc\bin\Win32\Release\AVSMeter.exe
+pwsh -File tests\run-characterization.ps1 -Case audio_only -UpdateGolden
+```
+
+Do not run another AVSMeter instance at the same time. The runner currently
+targets Windows; Linux builds are checked by hand.
 
 ## License
 
