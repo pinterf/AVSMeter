@@ -338,9 +338,12 @@
     Application Verifier (Windows) find the real culprit.<br>
     <b><i>Note:</i></b> With "Prefetch", frames are processed in worker
     threads. On Windows, AviSynth passes the exception on to the main
-    thread, so the module is reported as "KERNELBASE.dll"; run the
-    script without "Prefetch" to find the actual module. On Linux the
-    report names the faulting module and thread.<br>
+    thread; the report then names the module and thread where the fault
+    happened, followed by "(rethrown by ...KERNELBASE.dll)". If memory
+    was corrupted, several threads may fault, and the reported module
+    can vary between runs; run the script without "Prefetch" to confirm
+    the culprit. On Linux the report names the faulting module and
+    thread.<br>
     <br>
     <br>
   </body>

@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -20,6 +20,7 @@
 #include "platform/file_info.h"
 #include "platform/win32/utf_win32.h"
 
+#include <atomic>
 #include <cstdio>
 #include <exception>
 #include <string>
@@ -30,6 +31,113 @@
 
 namespace
 {
+
+// Recent hardware faults seen in any thread. A fault in a thread AVSMeter does not
+// own (e.g. a Prefetch worker) reaches the translator only after AviSynth has passed it
+// on with RaiseException, which makes KERNELBASE.dll the reported module. The vectored
+// handler sees the original fault first, so the translator can report where it happened.
+// Several worker threads may fault at once, hence a small ring instead of a single slot.
+struct FaultRecord
+{
+  DWORD dwCode;
+  PVOID pAddress;
+  DWORD dwNumParams;
+  ULONG_PTR uParams[2];
+  DWORD dwThreadId;
+};
+
+SRWLOCK g_FaultLock = SRWLOCK_INIT;
+const int kFaultRing = 16;
+FaultRecord g_Faults[kFaultRing] = {};
+unsigned int g_uFaultCount = 0;
+HMODULE g_hRaiseModule = nullptr; // RaiseException's module: "faults" there are rethrows
+std::atomic<bool> g_bVehInstalled(false);
+
+
+bool IsHardwareFault(DWORD dwCode)
+{
+  switch (dwCode)
+  {
+    case EXCEPTION_ACCESS_VIOLATION:
+    case EXCEPTION_IN_PAGE_ERROR:
+    case EXCEPTION_DATATYPE_MISALIGNMENT:
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+    case EXCEPTION_PRIV_INSTRUCTION:
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+    case EXCEPTION_INT_OVERFLOW:
+    case EXCEPTION_FLT_DENORMAL_OPERAND:
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+    case EXCEPTION_FLT_INEXACT_RESULT:
+    case EXCEPTION_FLT_INVALID_OPERATION:
+    case EXCEPTION_FLT_OVERFLOW:
+    case EXCEPTION_FLT_STACK_CHECK:
+    case EXCEPTION_FLT_UNDERFLOW:
+    case STATUS_FLOAT_MULTIPLE_FAULTS:
+    case STATUS_FLOAT_MULTIPLE_TRAPS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+
+LONG CALLBACK RecordFault(EXCEPTION_POINTERS* pExcept)
+{
+  const EXCEPTION_RECORD* pRec = pExcept->ExceptionRecord;
+  HMODULE hModule = nullptr;
+  if (IsHardwareFault(pRec->ExceptionCode)
+      && !(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                              (LPCWSTR)pRec->ExceptionAddress, &hModule) && hModule == g_hRaiseModule))
+  {
+    AcquireSRWLockExclusive(&g_FaultLock);
+    FaultRecord &f = g_Faults[g_uFaultCount++ % kFaultRing];
+    f.dwCode = pRec->ExceptionCode;
+    f.pAddress = pRec->ExceptionAddress;
+    f.dwNumParams = pRec->NumberParameters;
+    f.uParams[0] = pRec->NumberParameters > 0 ? pRec->ExceptionInformation[0] : 0;
+    f.uParams[1] = pRec->NumberParameters > 1 ? pRec->ExceptionInformation[1] : 0;
+    f.dwThreadId = GetCurrentThreadId();
+    ReleaseSRWLockExclusive(&g_FaultLock);
+  }
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+
+
+bool IsSameFault(const EXCEPTION_RECORD* pRec, const FaultRecord &f)
+{
+  if (f.dwCode != pRec->ExceptionCode || f.pAddress == pRec->ExceptionAddress || f.dwThreadId == GetCurrentThreadId())
+    return false;
+
+  // Access violation parameters (read/write flag, address) must match as well.
+  for (DWORD i = 0; i < 2 && i < f.dwNumParams; i++)
+  {
+    if (pRec->NumberParameters <= i || pRec->ExceptionInformation[i] != f.uParams[i])
+      return false;
+  }
+  return true;
+}
+
+
+// True if pRec is a fault raised in another thread and rethrown here; pOrig receives it.
+bool FindOriginalFault(const EXCEPTION_RECORD* pRec, FaultRecord* pOrig)
+{
+  bool bFound = false;
+  AcquireSRWLockShared(&g_FaultLock);
+  unsigned int uCount = g_uFaultCount < (unsigned int)kFaultRing ? g_uFaultCount : (unsigned int)kFaultRing;
+  for (unsigned int i = 1; i <= uCount && !bFound; i++) // newest first
+  {
+    const FaultRecord &f = g_Faults[(g_uFaultCount - i) % kFaultRing];
+    if (IsSameFault(pRec, f))
+    {
+      *pOrig = f;
+      bFound = true;
+    }
+  }
+  ReleaseSRWLockShared(&g_FaultLock);
+  return bFound;
+}
+
 
 std::string GetExceptionModule(LPVOID address)
 {
@@ -1841,7 +1949,17 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
     default: sExceptionDescription = "UNKNOWN_EXCEPTION";
   }
 
-  _snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p", pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
+  FaultRecord orig;
+  if (FindOriginalFault(pExcept->ExceptionRecord, &orig))
+  {
+    std::string sOrigModule = GetExceptionModule(orig.pAddress);
+    if (sOrigModule == "") sOrigModule = "Cannot determine module";
+    _snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p\nThread:   %lu (rethrown by %s)",
+      pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sOrigModule.c_str(), orig.pAddress,
+      orig.dwThreadId, sExceptionModule.c_str());
+  }
+  else
+    _snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p", pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
 
   throw std::exception(msg);
 }
@@ -1851,5 +1969,13 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
 
 void platform::TranslateCrashes()
 {
+  if (!g_bVehInstalled.exchange(true))
+  {
+    // kernel32's RaiseException is a stub; the exception is raised in KERNELBASE (Win7+).
+    g_hRaiseModule = GetModuleHandleW(L"kernelbase.dll");
+    if (g_hRaiseModule == nullptr)
+      g_hRaiseModule = GetModuleHandleW(L"kernel32.dll");
+    AddVectoredExceptionHandler(0, RecordFault);
+  }
   _set_se_translator(SE_Translator);
 }
