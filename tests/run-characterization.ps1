@@ -41,6 +41,11 @@ $Cases = @(
     @{ Name = 'runtime_error';      Args = @('runtime_error.avs', '-o');         Exit = -1; Artifacts = @() }
     @{ Name = 'missing_script';     Args = @('does_not_exist.avs');              Exit = -1; Artifacts = @() }
     @{ Name = 'usage';              Args = @();                                  Exit = -1;  Artifacts = @() }
+    @{ Name = 'audio_av_log';       Args = @('audio_video.avs', '-o', '-log', '-av'); Exit = 0; Artifacts = @('audio_video.log') }
+    @{ Name = 'audio_only';         Args = @('audio_only.avs', '-o', '-audio');  Exit = 0;  Artifacts = @() }
+    @{ Name = 'audio_chunk1';       Args = @('audio_ntsc.avs', '-o', '-audio', '-chunk=1'); Exit = 0; Artifacts = @() }
+    @{ Name = 'audio_only_as_video'; Args = @('audio_only.avs', '-o');           Exit = -1; Artifacts = @() }
+    @{ Name = 'chunk_without_audio'; Args = @('video.avs', '-chunk=10');         Exit = -1; Artifacts = @() }
     @{ Name = 'avsinfo';            Args = @('-avsinfo');                        Exit = 0;  Artifacts = @(); LabelsOnly = $true }
 )
 
@@ -87,13 +92,14 @@ function Compress-Blank([string[]]$Lines) {
 }
 
 $VolatileValue = @(
-    '^(FPS \(min \| max \| average\):\s+).*$'
-    '^(TPF \(min \| max \| average\):\s+).*$'
+    '^((FPS|CPS) \(min \| max \| average\):\s+).*$'
+    '^((TPF|TPC) \(min \| max \| average\):\s+).*$'
     '^(Process memory usage \(max\):\s+).*$'
     '^(Thread count:\s+).*$'
     '^(CPU usage \(average\):\s+).*$'
     '^(Time \(elapsed\):\s+).*$'
     '^(Time \(elapsed \| estimated\):\s+).*$'
+    '^(Audio speed \(realtime\):\s+).*$'
 )
 
 function Format-Common([string[]]$Lines, [hashtable]$C) {
@@ -103,7 +109,7 @@ function Format-Common([string[]]$Lines, [hashtable]$C) {
         $l = $l -replace '^AviSynth.*\(\d+(\.\d+)+\)\s*$', '<AVISYNTH VERSION>'
         $l = $l -replace '^Pre-scanning script \(F\d+ / T[\d.]+\)$', 'Pre-scanning script (<V>)'
         foreach ($re in $VolatileValue) { $l = $l -replace $re, '$1<V>' }
-        if ($C.VolatileFrames) { $l = $l -replace '^(Frames processed:\s+).*$', '$1<V>' }
+        if ($C.VolatileFrames) { $l = $l -replace '^((Frames|Chunks|Audio samples) processed:\s+).*$', '$1<V>' }
         $l
     }
 }
@@ -118,7 +124,7 @@ function Format-Stdout([string]$Text, [hashtable]$C) {
     # Drop the live progress block (first progress line .. last "Press 'Esc'" line).
     $first = -1; $last = -1
     for ($i = 0; $i -lt $lines.Count; $i++) {
-        if ($first -lt 0 -and $lines[$i] -match '^Frame \(current \| last\):') { $first = $i }
+        if ($first -lt 0 -and $lines[$i] -match '^(Frame|Chunk) \(current \| last\):') { $first = $i }
         if ($lines[$i] -like "Press 'Esc'*") { $last = $i }
     }
     if ($first -ge 0) {

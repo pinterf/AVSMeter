@@ -85,6 +85,12 @@
 
       Displays GPU/VPU usage (requires GPU-Z)<br>
       &nbsp; -range=first,last&nbsp;&nbsp; Sets frame range<br>
+      &nbsp; -audio&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Requests audio only (GetAudio)<br>
+      &nbsp; -av&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Requests video and the audio of each frame<br>
+      &nbsp; -chunk=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Samples per audio request<br>
       &nbsp; -timelimit=n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Sets
       time limit (seconds)<br>
       &nbsp;
@@ -155,7 +161,32 @@
     <b>"-range=first,last"<br>
     </b>Specify the range of frames to be processed. For example,
     "-range=1500,1999" processes 500 frames starting at frame 1500.
-    Without "-range" AVSMeter processes all frames of the script.<br>
+    Without "-range" AVSMeter processes all frames of the script.
+    For clips without video "-range" selects audio chunks.<br>
+    <br>
+    <b>"-audio"<br>
+    </b>Benchmarks the audio part of the script (GetAudio) without
+    requesting video frames. For each frame the exact span of audio
+    samples belonging to that frame is requested, so the audio is read
+    without gaps or overlaps. Clips without video are read in chunks of
+    1000 samples (see "-chunk").<br>
+    <br>
+    <b>"-av"<br>
+    </b>Requests each video frame (GetFrame) followed by the audio
+    samples of that frame (GetAudio), similar to how players and
+    encoders read a script.<br>
+    <br>
+    <b>"-chunk=n"<br>
+    </b>Only together with "-audio" or "-av". Sets the maximum number of
+    samples per GetAudio request (1..1000000). Frame-aligned requests are
+    split into pieces of at most n samples; "-chunk=1" requests every
+    sample separately, which is useful for stress-testing an audio
+    filter. For clips without video it sets the chunk size, and progress,
+    rate (CPS) and time (TPC) are reported per chunk instead of per frame.
+    The results include the number of audio samples processed and the
+    audio speed relative to realtime. Audio is often read in less than
+    the minimum runtime of 0.5 seconds; the realtime factor is then marked
+    as imprecise. Use a longer clip (e.g. Loop) for reliable figures.<br>
     <br>
     <b>"-timelimit=n"<br>
     </b>Specify a time limit (in seconds) after which the program stops

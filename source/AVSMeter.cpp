@@ -32,6 +32,7 @@
 #include "platform/single_instance.h"
 #include "platform/text.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <thread>
@@ -46,6 +47,11 @@
 #define REFRESH_INTERVAL               0.20   //seconds
 #define MIN_TIME_PER_FRAMEINTERVAL    20.00   //milliseconds
 #define MIN_RUNTIME                  500      //milliseconds
+
+#define DEFAULT_AUDIO_CHUNK         1000      //samples per request of an audio-only clip, like ffmpeg
+#define MAX_AUDIO_CHUNK          1000000      //samples
+
+enum BenchMode { BENCH_VIDEO = 0, BENCH_AUDIO, BENCH_AV };
 
 struct stSettings
 {
@@ -71,6 +77,8 @@ struct stSettings
   bool      bLogFileDateTimeSuffix;
   bool      bDisableFFTWDLLWarning;
   size_t    nLoadPluginInterval;
+  int       iBenchMode;
+  int64_t   iAudioChunk;
 } Settings;
 
 
@@ -106,6 +114,7 @@ struct stRunStats
   bool          bFirstScr = true;
   unsigned int  uiCursorOffset = 0;
   int64_t       iElapsedMS = 0;
+  double        dElapsedSec = 0.0;
   int64_t       iEstimatedMS = 0;
   uint32_t      dwMemPeakMB = 0;
   uint16_t      wThreadCount = 0;
@@ -116,6 +125,26 @@ struct stRunStats
   double        dFPSAverage = 0.0;
   double        dFPSMin = 1.0e+20;
   double        dFPSMax = 0.0;
+};
+
+// What one benchmark step (unit) requests: a video frame, its audio samples, or both.
+// Audio-only clips have no frames, there a unit is a chunk of samples.
+struct stBenchUnits
+{
+  bool          bGetFrame = true;
+  bool          bGetAudio = false;
+  bool          bFrameUnits = true;
+  int64_t       iChunk = 0;          //samples per GetAudio call, 0: one call per frame
+  unsigned int  uiUnits = 0;
+  int64_t       iSamplesRead = 0;
+  int64_t       iFirstSample = -1;
+  int64_t       iLastSample = -1;
+  std::vector<uint8_t> vBuffer;
+  VideoInfo     vi;
+
+  const char *UnitName() const { return bFrameUnits ? "Frame" : "Chunk"; }
+  const char *RateName() const { return bFrameUnits ? "FPS" : "CPS"; }
+  const char *TimeName() const { return bFrameUnits ? "TPF" : "TPC"; }
 };
 
 typedef IScriptEnvironment * __stdcall CREATE_ENV(int);
@@ -142,8 +171,10 @@ static int   RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cm
 static std::string FormatPluginDirLine(const std::string &sPluginDir);
 static void  AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
 static void  ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, std::string &sLogBuffer);
-static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs);
-static void  ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, std::string &sLogBuffer, bool &bRuntimeTooShort);
+static void  InitBenchUnits(const VideoInfo &vi, IScriptEnvironment *AVS_env, const std::string &sAVSFile, stBenchUnits &bu);
+static void  ProcessUnit(const PClip &AVS_clip, IScriptEnvironment *AVS_env, unsigned int uiUnit, stBenchUnits &bu);
+static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs, stBenchUnits &bu);
+static void  ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, std::string &sLogBuffer, bool &bRuntimeTooShort);
 
 
 
@@ -393,22 +424,22 @@ int main(int argc, char* argv[])
 
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
 
-    if (!AVS_vidinfo.HasVideo())
-      AVS_env->ThrowError("Script did not return a video clip:\n%s", cmd.sAVSFile.c_str());
+    stBenchUnits bu;
+    InitBenchUnits(AVS_vidinfo, AVS_env, cmd.sAVSFile, bu);
 
     stRunStats rs;
-    rs.uiLastFrame = uiFrames - 1;
+    rs.uiLastFrame = bu.uiUnits - 1;
 
     if (Settings.iStopFrame == -1)
-      Settings.iStopFrame = (int64_t)uiFrames - 1;
+      Settings.iStopFrame = (int64_t)bu.uiUnits - 1;
 
-    if ((Settings.iStartFrame >= 0) && (Settings.iStartFrame <= Settings.iStopFrame) && (Settings.iStopFrame < (int64_t)uiFrames))
+    if ((Settings.iStartFrame >= 0) && (Settings.iStartFrame <= Settings.iStopFrame) && (Settings.iStopFrame < (int64_t)bu.uiUnits))
     {
       rs.uiFirstFrame = (unsigned int)Settings.iStartFrame;
       rs.uiLastFrame = (unsigned int)Settings.iStopFrame;
       rs.uiFramesToProcess = rs.uiLastFrame - rs.uiFirstFrame + 1;
 
-      sOutBuf = utils.StrFormat("Frame (current | last):         %u | %u", rs.uiFirstFrame, rs.uiLastFrame);
+      sOutBuf = utils.StrFormat("%s (current | last):         %u | %u", bu.UnitName(), rs.uiFirstFrame, rs.uiLastFrame);
       PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\r", Pad(sOutBuf).c_str());
     }
     else
@@ -430,9 +461,9 @@ int main(int argc, char* argv[])
         uiFrameInterval *= 10;
     }
 
-    RunBenchmark(AVS_clip, AVS_env, gpuinfo, uiFrameInterval, uiLogFrameInterval, perfdata, bEarlyExit, rs);
+    RunBenchmark(AVS_clip, AVS_env, gpuinfo, uiFrameInterval, uiLogFrameInterval, perfdata, bEarlyExit, rs, bu);
 
-    ReportRuntime(rs, gpuinfo, uiFrameInterval, sLogBuffer, bRuntimeTooShort);
+    ReportRuntime(rs, bu, gpuinfo, uiFrameInterval, sLogBuffer, bRuntimeTooShort);
 
     AVS_clip = 0;
     AVS_main = 0;
@@ -548,6 +579,8 @@ static void SetDefaultSettings()
   Settings.bAutoCompleteExtension = false;
   Settings.bDisableFFTWDLLWarning = false;
   Settings.nLoadPluginInterval = 40;
+  Settings.iBenchMode = BENCH_VIDEO;
+  Settings.iAudioChunk = 0;
 }
 
 
@@ -561,6 +594,9 @@ static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cm
   bool CLSwitches_info = false;
   bool CLSwitches_o = false;
   bool CLSwitches_lf = false;
+  bool CLSwitches_audio = false;
+  bool CLSwitches_av = false;
+  bool CLSwitches_chunk = false;
 
   std::string sArg = "";
   std::string sArgTest = "";
@@ -683,6 +719,37 @@ static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cm
       continue;
     }
 
+    if (sArgTest == "-audio")
+    {
+      cmd.sCommandLine += sCmdToken + " ";
+      CLSwitches_audio = true;
+      Settings.iBenchMode = BENCH_AUDIO;
+      continue;
+    }
+
+    if (sArgTest == "-av")
+    {
+      cmd.sCommandLine += sCmdToken + " ";
+      CLSwitches_av = true;
+      Settings.iBenchMode = BENCH_AV;
+      continue;
+    }
+
+    if (sArgTest.substr(0, 7) == "-chunk=")
+    {
+      cmd.sCommandLine += sCmdToken + " ";
+      CLSwitches_chunk = true;
+      sTemp = sArgTest.substr(7);
+      if (utils.IsNumeric(sTemp) && (sTemp.length() <= 7))
+        Settings.iAudioChunk = std::strtoll(sTemp.c_str(), nullptr, 10);
+      if ((Settings.iAudioChunk < 1) || (Settings.iAudioChunk > MAX_AUDIO_CHUNK))
+      {
+        PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nInvalid parameter value: \"%s\"\nValue must be between \'1\' and \'%d\'\n", sArg.c_str(), MAX_AUDIO_CHUNK);
+        return false;
+      }
+      continue;
+    }
+
     if (sArgTest.substr(0, 11) == "-timelimit=")
     {
       cmd.sCommandLine += sCmdToken + " ";
@@ -795,6 +862,13 @@ static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cm
       return false;
     }
 
+    if (CLSwitches_audio || CLSwitches_av || CLSwitches_chunk)
+    {
+      PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid switch in combination with \'-avsinfo\': \"%s\"\n", CLSwitches_audio ? "-audio" : (CLSwitches_av ? "-av" : "-chunk"));
+      PrintUsage();
+      return false;
+    }
+
     if (cmd.sAVSFile != "")
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Script specified together with \'avsinfo\'\n");
@@ -807,6 +881,20 @@ static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cm
     if (CLSwitches_lf)
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Switch \'-lf\' must be used in combination with \'avsinfo\'\n");
+      PrintUsage();
+      return false;
+    }
+
+    if (CLSwitches_audio && CLSwitches_av)
+    {
+      PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Switches \'-audio\' and \'-av\' cannot be combined\n");
+      PrintUsage();
+      return false;
+    }
+
+    if (CLSwitches_chunk && !CLSwitches_audio && !CLSwitches_av)
+    {
+      PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Switch \'-chunk\' must be used in combination with \'-audio\' or \'-av\'\n");
       PrintUsage();
       return false;
     }
@@ -1206,6 +1294,48 @@ static std::string FormatPluginDirLine(const std::string &sPluginDir)
 }
 
 
+// Same names as AviSynth+ Info() (channel_layout_to_str, ffmpeg layout names)
+static std::string ChannelLayoutString(unsigned int uiMask)
+{
+  static const struct { const char *name; unsigned int mask; } layouts[] = {
+    { "mono", 0x4 },        { "stereo", 0x3 },       { "2.1", 0xB },           { "3.0", 0x7 },
+    { "3.0(back)", 0x103 }, { "4.0", 0x107 },        { "quad", 0x33 },         { "quad(side)", 0x603 },
+    { "3.1", 0xF },         { "5.0", 0x37 },         { "5.0(side)", 0x607 },   { "4.1", 0x10F },
+    { "5.1", 0x3F },        { "5.1(side)", 0x60F },  { "6.0", 0x707 },         { "6.0(front)", 0x6C3 },
+    { "hexagonal", 0x137 }, { "6.1", 0x70F },        { "6.1(back)", 0x13F },   { "6.1(front)", 0x6CB },
+    { "7.0", 0x637 },       { "7.0(front)", 0x6C7 }, { "7.1", 0x63F },         { "7.1(wide)", 0xFF },
+    { "7.1(wide-side)", 0x6CF }, { "7.1(top)", 0x503F }, { "octagonal", 0x737 }, { "cube", 0x2D033 }
+  };
+  static const char *speakers[] = {
+    "FL", "FR", "FC", "LFE", "BL", "BR", "FLC", "FRC", "BC",
+    "SL", "SR", "TC", "TFL", "TFC", "TFR", "TBL", "TBC", "TBR"
+  };
+
+  if (uiMask == 0x80000000)
+    return "speaker_all";
+
+  for (const auto &l : layouts)
+    if (l.mask == uiMask)
+      return l.name;
+
+  std::string sNames;
+  int iChannels = 0;
+  for (unsigned int i = 0; i < 32; i++)
+  {
+    if (!(uiMask & (1u << i)))
+      continue;
+    if (iChannels++)
+      sNames += "+";
+    sNames += (i < sizeof(speakers) / sizeof(speakers[0])) ? speakers[i] : "NONE";
+  }
+
+  if (iChannels == 0)
+    return "n/a";
+
+  return utils.StrFormat("%d channels (%s)", iChannels, sNames.c_str());
+}
+
+
 static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, std::string &sLogBuffer)
 {
   std::string sOutBuf = "";
@@ -1367,6 +1497,20 @@ static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_
   if (AVS_vidinfo.HasAudio())
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
 
+  sOutBuf = "Audio channel layout:  ";
+  sLogBuffer += sOutBuf;
+  if (AVS_vidinfo.HasAudio())
+    PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
+
+  if (AVS_vidinfo.HasAudio() && AVS_vidinfo.IsChannelMaskKnown())
+    sOutBuf = utils.StrFormat("%19s", ChannelLayoutString(AVS_vidinfo.GetChannelMask()).c_str());
+  else
+    sOutBuf = "                n/a";
+
+  sLogBuffer += sOutBuf + "\n";
+  if (AVS_vidinfo.HasAudio())
+    PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s\n", sOutBuf.c_str());
+
   sOutBuf = "Audio bits/sample:     ";
   sLogBuffer += sOutBuf;
   if (AVS_vidinfo.HasAudio())
@@ -1406,7 +1550,7 @@ static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "%s", sOutBuf.c_str());
 
   if (AVS_vidinfo.num_audio_samples)
-    sOutBuf = utils.StrFormat("%19lld", AVS_vidinfo.num_audio_samples);
+    sOutBuf = utils.StrFormat("%19lld", (long long)AVS_vidinfo.num_audio_samples);
   else
     sOutBuf = "                n/a";
 
@@ -1416,7 +1560,126 @@ static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_
 }
 
 
-static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs)
+// First audio sample of frame n (0 <= n <= 2^31): floor(n * rate * den / num), like
+// VideoInfo::AudioSamplesFromFrames, but split into quotient and remainder so that degenerate
+// rates (huge fps_denominator) cannot overflow int64. rate * den < 2^63, n * remainder < 2^63,
+// the remainder term is below n; saturates instead of wrapping.
+static int64_t FirstSampleOfFrame(const VideoInfo &vi, int64_t n)
+{
+  if ((vi.fps_numerator == 0) || (vi.audio_samples_per_second <= 0) || (n <= 0))
+    return 0;
+  uint64_t uiRateDen = (uint64_t)vi.audio_samples_per_second * vi.fps_denominator;
+  uint64_t uiQuot = uiRateDen / vi.fps_numerator;
+  uint64_t uiRem = uiRateDen % vi.fps_numerator;
+  if ((uint64_t)n > (uint64_t)INT64_MAX / (uiQuot + 1))
+    return INT64_MAX;
+  return (int64_t)((uint64_t)n * uiQuot + ((uint64_t)n * uiRem) / vi.fps_numerator);
+}
+
+
+static void InitBenchUnits(const VideoInfo &vi, IScriptEnvironment *AVS_env, const std::string &sAVSFile, stBenchUnits &bu)
+{
+  bu.vi = vi;
+  bu.bGetFrame = (Settings.iBenchMode != BENCH_AUDIO);
+  bu.bGetAudio = (Settings.iBenchMode != BENCH_VIDEO);
+  bu.bFrameUnits = vi.HasVideo();
+  bu.iChunk = Settings.iAudioChunk;
+
+  if (bu.bGetFrame && !vi.HasVideo())
+    AVS_env->ThrowError("Script did not return a video clip:\n%s%s", sAVSFile.c_str(), vi.HasAudio() ? "\nUse \"-audio\" for clips without video" : "");
+
+  if (bu.bGetAudio && !vi.HasAudio())
+    AVS_env->ThrowError("Script did not return an audio clip:\n%s", sAVSFile.c_str());
+
+  if (bu.bFrameUnits)
+    bu.uiUnits = (unsigned int)vi.num_frames;
+  else
+  {
+    if (bu.iChunk == 0)
+      bu.iChunk = DEFAULT_AUDIO_CHUNK;
+    int64_t iUnits = (vi.num_audio_samples + bu.iChunk - 1) / bu.iChunk;
+    if (iUnits > 0x7FFFFFFF)
+      AVS_env->ThrowError("Too many audio chunks (%lld), use a larger \"-chunk\"", (long long)iUnits);
+    bu.uiUnits = (unsigned int)iUnits;
+  }
+
+  if (bu.bGetAudio)
+  {
+    // The samples of one frame differ by one at most: floor((n+1)*r) - floor(n*r).
+    // Very low frame rates would need huge buffers, so frame spans are split at MAX_AUDIO_CHUNK.
+    int64_t iMaxCount = bu.iChunk;
+    if (iMaxCount == 0)
+    {
+      int64_t iPerFrame = FirstSampleOfFrame(vi, 1);
+      iMaxCount = (iPerFrame >= MAX_AUDIO_CHUNK) ? MAX_AUDIO_CHUNK : iPerFrame + 1;
+    }
+    bu.vBuffer.resize((size_t)(iMaxCount * vi.BytesPerAudioSample()));
+  }
+}
+
+
+// Frame units request exactly the samples of frame n (like ffmpeg), so consecutive frames
+// neither overlap nor leave gaps; -chunk splits them into smaller GetAudio calls.
+static void ProcessUnit(const PClip &AVS_clip, IScriptEnvironment *AVS_env, unsigned int uiUnit, stBenchUnits &bu)
+{
+  if (bu.bGetFrame)
+  {
+    PVideoFrame src_frame = AVS_clip->GetFrame((int)uiUnit, AVS_env);
+  }
+
+  if (!bu.bGetAudio)
+    return;
+
+  int64_t iStart = 0;
+  int64_t iEnd = 0;
+  if (bu.bFrameUnits)
+  {
+    iStart = FirstSampleOfFrame(bu.vi, uiUnit);
+    iEnd = FirstSampleOfFrame(bu.vi, (int64_t)uiUnit + 1);
+  }
+  else
+  {
+    iStart = (int64_t)uiUnit * bu.iChunk;
+    iEnd = iStart + bu.iChunk;
+  }
+
+  if (iEnd > bu.vi.num_audio_samples)
+    iEnd = bu.vi.num_audio_samples;
+
+  if (iEnd <= iStart)
+    return;
+
+  int64_t iStep = bu.iChunk ? bu.iChunk : (std::min)(iEnd - iStart, (int64_t)MAX_AUDIO_CHUNK);
+  for (int64_t iPos = iStart; iPos < iEnd; iPos += iStep)
+  {
+    int64_t iCount = (std::min)(iStep, iEnd - iPos);
+    AVS_clip->GetAudio(bu.vBuffer.data(), iPos, iCount, AVS_env);
+    bu.iSamplesRead += iCount;
+  }
+
+  if (bu.iFirstSample < 0)
+    bu.iFirstSample = iStart;
+  bu.iLastSample = iEnd - 1;
+}
+
+
+static std::string AudioSamplesText(const stBenchUnits &bu)
+{
+  if (bu.iSamplesRead == 0)
+    return "0";
+  return std::to_string((long long)bu.iSamplesRead) + " (" + std::to_string((long long)bu.iFirstSample) + " - " + std::to_string((long long)bu.iLastSample) + ")";
+}
+
+
+static double AudioRealtimeFactor(const stBenchUnits &bu, double dSeconds)
+{
+  if ((dSeconds <= 0.0) || (bu.vi.audio_samples_per_second <= 0))
+    return 0.0;
+  return (double)bu.iSamplesRead / (double)bu.vi.audio_samples_per_second / dSeconds;
+}
+
+
+static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs, stBenchUnits &bu)
 {
   std::string sOutBuf = "";
 
@@ -1455,7 +1718,7 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
 
   for (uiCurrentFrame = rs.uiFirstFrame; uiCurrentFrame <= rs.uiLastFrame; uiCurrentFrame++)
   {
-    PVideoFrame src_frame = AVS_clip->GetFrame(uiCurrentFrame, AVS_env);
+    ProcessUnit(AVS_clip, AVS_env, uiCurrentFrame, bu);
     ++rs.uiFramesRead;
 
     if (((rs.uiFramesRead % uiFrameInterval) != 0) && (rs.uiFramesRead != rs.uiFramesToProcess))
@@ -1485,7 +1748,8 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
       rs.dGPUPowerConsumptionAvg = dGPUPowerConsumptionAcc / (double)uiIntervalCounter;
     }
 
-    rs.iElapsedMS = (int64_t)(((dCurrentTime - dStartTime) * 1000.0) + 0.5);
+    rs.dElapsedSec = dCurrentTime - dStartTime;
+    rs.iElapsedMS = (int64_t)((rs.dElapsedSec * 1000.0) + 0.5);
     rs.iEstimatedMS = (int64_t)((double)rs.uiFramesToProcess * (double)rs.iElapsedMS / (double)rs.uiFramesRead);
 
     dCPUUsageCur = processinfo.dCPUUsage;
@@ -1554,20 +1818,27 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
     rs.bFirstScr = false;
     bEarlyExit = false;
 
-    sOutBuf = utils.StrFormat("Frame (current | last):             %u | %u", uiCurrentFrame + 1, rs.uiLastFrame);
+    sOutBuf = utils.StrFormat("%s (current | last):             %u | %u", bu.UnitName(), uiCurrentFrame + 1, rs.uiLastFrame);
     PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
     ++rs.uiCursorOffset;
 
     if (Settings.bDisplayFPS)
     {
-      sOutBuf = utils.StrFormat("FPS (cur | min | max | avg):        %s | %s | %s | %s", utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(rs.dFPSMin).c_str(), utils.StrFormatFPS(rs.dFPSMax).c_str(), utils.StrFormatFPS(rs.dFPSAverage).c_str());
+      sOutBuf = utils.StrFormat("%s (cur | min | max | avg):        %s | %s | %s | %s", bu.RateName(), utils.StrFormatFPS(dFPSCurrent).c_str(), utils.StrFormatFPS(rs.dFPSMin).c_str(), utils.StrFormatFPS(rs.dFPSMax).c_str(), utils.StrFormatFPS(rs.dFPSAverage).c_str());
       PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
       ++rs.uiCursorOffset;
     }
 
     if (Settings.bDisplayTPF)
     {
-      sOutBuf = utils.StrFormat("TPF (cur | max | min | avg):        %s | %s | %s | %s ms", utils.StrFormatTPF(1000.0 / dFPSCurrent).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSAverage).c_str());
+      sOutBuf = utils.StrFormat("%s (cur | max | min | avg):        %s | %s | %s | %s ms", bu.TimeName(), utils.StrFormatTPF(1000.0 / dFPSCurrent).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSAverage).c_str());
+      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      ++rs.uiCursorOffset;
+    }
+
+    if (bu.bGetAudio)
+    {
+      sOutBuf = utils.StrFormat("Audio (samples | realtime):         %lld | %.2fx", (long long)bu.iSamplesRead, AudioRealtimeFactor(bu, dCurrentTime - dStartTime));
       PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
       ++rs.uiCursorOffset;
     }
@@ -1664,7 +1935,7 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
 }
 
 
-static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, std::string &sLogBuffer, bool &bRuntimeTooShort)
+static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, std::string &sLogBuffer, bool &bRuntimeTooShort)
 {
   std::string sOutBuf = "";
 
@@ -1678,28 +1949,42 @@ static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, u
     if (rs.uiFirstFrame == rs.uiLastFrame)
     {
       if (rs.uiFirstFrame == 0)
-        sOutBuf = utils.StrFormat("Frames processed:                   %u", rs.uiFramesRead);
+        sOutBuf = utils.StrFormat("%ss processed:                   %u", bu.UnitName(), rs.uiFramesRead);
       else
-        sOutBuf = utils.StrFormat("Frames processed:                   %u (%u)", rs.uiFramesRead, rs.uiFirstFrame);
+        sOutBuf = utils.StrFormat("%ss processed:                   %u (%u)", bu.UnitName(), rs.uiFramesRead, rs.uiFirstFrame);
     }
     else
-      sOutBuf = utils.StrFormat("Frames processed:                   %u (%u - %u)", rs.uiFramesRead, rs.uiFirstFrame, rs.uiLastFrame);
+      sOutBuf = utils.StrFormat("%ss processed:                   %u (%u - %u)", bu.UnitName(), rs.uiFramesRead, rs.uiFirstFrame, rs.uiLastFrame);
 
     PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
     sLogBuffer += sOutBuf + "\n";
+
+    if (bu.bGetAudio)
+    {
+      sOutBuf = "Audio samples processed:            " + AudioSamplesText(bu);
+      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      sLogBuffer += sOutBuf + "\n";
+    }
 
     if (rs.uiFramesRead >= uiFrameInterval)
     {
       if (Settings.bDisplayFPS)
       {
-        sOutBuf = utils.StrFormat("FPS (min | max | average):          %s | %s | %s", utils.StrFormatFPS(rs.dFPSMin).c_str(), utils.StrFormatFPS(rs.dFPSMax).c_str(), utils.StrFormatFPS(rs.dFPSAverage).c_str());
+        sOutBuf = utils.StrFormat("%s (min | max | average):          %s | %s | %s", bu.RateName(), utils.StrFormatFPS(rs.dFPSMin).c_str(), utils.StrFormatFPS(rs.dFPSMax).c_str(), utils.StrFormatFPS(rs.dFPSAverage).c_str());
         PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
         sLogBuffer += sOutBuf + "\n";
       }
 
       if (Settings.bDisplayTPF)
       {
-        sOutBuf = utils.StrFormat("TPF (max | min | average):          %s | %s | %s ms", utils.StrFormatTPF(1000.0 / rs.dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSAverage).c_str());
+        sOutBuf = utils.StrFormat("%s (max | min | average):          %s | %s | %s ms", bu.TimeName(), utils.StrFormatTPF(1000.0 / rs.dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSAverage).c_str());
+        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        sLogBuffer += sOutBuf + "\n";
+      }
+
+      if (bu.bGetAudio)
+      {
+        sOutBuf = utils.StrFormat("Audio speed (realtime):             %.2fx", AudioRealtimeFactor(bu, (double)rs.iElapsedMS / 1000.0));
         PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
         sLogBuffer += sOutBuf + "\n";
       }
@@ -1785,22 +2070,39 @@ static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, u
       }
     }
 
-    sOutBuf = "Script runtime is too short for meaningful measurements\n\n";
+    sOutBuf = "Script runtime is too short for meaningful measurements\n";
+    if (bu.bGetAudio)
+      sOutBuf += "Use a longer clip (e.g. Loop) or a smaller \"-chunk\"\n";
+    sOutBuf += "\n";
     PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\r%s", Pad(sOutBuf).c_str());
     sLogBuffer += sOutBuf;
 
     if (rs.uiFirstFrame == rs.uiLastFrame)
     {
       if (rs.uiFirstFrame == 0)
-        sOutBuf = utils.StrFormat("Frames processed:               %u", rs.uiFramesRead);
+        sOutBuf = utils.StrFormat("%ss processed:               %u", bu.UnitName(), rs.uiFramesRead);
       else
-        sOutBuf = utils.StrFormat("Frames processed:               %u (%u)", rs.uiFramesRead, rs.uiFirstFrame);
+        sOutBuf = utils.StrFormat("%ss processed:               %u (%u)", bu.UnitName(), rs.uiFramesRead, rs.uiFirstFrame);
     }
     else
-      sOutBuf = utils.StrFormat("Frames processed:               %u (%u - %u)", rs.uiFramesRead, rs.uiFirstFrame, rs.uiLastFrame);
+      sOutBuf = utils.StrFormat("%ss processed:               %u (%u - %u)", bu.UnitName(), rs.uiFramesRead, rs.uiFirstFrame, rs.uiLastFrame);
 
     PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
     sLogBuffer += sOutBuf + "\n";
+
+    if (bu.bGetAudio)
+    {
+      sOutBuf = "Audio samples processed:        " + AudioSamplesText(bu);
+      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      sLogBuffer += sOutBuf + "\n";
+
+      if ((bu.iSamplesRead > 0) && (rs.dElapsedSec > 0.0))
+      {
+        sOutBuf = utils.StrFormat("Audio speed (realtime):         %.2fx (imprecise)", AudioRealtimeFactor(bu, rs.dElapsedSec));
+        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        sLogBuffer += sOutBuf + "\n";
+      }
+    }
 
     if ((Settings.bLogEstimatedTime) && (rs.uiFramesRead < rs.uiFramesToProcess))
       sOutBuf = utils.StrFormat("Time (elapsed | estimated):     %s | %s", timer.FormatTimeString(rs.iElapsedMS, false).c_str(), timer.FormatTimeString(rs.iEstimatedMS, false).c_str());
@@ -2327,10 +2629,9 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
     AVS_clip = AVS_main.AsClip();
     AVS_vidinfo = AVS_clip->GetVideoInfo();
 
-    unsigned int uiTotalFrames = (unsigned int)AVS_vidinfo.num_frames;
-
-    if (!AVS_vidinfo.HasVideo())
-      AVS_env->ThrowError("Script did not return a video clip:\n%s", s_avsfile.c_str());
+    stBenchUnits bu;
+    InitBenchUnits(AVS_vidinfo, AVS_env, s_avsfile, bu);
+    unsigned int uiTotalFrames = bu.uiUnits;
 
     unsigned int uiFrame = 0;
     double TDelta = 0.0;
@@ -2350,7 +2651,7 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
         }
       }
 
-      PVideoFrame src_frame = AVS_clip->GetFrame(uiFrame, AVS_env);
+      ProcessUnit(AVS_clip, AVS_env, uiFrame, bu);
       ++uiFrame;
       TDelta = timer.GetSTDTimer() - T0;
     }
@@ -2421,6 +2722,10 @@ void PrintUsage()
   PrintConsole(true, COLOR_EMPHASIS, "  -csv                Creates csv file\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -gpu                Displays GPU/VPU usage (requires GPU-Z)\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -range=first,last   Sets frame range\n");
+  PrintConsole(true, COLOR_EMPHASIS, "  -audio              Requests audio only (GetAudio)\n");
+  PrintConsole(true, COLOR_EMPHASIS, "  -av                 Requests video and the audio of each frame\n");
+  PrintConsole(true, COLOR_EMPHASIS, "  -chunk=n            Samples per audio request (default: one frame,\n");
+  PrintConsole(true, COLOR_EMPHASIS, "                      %d for clips without video)\n", DEFAULT_AUDIO_CHUNK);
   PrintConsole(true, COLOR_EMPHASIS, "  -timelimit=n        Sets time limit (seconds)\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -hp                 Sets process priority to high\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -o                  Omits script pre-scanning\n");

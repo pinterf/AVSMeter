@@ -17,6 +17,7 @@ Frame height:                          360
 Framerate:                          25.000 (25/1)
 Colorspace:                           YV12
 Audio channels:                          1
+Audio channel layout:                  n/a
 Audio bits/sample:                      16
 Audio sample rate:                     n/a
 Audio samples:                         n/a

@@ -10,6 +10,10 @@ Switches:
   -csv                Creates csv file
   -gpu                Displays GPU/VPU usage (requires GPU-Z)
   -range=first,last   Sets frame range
+  -audio              Requests audio only (GetAudio)
+  -av                 Requests video and the audio of each frame
+  -chunk=n            Samples per audio request (default: one frame,
+                      1000 for clips without video)
   -timelimit=n        Sets time limit (seconds)
   -hp                 Sets process priority to high
   -o                  Omits script pre-scanning

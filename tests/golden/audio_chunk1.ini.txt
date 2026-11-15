@@ -1,0 +1,25 @@
+# This INI file can be used to set defaults for AVSMeter and/or configure
+# settings that are not implemented as command line switches.
+# See "AVSMeter.html" for documentation of the various settings
+# Note: If applicable, command line switches override INI file settings.
+
+DisplayFPS=1
+DisplayTPF=0
+
+CreateLog=0
+CreateCSV=0
+LogDirectory=
+LogFileDateTimeSuffix=0
+AVSDLL=
+
+AllowOnlyOneInstance=0
+ConUseSTDOUT=1
+UseColor=0
+PauseBeforeExit=0
+
+DisableFFTWDLLWarning=1
+InvokeDistributor=1
+LogEstimatedTime=0
+AutoCompleteExtension=1
+LoadPluginInterval=40
+
