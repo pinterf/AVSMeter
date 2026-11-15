@@ -2015,22 +2015,20 @@ bool WriteINIFile(std::string &s_inifile)
 }
 
 
-// Non-ASCII paths are UTF-8: Import(utf8=true) on AviSynth+ (r2487+), the ANSI path on
-// older versions (no utf8 parameter: NotFound).
+// Non-ASCII paths are UTF-8: Import(utf8=true) on AviSynth+ r2487+, the ANSI path on
+// older versions (an unknown named argument is a script error there, not NotFound).
 static AVSValue ImportScript(IScriptEnvironment *AVS_env, const std::string &s_avsfile)
 {
   bool bAscii = std::all_of(s_avsfile.begin(), s_avsfile.end(), [](char c) { return (unsigned char)c < 0x80; });
   if (bAscii)
     return AVS_env->Invoke("Import", s_avsfile.c_str());
 
-  try
+  size_t pos = AvisynthInfo.sVersionString.find("(r");
+  if (AvisynthInfo.bIsAVSPlus && (pos != std::string::npos) && (atoi(AvisynthInfo.sVersionString.c_str() + pos + 2) >= 2487))
   {
     AVSValue avsArgs[2] = { s_avsfile.c_str(), true };
     const char *pszNames[2] = { NULL, "utf8" };
     return AVS_env->Invoke("Import", AVSValue(avsArgs, 2), pszNames);
-  }
-  catch (IScriptEnvironment::NotFound)
-  {
   }
 
   std::string sLegacy;
