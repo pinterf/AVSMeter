@@ -75,6 +75,7 @@ set(AVSMeter_Headers
   "${SRC}/platform/file_info.h"
   "${SRC}/platform/process.h"
   "${SRC}/platform/process_stats.h"
+  "${SRC}/platform/text.h"
   "${SRC}/platform/single_instance.h"
 )
 
@@ -89,6 +90,7 @@ if(WIN32)
     "${SRC}/platform/win32/binary_info_win32.cpp"
     "${SRC}/platform/win32/file_info_win32.cpp"
     "${SRC}/platform/win32/process_win32.cpp"
+    "${SRC}/platform/win32/text_win32.cpp"
     "${SRC}/platform/win32/utf_win32.h"
     "${SRC}/platform/win32/process_stats_win32.cpp"
     "${SRC}/platform/win32/single_instance_win32.cpp"

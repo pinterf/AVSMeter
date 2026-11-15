@@ -99,6 +99,7 @@
     <ClCompile Include="..\source\platform\win32\file_info_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\gpu_sensors_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_win32.cpp" />
+    <ClCompile Include="..\source\platform\win32\text_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_stats_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\single_instance_win32.cpp" />
     <ResourceCompile Include="..\source\AVSMeter.rc" />
@@ -119,6 +120,7 @@
     <ClInclude Include="..\source\platform\file_info.h" />
     <ClInclude Include="..\source\platform\gpu_sensors.h" />
     <ClInclude Include="..\source\platform\process.h" />
+    <ClInclude Include="..\source\platform\text.h" />
     <ClInclude Include="..\source\platform\win32\utf_win32.h" />
     <ClInclude Include="..\source\platform\process_stats.h" />
     <ClInclude Include="..\source\platform\single_instance.h" />

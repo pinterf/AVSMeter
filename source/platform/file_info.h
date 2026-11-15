@@ -38,6 +38,8 @@ namespace platform
   // Path as seen by the OS: System32 maps to SysWOW64 for a 32 bit process on 64 bit Windows.
   std::string NativeSystemPath(const std::string &s_path);
 
+  std::string ExecutablePath(); // own executable, empty on error
+
   // UTF-8 path <-> std::filesystem::path, for streams and directory iterators.
   std::filesystem::path PathFromUtf8(const std::string &s_path);
   std::string           PathToUtf8(const std::filesystem::path &path);

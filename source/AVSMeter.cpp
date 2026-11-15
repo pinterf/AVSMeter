@@ -30,6 +30,7 @@
 #include "platform/gpu_sensors.h"
 #include "platform/process.h"
 #include "platform/single_instance.h"
+#include "platform/text.h"
 
 #include <chrono>
 #include <thread>
@@ -1088,24 +1089,25 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
       Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
     std::string sAVSInfoFile = "";
-    char szPath[MAX_PATH + 1];
-    if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
+    std::error_code ec;
+    std::string sCurrentDir = platform::PathToUtf8(std::filesystem::current_path(ec));
+    if (!ec)
     {
       if (Settings.sLogDirectory == "")
       {
         if (Settings.bLogFileDateTimeSuffix)
         {
           if (PROCESS_64)
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", szPath, Settings.sSystemDateTime.c_str());
+            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64 [%s].log", sCurrentDir.c_str(), Settings.sSystemDateTime.c_str());
           else
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", szPath, Settings.sSystemDateTime.c_str());
+            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86 [%s].log", sCurrentDir.c_str(), Settings.sSystemDateTime.c_str());
         }
         else
         {
           if (PROCESS_64)
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", szPath);
+            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x64.log", sCurrentDir.c_str());
           else
-            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", szPath);
+            sAVSInfoFile = utils.StrFormat("%s\\avsinfo_x86.log", sCurrentDir.c_str());
         }
       }
       else
@@ -1116,7 +1118,7 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
           sAVSInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
       }
 
-      std::ofstream hAVSInfoFile(sAVSInfoFile.c_str());
+      std::ofstream hAVSInfoFile(platform::PathFromUtf8(sAVSInfoFile));
       if (hAVSInfoFile.is_open())
      {
         hAVSInfoFile << sLogBuffer;
@@ -1810,10 +1812,9 @@ std::string ParseINIFile()
   std::string sINIFile = "";
   std::string sTemp = "";
 
-  char szPath[MAX_PATH_LEN + 1];
-  if (::GetModuleFileName(NULL, szPath, MAX_PATH_LEN) > 0)
+  sProgramPath = platform::ExecutablePath();
+  if (sProgramPath != "")
   {
-    sProgramPath = utils.StrFormat("%s", szPath);
     size_t i = 0;
     for (i = (sProgramPath.length() - 1); i > 0; i--)
     {
@@ -1841,7 +1842,7 @@ std::string ParseINIFile()
     return "";
   }
 
-  std::ifstream hINIFile(sINIFile.c_str());
+  std::ifstream hINIFile(platform::PathFromUtf8(sINIFile));
   if (!hINIFile.is_open())
   {
     sRet = utils.StrFormat("\nError: Cannot open \"%s\"\n", sINIFile.c_str());
@@ -1855,6 +1856,7 @@ std::string ParseINIFile()
 
   while (std::getline(hINIFile, sCurrentLine))
   {
+    sCurrentLine = platform::ToUtf8(sCurrentLine);
     utils.StrTrim(sCurrentLine);
     sOrgLine = sCurrentLine;
     utils.StrToLC(sCurrentLine);
@@ -1976,7 +1978,7 @@ bool WriteINIFile(std::string &s_inifile)
   std::string sSettings = "";
   std::string sComment = "";
 
-  std::ofstream hINIFile(s_inifile.c_str());
+  std::ofstream hINIFile(platform::PathFromUtf8(s_inifile));
   if (!hINIFile.is_open())
     return false;
 
@@ -2056,6 +2058,7 @@ std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std:
     sAVSBuffer += sCurrentLine + "\n";
 
   hAVSFile.close();
+  sAVSBuffer = platform::ToUtf8(sAVSBuffer);
   utils.StrTrim(sAVSBuffer);
 
   std::string sLogFile = "";
@@ -2092,7 +2095,7 @@ std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std:
     }
   }
 
-  hLogFile.open(sLogFile.c_str());
+  hLogFile.open(platform::PathFromUtf8(sLogFile));
   if (!hLogFile.is_open())
   {
     sRet = utils.StrFormat("\nCannot create \"%s\"\n", sLogFile.c_str());
@@ -2108,7 +2111,7 @@ std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std:
   hLogFile << sLog;
 
   if (s_avserror != "")
-    hLogFile << "\n[Errors]\n" + s_avserror + "\n\n";
+    hLogFile << "\n[Errors]\n" + platform::ToUtf8(s_avserror) + "\n\n";
 
   if (Settings.bGPUInfo)
     hLogFile << s_gpuinfo;
@@ -2194,7 +2197,7 @@ std::string CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pd
     }
   }
 
-  hCSVFile.open(sCSVFile.c_str());
+  hCSVFile.open(platform::PathFromUtf8(sCSVFile));
   if (!hCSVFile.is_open())
   {
     sRet = utils.StrFormat("\nCannot create \"%s\"\n", sCSVFile.c_str());

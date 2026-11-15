@@ -199,3 +199,9 @@ bool platform::LegacyPath(const std::string &s_path, std::string &s_legacy)
 
   return win32::AnsiToWide(s_legacy.c_str()) == wsPath;
 }
+
+
+std::string platform::ExecutablePath()
+{
+  return win32::WideToUtf8(win32::ModuleFileNameW(NULL).c_str());
+}
