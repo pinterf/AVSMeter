@@ -43,7 +43,7 @@ const std::string &platform::posix::LastDlError()
 }
 
 
-// A negative nice value needs CAP_SYS_NICE (or root).
+// A negative nice value needs CAP_SYS_NICE (or root), otherwise EACCES.
 bool platform::SetHighPriority()
 {
   return setpriority(PRIO_PROCESS, 0, -10) == 0;

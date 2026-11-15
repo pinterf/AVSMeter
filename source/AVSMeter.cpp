@@ -218,8 +218,11 @@ int main(int argc, char* argv[])
   }
 
 
-  if (cmd.bHighPriority)
-    platform::SetHighPriority();
+  if (cmd.bHighPriority && !platform::SetHighPriority())
+  {
+    std::string sReason = platform::LastErrorMessage();
+    PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nWarning: Cannot set high process priority%s%s\n", sReason.empty() ? "" : ": ", sReason.c_str());
+  }
 
   PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
