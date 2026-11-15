@@ -19,18 +19,68 @@
 #include "platform/os_info.h"
 
 #include <cstring>
+#include <fstream>
+#include <map>
 
 #include <sys/utsname.h>
 
 
-// Phase 2: distribution name from /etc/os-release
+namespace
+{
+  // os-release(5): KEY=value lines, value optionally quoted with shell-style escapes
+  std::string DistributionName()
+  {
+    std::ifstream file("/etc/os-release");
+    if (!file)
+      file.open("/usr/lib/os-release");
+    if (!file)
+      return "";
+
+    std::map<std::string, std::string> values;
+    std::string sLine;
+    while (std::getline(file, sLine))
+    {
+      size_t pos = sLine.find('=');
+      if (pos == std::string::npos || sLine[0] == '#')
+        continue;
+
+      std::string sValue = sLine.substr(pos + 1);
+      if (!sValue.empty() && sValue.back() == '\r')
+        sValue.pop_back();
+      if (sValue.size() >= 2 && (sValue[0] == '"' || sValue[0] == '\'') && sValue.back() == sValue[0])
+      {
+        std::string sUnquoted;
+        for (size_t i = 1; i + 1 < sValue.size(); i++)
+        {
+          if (sValue[i] == '\\' && i + 2 < sValue.size())
+            i++;
+          sUnquoted += sValue[i];
+        }
+        sValue = sUnquoted;
+      }
+      values[sLine.substr(0, pos)] = sValue;
+    }
+
+    if (!values["PRETTY_NAME"].empty())
+      return values["PRETTY_NAME"];
+
+    std::string sName = values["NAME"].empty() ? "Linux" : values["NAME"];
+    return values["VERSION"].empty() ? sName : sName + " " + values["VERSION"];
+  }
+}
+
+
+// e.g. "Ubuntu 26.04.1 LTS, Linux 6.18.58.1-microsoft-standard-WSL2 (x86_64)"
 std::string platform::OsVersion()
 {
+  std::string sDistribution = DistributionName();
+
   struct utsname un;
   if (uname(&un) != 0)
-    return "Unknown OS";
+    return sDistribution.empty() ? "Unknown OS" : sDistribution;
 
-  return std::string(un.sysname) + " " + un.release + " (" + un.machine + ")";
+  std::string sKernel = std::string(un.sysname) + " " + un.release + " (" + un.machine + ")";
+  return sDistribution.empty() ? sKernel : sDistribution + ", " + sKernel;
 }
 
 
