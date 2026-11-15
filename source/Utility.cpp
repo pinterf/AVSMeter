@@ -191,28 +191,26 @@ void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delim
 }
 
 
+string StrVFormat(char const *fmt, va_list args)
+{
+  va_list args2;
+  va_copy(args2, args);
+  int len = vsnprintf(nullptr, 0, fmt, args2);
+  va_end(args2);
+  if (len < 0)
+    return "Buffer overflow";
+
+  string ret((size_t)len, '\0');
+  vsnprintf(&ret[0], (size_t)len + 1, fmt, args);
+  return ret;
+}
+
+
 string CUtils::StrFormat(char const *fmt, ...)
 {
-  const unsigned int maxbufsize = 16384;
-  const unsigned int minbufsize =   256;
-
-  vector<char> buffer(minbufsize);
-  string ret = "Buffer overflow";
-
   va_list args;
   va_start(args, fmt);
-
-  while (buffer.size() <= maxbufsize)
-  {
-    if(_vsnprintf(&buffer[0], buffer.size(), fmt, args) > 0)
-    {
-      ret = &buffer[0];
-      break;
-    }
-    else
-      buffer.resize(buffer.size() * 2);
-  }
-
+  string ret = StrVFormat(fmt, args);
   va_end(args);
 
   return ret;

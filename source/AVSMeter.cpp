@@ -131,7 +131,7 @@ string       ParseINIFile();
 bool         WriteINIFile(string &s_inifile);
 void         PrintUsage();
 void         PollKeys();
-void         PrintConsole(bool bUseStdOut, WORD wAttributes, const char *fmt, ...);
+void         PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...);
 string       Pad(string s_line);
 static void  SetDefaultSettings();
 static bool  ParseCommandLine(int argc, char* argv[], stCmdLine &cmd);
@@ -2243,36 +2243,26 @@ void PollKeys()
 }
 
 
-void PrintConsole(bool bUseStdOut, WORD wAttributes, const char *fmt, ...)
+void PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...)
 {
-  const unsigned int bufsize = 8192;
-  char buffer[bufsize];
-
   va_list args;
   va_start(args, fmt);
-
-  if (_vsnprintf(buffer, bufsize, fmt, args) < 0)
-  {
-    va_end(args);
-    fprintf(stderr, "\rBuffer overflow...\r");
-    return;
-  }
-
+  string buffer = StrVFormat(fmt, args);
   va_end(args);
 
-  platform::ConsoleToOutputCP(buffer);
+  platform::ConsoleToOutputCP(&buffer[0]);
 
   if (wAttributes && Settings.bUseColor)
     platform::ConsoleSetColors(wAttributes);
 
   if (bUseStdOut)
   {
-    fputs(buffer, stdout);
+    fputs(buffer.c_str(), stdout);
     fflush(stdout);
   }
   else
   {
-    fputs(buffer, stderr);
+    fputs(buffer.c_str(), stderr);
     fflush(stderr);
   }
 

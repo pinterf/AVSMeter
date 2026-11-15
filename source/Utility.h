@@ -20,8 +20,12 @@
 #define _UTILITY_H
 
 #include "common.h"
+#include <cstdarg>
 
 
+
+// printf-style formatting into a string of any length; "Buffer overflow" on encoding error.
+string StrVFormat(char const *fmt, va_list args);
 
 class CUtils
 {
