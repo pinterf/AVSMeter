@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -66,8 +66,10 @@ void CSysInfo::GetCPUID()
   if (!cpuid_present())
     return;
 
-  struct cpu_raw_data_t raw;
-  struct cpu_id_t data;
+  // Zeroed: on ARM cpuid_get_raw_data does not clear the x86 fields, and cpu_identify
+  // takes any nonzero basic_cpuid[0] as an x86 CPU
+  struct cpu_raw_data_t raw = {};
+  struct cpu_id_t data = {};
 
   if (cpuid_get_raw_data(&raw) < 0)
     return;
