@@ -385,6 +385,12 @@ bool platform::InspectBinary(const std::string &s_name, BinaryInfo &info)
 
 
 // Windows only: the Visual C++ 2005/2008 runtimes are never imported by ELF binaries.
+bool platform::IsMsvcBuilt(const BinaryInfo &)
+{
+  return false;
+}
+
+
 bool platform::IsVCRuntimeInstalled(const std::string &s_year, bool b_64bit)
 {
   (void)s_year;

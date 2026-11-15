@@ -126,11 +126,13 @@ namespace
       pSections = At<IMAGE_SECTION_HEADER>(nOptOffset + pFileHeader->SizeOfOptionalHeader, pFileHeader->NumberOfSections);
       nSections = pSections ? pFileHeader->NumberOfSections : 0;
       wMachine = pFileHeader->Machine;
+      bRichHeader = FindRichHeader(nNtOffset);
 
       return true;
     }
 
     bool Is64Bit() const { return b64Bit; }
+    bool HasRichHeader() const { return bRichHeader; }
 
     std::string MachineName() const
     {
@@ -169,6 +171,30 @@ namespace
     }
 
   private:
+    // MSVC's link.exe writes the undocumented "Rich" header between the DOS stub and the PE
+    // header: "DanS" ... "Rich" key, the DWORDs from "DanS" XOR-ed with the key. GNU ld and
+    // LLVM lld write none.
+    bool FindRichHeader(size_t n_nt_offset) const
+    {
+      for (size_t nRich = sizeof(IMAGE_DOS_HEADER); nRich + 8 <= n_nt_offset; nRich += 4)
+      {
+        const DWORD *pRich = At<DWORD>(nRich, 2);
+        if (!pRich || (pRich[0] != 0x68636952)) // "Rich"
+          continue;
+
+        const DWORD dwKey = pRich[1];
+        for (size_t nDans = nRich; nDans >= sizeof(IMAGE_DOS_HEADER) + 4; )
+        {
+          nDans -= 4;
+          const DWORD *pDans = At<DWORD>(nDans);
+          if (pDans && ((*pDans ^ dwKey) == 0x536E6144)) // "DanS"
+            return true;
+        }
+        return false;
+      }
+      return false;
+    }
+
     template <class T>
     const T *At(size_t n_offset, size_t n_count = 1) const
     {
@@ -197,6 +223,7 @@ namespace
     const BYTE                 *pData;
     size_t                      nSize;
     bool                        b64Bit = false;
+    bool                        bRichHeader = false;
     WORD                        wMachine = 0;
     const IMAGE_DATA_DIRECTORY *pDirs = nullptr;
     size_t                      nDirs = 0;
@@ -282,10 +309,27 @@ bool platform::InspectBinary(const std::string &s_name, BinaryInfo &info)
   info.path = win32::WideToUtf8(wsPath.c_str());
   info.is64Bit = pe.Is64Bit();
   info.machine = pe.MachineName();
+  info.msvcLinked = pe.HasRichHeader();
   ReadExports(pe, info.exports);
   ReadImports(pe, info.imports);
 
   return true;
+}
+
+
+bool platform::IsMsvcBuilt(const BinaryInfo &info)
+{
+  if (info.msvcLinked)
+    return true;
+
+  // clang-cl + lld-link: no Rich header, but the MSVC runtime (unless linked statically)
+  for (const std::string &sImport : info.imports)
+  {
+    std::string s = AsciiLower(sImport);
+    if ((s.rfind("msvcp1", 0) == 0) || (s.rfind("vcruntime", 0) == 0) || (s.rfind("msvcr1", 0) == 0))
+      return true;
+  }
+  return false;
 }
 
 

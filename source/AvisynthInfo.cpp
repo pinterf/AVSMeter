@@ -68,6 +68,15 @@ bool IsSameCpuFamily(const std::string &s_machine)
   }
   return false;
 }
+
+// Windows on ARM64: AviSynth+ is built with llvm-mingw, and so is AVSMeter (it uses the C++ interface, the
+// ABI must match). C++ plugins and the core built with MSVC have another C++ ABI; C-interface plugins work
+// whatever compiler built them.
+#if defined(_WIN32) && !defined(_MSC_VER) && defined(__aarch64__)
+constexpr bool kMinGWCppAbi = true;
+#else
+constexpr bool kMinGWCppAbi = false;
+#endif
 }
 
 
@@ -162,6 +171,12 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   if (bi.machine != kArchName)
   {
     s_ErrorMsg = utils.StrFormat("Error: AVSMeter (%s) cannot load %s, it is built for %s.", kArchName, platform::kAvsLibFileName, bi.machine.c_str());
+    return false;
+  }
+
+  if (kMinGWCppAbi && platform::IsMsvcBuilt(bi))
+  {
+    s_ErrorMsg = utils.StrFormat("Error: %s is built with MSVC. AVSMeter (%s, MinGW C++ ABI) needs an AviSynth+ built with llvm-mingw.", platform::kAvsLibFileName, kArchName);
     return false;
   }
 
@@ -811,6 +826,9 @@ bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b
   else if (bCppInit)
     s_Msg = "AVSCPP20";
 
+  if (kMinGWCppAbi && (bCppInit3 || bCppInit2) && (s_machine == kArchName) && platform::IsMsvcBuilt(bi))
+    sMsvcCppPlugins.insert(s_dll);
+
   return true;
 }
 
@@ -909,6 +927,14 @@ void CAvisynthInfo::TestLoadPlugins()
       if (!sMachine.empty() && (sMachine.back() == ')'))
         sMachine.pop_back();
       vPluginErrors.push_back(utils.StrFormat("\"%s\" is built for %s, AVSMeter (%s) cannot load it.", sPlugin.c_str(), sMachine.c_str(), kArchName));
+      continue;
+    }
+
+    // Not test-loaded: a C++ ABI mismatch may crash instead of failing cleanly
+    if (sMsvcCppPlugins.count(sPlugin) != 0)
+    {
+      vPluginErrors.push_back(utils.StrFormat("\"%s\" is a C++ plugin built with MSVC, it cannot work with this AviSynth+ (MinGW C++ ABI)."
+        "\n\nNote: On Windows on ARM64, C++ plugins must be built with llvm-mingw, like AviSynth+. C-Interface plugins work with any compiler.", sPlugin.c_str()));
       continue;
     }
 

@@ -23,6 +23,8 @@
 #include "Utility.h"
 #include "avs_headers/avisynth.h"
 
+#include <set>
+
 class CAvisynthInfo
 {
 public:
@@ -39,6 +41,7 @@ public:
   std::vector<std::string> vPlugins;
   std::vector<std::string> vPluginErrors;
   std::map<std::string, std::string> mShadowedBy; // file not autoloaded -> earlier file with its base name
+  std::set<std::string>    sMsvcCppPlugins; // C++ plugins with the MSVC ABI, unusable where AviSynth+ has the MinGW one
   std::string              sDLLPath;
   std::string              sFileVersion;
   std::string              sProductVersion;

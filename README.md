@@ -391,7 +391,9 @@ the C++ interface, which needs the same C++ ABI. CMake stops if MSVC targets ARM
 This build is untested on real hardware. libcpuid cannot identify ARM CPUs on
 Windows, so the CPU name, core counts and instruction sets come from Windows
 instead (no code name). A hardware fault prints a crash report and ends AVSMeter,
-as on Linux, because MinGW cannot turn it into a C++ exception.
+as on Linux, because MinGW cannot turn it into a C++ exception. For the same ABI
+reason, `-avsinfo` reports C++ plugins built with MSVC as errors without loading
+them; C-Interface plugins work whichever compiler built them.
 
 ```bat
 rem Windows on ARM64: build\windows-arm64-mingw\AVSMeter64.exe

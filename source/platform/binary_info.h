@@ -32,7 +32,11 @@ namespace platform
     std::string              machine; // target CPU, named like kArchName: "x64", "x86", "aarch64", "arm", ...
     std::vector<std::string> exports; // exported symbol names
     std::vector<std::string> imports; // names of the libraries it depends on
+    bool                     msvcLinked = false; // Windows: has the "Rich" header of MSVC's link.exe
   };
+
+  // Built with MSVC (C++ ABI): MSVC linker or MSVC C/C++ runtime imports. Windows only.
+  bool IsMsvcBuilt(const BinaryInfo &info);
 
   // A name without path is searched like the OS library loader does.
   // false: not found or not a valid binary, the reason is in the last system error.
