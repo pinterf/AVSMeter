@@ -27,10 +27,16 @@ namespace platform
   inline constexpr const char *kAvsLibName = "avisynth";
   inline constexpr const char *kAvsLibFileName = "avisynth.dll"; // for messages
   inline constexpr const char *kAvsLibLabel = "Avisynth.dll";    // for log labels
+  inline constexpr const char *kPluginExt = ".dll";               // compared case-insensitively
 #else
   inline constexpr const char *kAvsLibName = "libavisynth.so";
   inline constexpr const char *kAvsLibFileName = "libavisynth.so";
   inline constexpr const char *kAvsLibLabel = "libavisynth.so";
+#if defined(__APPLE__)
+  inline constexpr const char *kPluginExt = ".dylib";             // compared case-sensitively
+#else
+  inline constexpr const char *kPluginExt = ".so";
+#endif
 #endif
 
   // psz_name is UTF-8 (Windows: ANSI is accepted if not valid UTF-8).

@@ -34,6 +34,11 @@
 namespace
 {
   const char PATH_SEP = (char)std::filesystem::path::preferred_separator;
+#ifdef _WIN32
+const char *const UNCATEGORIZED_LIBS = "Uncategorized DLLs";
+#else
+const char *const UNCATEGORIZED_LIBS = "Uncategorized libraries";
+#endif
 }
 
 
@@ -464,7 +469,7 @@ void CAvisynthInfo::EnumPluginDLLs()
       sDir = sDir.substr(spos + 2);
 
       std::string sCurrentFile = "";
-      std::string sCurrentFileLC = "";
+      std::string sCurrentFileKey = "";
       std::error_code ec;
       for (std::filesystem::directory_iterator it(platform::PathFromUtf8(sDir), ec), end; !ec && it != end; it.increment(ec))
       {
@@ -475,15 +480,21 @@ void CAvisynthInfo::EnumPluginDLLs()
         std::string sName = platform::PathToUtf8(it->path().filename());
 
         sCurrentFile = sDir + PATH_SEP + sName;
-        sCurrentFileLC = sCurrentFile;
-        utils.StrToLC(sCurrentFileLC);
 
-        if (mDuplicates.find(sCurrentFileLC) != mDuplicates.end())
+        //Like Avisynth+: path::extension() (a bare ".so" has none), case-sensitive on POSIX
+        std::string sExt = platform::PathToUtf8(it->path().extension());
+        sCurrentFileKey = sCurrentFile;
+#ifdef _WIN32
+        utils.StrToLC(sExt);
+        utils.StrToLC(sCurrentFileKey);
+#endif
+
+        if (mDuplicates.find(sCurrentFileKey) != mDuplicates.end())
           continue;
 
-        mDuplicates.insert(sCurrentFileLC);
+        mDuplicates.insert(sCurrentFileKey);
 
-        if (sCurrentFileLC.substr(sCurrentFileLC.length() - 4) == ".dll")
+        if (sExt == platform::kPluginExt)
         {
           if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin))
           {
@@ -505,7 +516,7 @@ void CAvisynthInfo::EnumPluginDLLs()
               if (sMessage == "AVSCPP20")
                 vPlugins.push_back("C++ 2.0 Plugins (64 Bit)|" + sCurrentFile);
               if (sMessage == "UNCATEGORIZED")
-                vPlugins.push_back("Uncategorized DLLs (64 Bit)|" + sCurrentFile);
+                vPlugins.push_back(std::string(UNCATEGORIZED_LIBS) + " (64 Bit)|" + sCurrentFile);
             }
             else
             {
@@ -520,11 +531,11 @@ void CAvisynthInfo::EnumPluginDLLs()
               if (sMessage == "AVSCPP20")
                 vPlugins.push_back("C++ 2.0 Plugins (32 Bit)|" + sCurrentFile);
               if (sMessage == "UNCATEGORIZED")
-                vPlugins.push_back("Uncategorized DLLs (32 Bit)|" + sCurrentFile);
+                vPlugins.push_back(std::string(UNCATEGORIZED_LIBS) + " (32 Bit)|" + sCurrentFile);
             }
           }
         }
-        else if (sCurrentFileLC.substr(sCurrentFileLC.length() - 5) == ".avsi")
+        else if (sExt == ".avsi")
         {
           vPlugins.push_back("Scripts (AVSI)|" + sCurrentFile);
           AddScriptFunctions(sCurrentFile);
@@ -690,6 +701,7 @@ bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b
       break;
     }
 
+#ifdef _WIN32
     if ((sExportFunc.find("avisynthplugininit") != std::string::npos) && !b_Is64BitDLL) //CPP 2.0
       s_Msg = "AVSCPP20"; //don't break here, keep looping
 
@@ -707,6 +719,14 @@ bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b
 
     if ((sExportFunc == "avisynth_c_plugin_init") && !b_Is64BitDLL) //C2.0
       s_Msg = "AVSC20"; //don't break here, keep looping
+#else
+    //No stdcall decoration and no 2.0 plugin interfaces on POSIX
+    if (sExportFunc == "avisynth_c_plugin_init")
+    {
+      s_Msg = "AVSC25";
+      break;
+    }
+#endif
   }
 
   return true;
@@ -868,7 +888,7 @@ void CAvisynthInfo::GetDLLDependencies(std::string s_dll, std::string &s_depende
   std::string sTemp = "";
 
   platform::BinaryInfo bi;
-  if (!platform::InspectBinary(s_dll, bi) || bi.imports.empty())
+  if (!platform::InspectBinary(s_dll, bi))
     return;
 
   s_dependencies = s_dll + ":\n";
@@ -957,6 +977,10 @@ void CAvisynthInfo::GetDLLDependencies(std::string s_dll, std::string &s_depende
 
   if (fftw_fail)
   {
+#ifndef _WIN32
+    if ((sTemp.find("libfftw3f_threads.so.3") != std::string::npos) || (sTemp.find("libfftw3f.so.3") != std::string::npos))
+      s_hint += "The single precision FFTW library doesn't seem to be installed\n      (Debian/Ubuntu: libfftw3-single3, Fedora: fftw-libs-single, Arch: fftw)\n";
+#endif
     if (sTemp.find("libfftw3f-3.dll") != std::string::npos)
       s_hint += "\'libfftw3f-3.dll\' can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      \'libfftw3f-3.dll\' should be placed in \"System32\" and/or \"SysWoW64\"\n";
 
@@ -985,30 +1009,29 @@ bool CAvisynthInfo::CheckFFTW(std::string s_dll, std::string &s_failed_deps)
 
       std::transform(filedata.begin(), filedata.end(), filedata.begin(), [](unsigned char c) { return (char)tolower(c); });
 
-      if (filedata.find("libfftw3f-3.dll") != std::string::npos)
+      //FFTW is often loaded at runtime, so it is not always an import: look for the name
+#ifdef _WIN32
+      static const char *const pszFFTWNames[] = { "libfftw3f-3.dll", "fftw3.dll" };
+#else
+      static const char *const pszFFTWNames[] = { "libfftw3f_threads.so.3", "libfftw3f.so.3" }; //fft3dfilter/mvtools, dfttest
+#endif
+      for (const char *pszName : pszFFTWNames)
       {
-        platform::LibHandle hDLL = platform::LoadLib("libfftw3f-3.dll");
+        if (filedata.find(pszName) == std::string::npos)
+          continue;
+
+        platform::LibHandle hDLL = platform::LoadLib(pszName);
         if (!hDLL)
         {
-          s_failed_deps += "  libfftw3f-3.dll\n";
+          std::string sEntry = utils.StrFormat("  %s\n", pszName);
+          if (s_failed_deps.find(sEntry) == std::string::npos)
+            s_failed_deps += sEntry;
           bSuccess = false;
         }
         else
           platform::FreeLib(hDLL);
 
         return bSuccess;
-      }
-
-      if (filedata.find("fftw3.dll") != std::string::npos)
-      {
-        platform::LibHandle hDLL = platform::LoadLib("fftw3.dll");
-        if (!hDLL)
-        {
-          s_failed_deps += "  fftw3.dll\n";
-          bSuccess = false;
-        }
-        else
-          platform::FreeLib(hDLL);
       }
     }
   }
