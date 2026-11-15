@@ -61,18 +61,32 @@ bool platform::FileModifiedUtc(const std::string &s_path, std::tm &tm_utc)
 }
 
 
-// Shared objects have no version resource.
+// Shared objects have no version resource; use the version suffix of the real file name
+// (symlinks followed): "libavisynth.so.3.7.6" -> "3.7.6".
 std::string platform::FileVersion(const std::string &s_path)
 {
-  (void)s_path;
-  return "n/a";
+  char szReal[PATH_MAX];
+  if (!realpath(s_path.c_str(), szReal))
+    return "n/a";
+
+  std::string sName = szReal;
+  sName = sName.substr(sName.rfind('/') + 1);
+
+  size_t pos = sName.find(".so.");
+  if (pos == std::string::npos)
+    return "n/a";
+
+  std::string sVersion = sName.substr(pos + 4);
+  if ((sVersion == "") || (sVersion.find_first_not_of("0123456789.") != std::string::npos))
+    return "n/a";
+
+  return sVersion;
 }
 
 
 std::string platform::ProductVersion(const std::string &s_path)
 {
-  (void)s_path;
-  return "n/a";
+  return FileVersion(s_path);
 }
 
 
