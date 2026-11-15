@@ -25,7 +25,7 @@
 
 
 // printf-style formatting into a string of any length; "Buffer overflow" on encoding error.
-string StrVFormat(char const *fmt, va_list args);
+std::string StrVFormat(char const *fmt, va_list args);
 
 class CUtils
 {
@@ -34,21 +34,21 @@ public:
   virtual        ~CUtils();
 
   //File/directory/system
-  string         SysErrorMessage();
-  string         GetFileTimeStamp(string s_file);
-  string         GetFileDateStamp(string s_file);
+  std::string    SysErrorMessage();
+  std::string    GetFileTimeStamp(std::string s_file);
+  std::string    GetFileDateStamp(std::string s_file);
 
   //string functions
-  string         StrFormat(char const *fmt, ...);
-  void           StrTrimLeft(string &s_string);
-  void           StrTrimRight(string &s_string);
-  void           StrTrim(string &s_string);
-  void           StrToUC(string &s_string);
-  void           StrToLC(string &s_string);
-  string         StrFormatFPS(double d_fps);
-  string         StrFormatTPF(double d_frametime);
-  void           StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, bool b_removedups);
-  bool           IsNumeric(string s_string);
+  std::string    StrFormat(char const *fmt, ...);
+  void           StrTrimLeft(std::string &s_string);
+  void           StrTrimRight(std::string &s_string);
+  void           StrTrim(std::string &s_string);
+  void           StrToUC(std::string &s_string);
+  void           StrToLC(std::string &s_string);
+  std::string    StrFormatFPS(double d_fps);
+  std::string    StrFormatTPF(double d_frametime);
+  void           StrTokenize(std::string s_string, std::vector<std::string> &tokens, std::string s_delimiter, bool b_removedups);
+  bool           IsNumeric(std::string s_string);
 
 };
 

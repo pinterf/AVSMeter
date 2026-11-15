@@ -28,26 +28,26 @@ class CSysInfo
 public:
   CSysInfo();
   virtual        ~CSysInfo();
-  string         GetOSVersion();
-  string         GetFormattedSystemDateTime();
+  std::string    GetOSVersion();
+  std::string    GetFormattedSystemDateTime();
 
   //CPUID
   void           GetCPUID();
   bool           bCPUIDSuccess;
   struct CPUData
   {
-    string       CPUBrandString;
-    string       CPUCodeName;
+    std::string  CPUBrandString;
+    std::string  CPUCodeName;
     int32_t      CPUCores;
     int32_t      CPULogicalCores;
     int32_t      NumCPUs;
     int32_t      CPUTotalLogicalCores;
-    string       CPUSupportedInstructionSets;
+    std::string  CPUSupportedInstructionSets;
   } cpudata;
 
 private:
   CUtils         utils;
-  string         RemoveMultipleWhiteSpaces(string s);
+  std::string    RemoveMultipleWhiteSpaces(std::string s);
 };
 
 

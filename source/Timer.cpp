@@ -57,7 +57,7 @@ uint64_t CTimer::GetSTDTimerMS()
 }
 
 
-string CTimer::FormatTimeString(int64_t i_milliseconds, bool b_rightaligned)
+std::string CTimer::FormatTimeString(int64_t i_milliseconds, bool b_rightaligned)
 {
   char buffer[128];
   unsigned int hours = (unsigned int)(i_milliseconds / 3600000);
@@ -74,7 +74,7 @@ string CTimer::FormatTimeString(int64_t i_milliseconds, bool b_rightaligned)
   if (iRet < 0)
     return "buffer overflow";
 
-  string sTime = &buffer[0];
+  std::string sTime = &buffer[0];
 
   if (!b_rightaligned)
     sTime.erase(0, sTime.find_first_not_of(" "));

@@ -45,7 +45,7 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
-bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugCheck)
+bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool b_ExtPlugCheck)
 {
   sDLLPath = "";
   bIs64BitAVSDLL = false;
@@ -98,10 +98,10 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
     }
   }
 
-  for (string sName : bi.exports)
+  for (std::string sName : bi.exports)
   {
     utils.StrToLC(sName);
-    if (sName.find("avs_linkage") != string::npos)
+    if (sName.find("avs_linkage") != std::string::npos)
     {
       bAVSLinkage = true;
       break;
@@ -111,7 +111,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
 
   if (!bAVSLinkage)
   {
-    string sFileVersion = platform::FileVersion(sDLLPath);
+    std::string sFileVersion = platform::FileVersion(sDLLPath);
 
     if (sFileVersion.substr(0, 3) == "2.6")
       s_ErrorMsg = utils.StrFormat("Error: The installed Avisynth version is a 2.6 Alpha or RC:\n%s\n\nUpdate to Avisynth 2.6 Release or Avisynth+\n\n", platform::NativeSystemPath(sDLLPath).c_str());
@@ -127,10 +127,10 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
   sProductVersion = platform::ProductVersion(sDLLPath);
   sTimeStamp = utils.GetFileTimeStamp(sDLLPath);
 
-  string sDeps = "";
-  string sFailedDeps = "";
-  string sNote = "";
-  string sHint = "";
+  std::string sDeps = "";
+  std::string sFailedDeps = "";
+  std::string sNote = "";
+  std::string sHint = "";
   bool bFFTWFail = false;
   GetDLLDependencies(sDLLPath, sDeps, sFailedDeps, sHint, bFFTWFail);
 
@@ -201,7 +201,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
 
     try
     {
-      string sTemp = utils.StrFormat("%f", AVS_env->Invoke("VersionNumber", AVSValue(&foo, 0)).AsFloat());
+      std::string sTemp = utils.StrFormat("%f", AVS_env->Invoke("VersionNumber", AVSValue(&foo, 0)).AsFloat());
       size_t x;
       for (x = sTemp.length() - 1; x > 3; x--)
       {
@@ -241,26 +241,26 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
       }
     }
 
-    string sInternalFunctions = "";
+    std::string sInternalFunctions = "";
     try
     {
       foo = AVS_env->GetVar("$InternalFunctions$");
       sInternalFunctions = foo.AsString();
       utils.StrTokenize(sInternalFunctions, vInternalFunctions, " ", true);
-      sort(vInternalFunctions.begin(), vInternalFunctions.end(), CompareNoCase);
+      std::sort(vInternalFunctions.begin(), vInternalFunctions.end(), CompareNoCase);
     }
     catch(...)
     {
       sInternalFunctions = "";
     }
 
-    string sDLLFunctions = "";
+    std::string sDLLFunctions = "";
     try
     {
       foo = AVS_env->GetVar("$PluginFunctions$");
       sDLLFunctions = foo.AsString();
       utils.StrTokenize(sDLLFunctions, vPluginFunctions, " ", true);
-      sort(vPluginFunctions.begin(), vPluginFunctions.end(), CompareNoCase);
+      std::sort(vPluginFunctions.begin(), vPluginFunctions.end(), CompareNoCase);
     }
     catch(...)
     {
@@ -277,7 +277,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
     bSuccess = false;
     s_ErrorMsg = utils.StrFormat("%s", (PCSTR)err.msg);
   }
-  catch (exception& ex)
+  catch (std::exception& ex)
   {
     bSuccess = false;
     s_ErrorMsg = ex.what();
@@ -298,7 +298,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
     return false;
 
 
-  string sFunction = "";
+  std::string sFunction = "";
   for (size_t InternalFunctions = 0; InternalFunctions < vInternalFunctions.size(); InternalFunctions++)
   {
     sFunction = vInternalFunctions[InternalFunctions];
@@ -324,7 +324,7 @@ bool CAvisynthInfo::GetInfo(string s_AVSDLL, string &s_ErrorMsg, bool b_ExtPlugC
 }
 
 
-static string TrimDirSeparators(string s_dir)
+static std::string TrimDirSeparators(std::string s_dir)
 {
   //keep the separator of a drive root ("C:\\")
   while ((s_dir.length() > 1) && ((s_dir.back() == '/') || (s_dir.back() == '\\')) && (s_dir[s_dir.length() - 2] != ':'))
@@ -334,11 +334,11 @@ static string TrimDirSeparators(string s_dir)
 }
 
 
-static string ComparableDir(string s_dir)
+static std::string ComparableDir(std::string s_dir)
 {
 #ifdef _WIN32
   replace(s_dir.begin(), s_dir.end(), '/', '\\');
-  transform(s_dir.begin(), s_dir.end(), s_dir.begin(), [](unsigned char c) { return (char)(((c >= 'A') && (c <= 'Z')) ? c + ('a' - 'A') : c); });
+  std::transform(s_dir.begin(), s_dir.end(), s_dir.begin(), [](unsigned char c) { return (char)(((c >= 'A') && (c <= 'Z')) ? c + ('a' - 'A') : c); });
 #endif
   return TrimDirSeparators(s_dir);
 }
@@ -349,11 +349,11 @@ void CAvisynthInfo::EnumPluginDirs()
   vPluginDirs.clear();
   const char *pszArch = PROCESS_64 ? "x64" : "x86";
 
-  vector<string> vRegLabels;
-  vector<string> vRegDirs;
+  std::vector<std::string> vRegLabels;
+  std::vector<std::string> vRegDirs;
   for (const platform::RegisteredPluginDir &regDir : platform::RegisteredPluginDirs())
   {
-    string sPluginDir = regDir.path;
+    std::string sPluginDir = regDir.path;
     utils.StrTrim(sPluginDir);
 
     if ((sPluginDir == "") || ((regDir.valueName == "PluginDir+") && !bIsAVSPlus))
@@ -376,10 +376,10 @@ void CAvisynthInfo::EnumPluginDirs()
 
   //Avisynth+ reports the directories it actually searches, in search order.
   //Show the registry label and spelling where a directory comes from the registry.
-  for (const string &sDir : vAutoloadDirs)
+  for (const std::string &sDir : vAutoloadDirs)
   {
-    string sLabel = utils.StrFormat("Autoload dir (AVS+, %s)", pszArch);
-    string sShownDir = TrimDirSeparators(sDir);
+    std::string sLabel = utils.StrFormat("Autoload dir (AVS+, %s)", pszArch);
+    std::string sShownDir = TrimDirSeparators(sDir);
 
     for (size_t i = 0; i < vRegDirs.size(); i++)
     {
@@ -404,10 +404,10 @@ void CAvisynthInfo::EnumPluginDirs()
 
 void CAvisynthInfo::EnumPluginDLLs()
 {
-  string sDir = "";
-  string sMessage = "";
+  std::string sDir = "";
+  std::string sMessage = "";
   bool bIs64BitPlugin = false;
-  set <string> mDuplicates;
+  std::set<std::string> mDuplicates;
 
   for (size_t uiPlugDir = 0; uiPlugDir < vPluginDirs.size(); uiPlugDir++)
   {
@@ -417,8 +417,8 @@ void CAvisynthInfo::EnumPluginDLLs()
       size_t spos = sDir.find(":\t");
       sDir = sDir.substr(spos + 2);
 
-      string sCurrentFile = "";
-      string sCurrentFileLC = "";
+      std::string sCurrentFile = "";
+      std::string sCurrentFileLC = "";
       std::error_code ec;
       for (std::filesystem::directory_iterator it(sDir, ec), end; !ec && it != end; it.increment(ec))
       {
@@ -426,7 +426,7 @@ void CAvisynthInfo::EnumPluginDLLs()
         if (it->is_directory(ecType))
           continue;
 
-        string sName;
+        std::string sName;
         try
         {
           sName = it->path().filename().string();
@@ -497,7 +497,7 @@ void CAvisynthInfo::EnumPluginDLLs()
     }
   }
 
-  sort(vPlugins.begin(), vPlugins.end(), CompareNoCase);
+  std::sort(vPlugins.begin(), vPlugins.end(), CompareNoCase);
 
   CheckFunctionDuplicates();
 
@@ -505,20 +505,20 @@ void CAvisynthInfo::EnumPluginDLLs()
 }
 
 
-void CAvisynthInfo::AddScriptFunctions(string s_avsi_file)
+void CAvisynthInfo::AddScriptFunctions(std::string s_avsi_file)
 {
-  string sOrgLine = "";
-  string sCurrentLine = "";
+  std::string sOrgLine = "";
+  std::string sCurrentLine = "";
   size_t BRPos = 0;
-  string sFunctionName = "";
-  string sFunctionNameLC = "";
-  string sAVSIError = "";
+  std::string sFunctionName = "";
+  std::string sFunctionNameLC = "";
+  std::string sAVSIError = "";
 
-  ifstream h_avsi_file(s_avsi_file.c_str());
+  std::ifstream h_avsi_file(s_avsi_file.c_str());
   if (!h_avsi_file.is_open())
     return;
 
-  while (getline(h_avsi_file, sCurrentLine))
+  while (std::getline(h_avsi_file, sCurrentLine))
   {
     utils.StrTrim(sCurrentLine);
     sOrgLine = sCurrentLine;
@@ -545,23 +545,23 @@ void CAvisynthInfo::AddScriptFunctions(string s_avsi_file)
 
 void CAvisynthInfo::CheckFunctionDuplicates()
 {
-  string sArrayEntry_i = "";
-  string sArrayEntry_y = "";
-  string sFunctionLC_i = "";
-  string sFunctionLC_i_Old = "";
-  string sFunction_i = "";
-  string sOrigin_i = "";
-  string sAVSIError_i = "";
+  std::string sArrayEntry_i = "";
+  std::string sArrayEntry_y = "";
+  std::string sFunctionLC_i = "";
+  std::string sFunctionLC_i_Old = "";
+  std::string sFunction_i = "";
+  std::string sOrigin_i = "";
+  std::string sAVSIError_i = "";
   size_t spos_i = 0;
-  string sFunction_y = "";
-  string sFunctionLC_y = "";
-  string sOrigin_y = "";
-  string sAVSIError = "";
-  string sGruntTest = "";
+  std::string sFunction_y = "";
+  std::string sFunctionLC_y = "";
+  std::string sOrigin_y = "";
+  std::string sAVSIError = "";
+  std::string sGruntTest = "";
 
   size_t spos_y = 0;
-  set <string> stDups;
-  sort(vAllFunctions.begin(), vAllFunctions.end(), CompareNoCase);
+  std::set<std::string> stDups;
+  std::sort(vAllFunctions.begin(), vAllFunctions.end(), CompareNoCase);
 
   for (size_t i = 0; i < vAllFunctions.size() - 1; i++)
   {
@@ -614,7 +614,7 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 }
 
 
-bool CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDLL)
+bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b_Is64BitDLL)
 {
   b_Is64BitDLL = false;
   s_Msg = "UNCATEGORIZED";
@@ -635,32 +635,32 @@ bool CAvisynthInfo::GetPluginType(string s_dll, string &s_Msg, bool &b_Is64BitDL
   if (b_Is64BitDLL != PROCESS_64)
     return true;
 
-  for (string sExportFunc : bi.exports)
+  for (std::string sExportFunc : bi.exports)
   {
     utils.StrToLC(sExportFunc); //convert to lower case for comparison
 
-    if (sExportFunc.find("avisynthplugininit3") != string::npos) //CPP 2.6, 32 or 64 bit
+    if (sExportFunc.find("avisynthplugininit3") != std::string::npos) //CPP 2.6, 32 or 64 bit
     {
       s_Msg = "AVSCPP26";
       break;
     }
 
-    if (sExportFunc.find("avisynthplugininit2") != string::npos) //CPP 2.5, 32 or 64 bit
+    if (sExportFunc.find("avisynthplugininit2") != std::string::npos) //CPP 2.5, 32 or 64 bit
     {
       s_Msg = "AVSCPP25";
       break;
     }
 
-    if ((sExportFunc.find("avisynthplugininit") != string::npos) && !b_Is64BitDLL) //CPP 2.0
+    if ((sExportFunc.find("avisynthplugininit") != std::string::npos) && !b_Is64BitDLL) //CPP 2.0
       s_Msg = "AVSCPP20"; //don't break here, keep looping
 
-    if ((sExportFunc.find("avisynth_c_plugin_init@4") != string::npos) && !b_Is64BitDLL) //32 bit C2.5
+    if ((sExportFunc.find("avisynth_c_plugin_init@4") != std::string::npos) && !b_Is64BitDLL) //32 bit C2.5
     {
       s_Msg = "AVSC25";
       break;
     }
 
-    if ((sExportFunc.find("avisynth_c_plugin_init") != string::npos) && b_Is64BitDLL) //64 bit C2.5
+    if ((sExportFunc.find("avisynth_c_plugin_init") != std::string::npos) && b_Is64BitDLL) //64 bit C2.5
     {
       s_Msg = "AVSC25";
       break;
@@ -685,18 +685,18 @@ void CAvisynthInfo::TestLoadPlugins()
   if (!hDLL)
     return;
 
-  string sPlugLoadError = "";
-  string sPlugLoadErrorLC = "";
-  string sNote = "";
-  string sPlugin = "";
-  string sPluginType = "";
+  std::string sPlugLoadError = "";
+  std::string sPlugLoadErrorLC = "";
+  std::string sNote = "";
+  std::string sPlugin = "";
+  std::string sPluginType = "";
   size_t uiPlugin = 0;
   size_t spos = 0;
-  string sDependencies = "";
-  string sFailedDependencies = "";
-  string sHint = "";
-  string sMsg = "";
-  string sTemp = "";
+  std::string sDependencies = "";
+  std::string sFailedDependencies = "";
+  std::string sHint = "";
+  std::string sMsg = "";
+  std::string sTemp = "";
   bool bFFTWFail = false;
 
   IScriptEnvironment *AVS_env = 0;
@@ -724,10 +724,10 @@ void CAvisynthInfo::TestLoadPlugins()
           return;
         }
       }
-      catch (exception& ex)
+      catch (std::exception& ex)
       {
         platform::FreeLib(hDLL);
-        string dummy = ex.what();
+        std::string dummy = ex.what();
         return;
       }
 
@@ -741,7 +741,7 @@ void CAvisynthInfo::TestLoadPlugins()
 
     sPluginType = sPlugin.substr(0, spos);
 
-    if (sPluginType.find("Plugins") == string::npos)
+    if (sPluginType.find("Plugins") == std::string::npos)
       continue;
 
     sPlugin = sPlugin.substr(spos + 1);
@@ -784,7 +784,7 @@ void CAvisynthInfo::TestLoadPlugins()
           sNote += utils.StrFormat("\n\nNote: %s", sHint.c_str());
       }
 
-      if ((sPlugLoadErrorLC.find("proc not found") != string::npos) || (sPlugLoadErrorLC.find("the specified procedure could not be found") != string::npos))
+      if ((sPlugLoadErrorLC.find("proc not found") != std::string::npos) || (sPlugLoadErrorLC.find("the specified procedure could not be found") != std::string::npos))
         sNote += "\n\nNote: You may need a newer OS version in order to use this plugin";
 
       if ((sPluginType.substr(0, 5) == "C 2.5") && (!bIsAVSPlus))
@@ -823,19 +823,19 @@ void CAvisynthInfo::TestLoadPlugins()
 }
 
 
-void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, string &s_failed_dependencies, string &s_hint, bool &fftw_fail)
+void CAvisynthInfo::GetDLLDependencies(std::string s_dll, std::string &s_dependencies, std::string &s_failed_dependencies, std::string &s_hint, bool &fftw_fail)
 {
   s_failed_dependencies = "";
-  string sTemp = "";
+  std::string sTemp = "";
 
   platform::BinaryInfo bi;
   if (!platform::InspectBinary(s_dll, bi) || bi.imports.empty())
     return;
 
   s_dependencies = s_dll + ":\n";
-  string sDepDLL = "";
+  std::string sDepDLL = "";
 
-  for (const string &sImport : bi.imports)
+  for (const std::string &sImport : bi.imports)
   {
     const char *szDepName = sImport.c_str();
     sTemp = utils.StrFormat("%s", szDepName);
@@ -878,50 +878,50 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
   utils.StrToLC(sTemp);
 
   s_hint = "";
-  if ((sTemp.find("msvcm80.dll") != string::npos) ||
-      (sTemp.find("msvcp80.dll") != string::npos) ||
-      (sTemp.find("msvcr80.dll") != string::npos) ||
-      (sTemp.find("vcomp.dll") != string::npos))
+  if ((sTemp.find("msvcm80.dll") != std::string::npos) ||
+      (sTemp.find("msvcp80.dll") != std::string::npos) ||
+      (sTemp.find("msvcr80.dll") != std::string::npos) ||
+      (sTemp.find("vcomp.dll") != std::string::npos))
         s_hint += "Visual Studio 2005 Runtime doesn't seem to be installed\n";
 
-  if ((sTemp.find("msvcm90.dll") != string::npos) ||
-      (sTemp.find("msvcp90.dll") != string::npos) ||
-      (sTemp.find("msvcr90.dll") != string::npos) ||
-      (sTemp.find("vcomp90.dll") != string::npos))
+  if ((sTemp.find("msvcm90.dll") != std::string::npos) ||
+      (sTemp.find("msvcp90.dll") != std::string::npos) ||
+      (sTemp.find("msvcr90.dll") != std::string::npos) ||
+      (sTemp.find("vcomp90.dll") != std::string::npos))
         s_hint += "Visual Studio 2008 Runtime doesn't seem to be installed\n";
 
-  if ((sTemp.find("msvcm100.dll") != string::npos) ||
-      (sTemp.find("msvcp100.dll") != string::npos) ||
-      (sTemp.find("msvcr100.dll") != string::npos) ||
-      (sTemp.find("vcomp100.dll") != string::npos))
+  if ((sTemp.find("msvcm100.dll") != std::string::npos) ||
+      (sTemp.find("msvcp100.dll") != std::string::npos) ||
+      (sTemp.find("msvcr100.dll") != std::string::npos) ||
+      (sTemp.find("vcomp100.dll") != std::string::npos))
         s_hint += "Visual Studio 2010 Runtime doesn't seem to be installed\n";
 
-  if ((sTemp.find("msvcm110.dll") != string::npos) ||
-      (sTemp.find("msvcp110.dll") != string::npos) ||
-      (sTemp.find("msvcr110.dll") != string::npos) ||
-      (sTemp.find("vcomp110.dll") != string::npos))
+  if ((sTemp.find("msvcm110.dll") != std::string::npos) ||
+      (sTemp.find("msvcp110.dll") != std::string::npos) ||
+      (sTemp.find("msvcr110.dll") != std::string::npos) ||
+      (sTemp.find("vcomp110.dll") != std::string::npos))
         s_hint += "Visual Studio 2012 Runtime doesn't seem to be installed\n";
 
-  if ((sTemp.find("msvcm120.dll") != string::npos) ||
-      (sTemp.find("msvcp120.dll") != string::npos) ||
-      (sTemp.find("msvcr120.dll") != string::npos) ||
-      (sTemp.find("vcomp120.dll") != string::npos))
+  if ((sTemp.find("msvcm120.dll") != std::string::npos) ||
+      (sTemp.find("msvcp120.dll") != std::string::npos) ||
+      (sTemp.find("msvcr120.dll") != std::string::npos) ||
+      (sTemp.find("vcomp120.dll") != std::string::npos))
         s_hint += "Visual Studio 2013 Runtime doesn't seem to be installed\n";
 
-  if ((sTemp.find("msvcm140.dll") != string::npos) ||
-      (sTemp.find("msvcp140.dll") != string::npos) ||
-      (sTemp.find("msvcr140.dll") != string::npos) ||
-      (sTemp.find("vcomp140.dll") != string::npos) ||
-      (sTemp.find("vcruntime140.dll") != string::npos) ||
-      (sTemp.find("api-ms-win-crt") != string::npos))
+  if ((sTemp.find("msvcm140.dll") != std::string::npos) ||
+      (sTemp.find("msvcp140.dll") != std::string::npos) ||
+      (sTemp.find("msvcr140.dll") != std::string::npos) ||
+      (sTemp.find("vcomp140.dll") != std::string::npos) ||
+      (sTemp.find("vcruntime140.dll") != std::string::npos) ||
+      (sTemp.find("api-ms-win-crt") != std::string::npos))
         s_hint += "Visual Studio 2015/2017/2019 Runtime doesn't seem to be installed\n";
 
   if (fftw_fail)
   {
-    if (sTemp.find("libfftw3f-3.dll") != string::npos)
+    if (sTemp.find("libfftw3f-3.dll") != std::string::npos)
       s_hint += "\'libfftw3f-3.dll\' can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      \'libfftw3f-3.dll\' should be placed in \"System32\" and/or \"SysWoW64\"\n";
 
-    if (sTemp.find("fftw3.dll") != string::npos)
+    if (sTemp.find("fftw3.dll") != std::string::npos)
       s_hint += "\'fftw3.dll\' (aka \'libfftw3f-3.dll\') can be downloaded here:\n      http://www.fftw.org/install/windows.html\n\n      \'fftw3.dll\' should be placed in \"System32\" and/or \"SysWoW64\"\n";
   }
 
@@ -931,7 +931,7 @@ void CAvisynthInfo::GetDLLDependencies(string s_dll, string &s_dependencies, str
 }
 
 
-bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
+bool CAvisynthInfo::CheckFFTW(std::string s_dll, std::string &s_failed_deps)
 {
   int64_t fsize = platform::FileSize(s_dll);
   bool bSuccess = true;
@@ -941,14 +941,14 @@ bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
     FILE *fp = fopen(s_dll.c_str(), "rb");
     if (fp)
     {
-      string filedata;
+      std::string filedata;
       fseek(fp, 0, SEEK_END);
       filedata.resize(ftell(fp));
       rewind(fp);
       fread(&filedata[0], 1, filedata.size(), fp);
       fclose(fp);
 
-      transform(filedata.begin(), filedata.end(), filedata.begin(), ::tolower);
+      std::transform(filedata.begin(), filedata.end(), filedata.begin(), ::tolower);
 
       if (filedata.find("libfftw3f-3.dll") != std::string::npos)
       {
@@ -982,7 +982,7 @@ bool CAvisynthInfo::CheckFFTW(string s_dll, string &s_failed_deps)
 }
 
 
-bool CAvisynthInfo::IsGruntFunc(string s_function)
+bool CAvisynthInfo::IsGruntFunc(std::string s_function)
 {
   utils.StrToLC(s_function);
 

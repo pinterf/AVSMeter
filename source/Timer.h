@@ -29,7 +29,7 @@ public:
   double           GetTimer();
   double           GetSTDTimer();
   uint64_t         GetSTDTimerMS();
-  string           FormatTimeString(int64_t i_milliseconds, bool b_rightaligned);
+  std::string      FormatTimeString(int64_t i_milliseconds, bool b_rightaligned);
 };
 
 

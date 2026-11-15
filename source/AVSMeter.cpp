@@ -47,8 +47,8 @@
 
 struct stSettings
 {
-  string    sLogDirectory;
-  string    sAVSDLL;
+  std::string sLogDirectory;
+  std::string sAVSDLL;
   bool      bDisplayFPS;
   bool      bDisplayTPF;
   bool      bCreateLog;
@@ -56,14 +56,14 @@ struct stSettings
   bool      bPauseBeforeExit;
   int64_t   iStartFrame;
   int64_t   iStopFrame;
-  string    sFrameRange;
+  std::string sFrameRange;
   int64_t   iTimeLimit;
   bool      bInvokeDistributor;
   bool      bAllowOnlyOneInstance;
   bool      bUseColor;
   bool      bGPUInfo;
   bool      bConUseStdOut;
-  string    sSystemDateTime;
+  std::string sSystemDateTime;
   bool      bLogEstimatedTime;
   bool      bAutoCompleteExtension;
   bool      bLogFileDateTimeSuffix;
@@ -86,8 +86,8 @@ struct stPerfData
 
 struct stCmdLine
 {
-  string    sCommandLine;
-  string    sAVSFile;
+  std::string sCommandLine;
+  std::string sAVSFile;
   bool      bModeAVSInfo = false;
   bool      bInfoOnly = false;
   bool      bOmitPreScan = false;
@@ -124,23 +124,23 @@ static CAvisynthInfo AvisynthInfo;
 static CSysInfo sys;
 
 
-unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error);
-string       CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<stPerfData> &cs_pdata, string &s_avserror, bool bNVVP, bool bOmitstPerfData);
-string       CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, bool bNVVP);
-string       ParseINIFile();
-bool         WriteINIFile(string &s_inifile);
+unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error);
+std::string  CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData);
+std::string  CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP);
+std::string  ParseINIFile();
+bool         WriteINIFile(std::string &s_inifile);
 void         PrintUsage();
 void         PollKeys();
 void         PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...);
-string       Pad(string s_line);
+std::string  Pad(std::string s_line);
 static void  SetDefaultSettings();
 static bool  ParseCommandLine(int argc, char* argv[], stCmdLine &cmd);
-static void  AppendSystemInfo(string &sLogBuffer, platform::GpuSensors &gpuinfo);
-static int   RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
-static void  AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
-static void  ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, string &sLogBuffer);
-static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs);
-static void  ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, string &sLogBuffer, bool &bRuntimeTooShort);
+static void  AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpuinfo);
+static int   RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
+static void  AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
+static void  ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, std::string &sLogBuffer);
+static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs);
+static void  ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, std::string &sLogBuffer, bool &bRuntimeTooShort);
 
 
 
@@ -150,13 +150,13 @@ int main(int argc, char* argv[])
 
   SetDefaultSettings();
 
-  string sINIRet = ParseINIFile();
+  std::string sINIRet = ParseINIFile();
 
   AvisynthInfo.nLoadPlugInterval = Settings.nLoadPluginInterval;
 
   int iRet = 0;
 
-  string sAVSMVersion = VERSION_STR;
+  std::string sAVSMVersion = VERSION_STR;
 
   if (PROCESS_64)
     sAVSMVersion += " (x64)";
@@ -172,16 +172,16 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  vector<stPerfData> perfdata;
-  string sOutBuf = "";
-  string sLogBuffer = "";
+  std::vector<stPerfData> perfdata;
+  std::string sOutBuf = "";
+  std::string sLogBuffer = "";
   bool   bRuntimeTooShort = false;
-  string sGPUInfo = "";
+  std::string sGPUInfo = "";
   bool bEarlyExit = true;
-  string sAVSError = "";
+  std::string sAVSError = "";
   unsigned int uiFrameInterval = 1;
   unsigned int uiLogFrameInterval = 1;
-  string sErrorMsg = "";
+  std::string sErrorMsg = "";
 
   Settings.sSystemDateTime = "";
 
@@ -372,7 +372,7 @@ int main(int argc, char* argv[])
 
       if (Settings.bCreateLog)
       {
-        string sLogRet = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, false, bRuntimeTooShort);
+        std::string sLogRet = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, false, bRuntimeTooShort);
         if (sLogRet != "")
           PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sLogRet.c_str());
       }
@@ -451,7 +451,7 @@ int main(int argc, char* argv[])
     else
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\n%s\n", sAVSError.c_str());
   }
-  catch (exception& ex)
+  catch (std::exception& ex)
   {
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
     iRet = -1;
@@ -493,7 +493,7 @@ int main(int argc, char* argv[])
 
   if (Settings.bCreateLog)
   {
-    string sr = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, gpuinfo.data.NVVPU, bRuntimeTooShort);
+    std::string sr = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, gpuinfo.data.NVVPU, bRuntimeTooShort);
     if (sr != "")
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
@@ -504,7 +504,7 @@ int main(int argc, char* argv[])
 
   if (Settings.bCreateCSV && !bRuntimeTooShort && (sAVSError == ""))
   {
-    string cr = CreateCSVFile(cmd.sAVSFile, perfdata, gpuinfo.data.NVVPU);
+    std::string cr = CreateCSVFile(cmd.sAVSFile, perfdata, gpuinfo.data.NVVPU);
     if (cr != "")
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
@@ -548,7 +548,7 @@ static void SetDefaultSettings()
 
 static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
 {
-  string sCmdToken = "";
+  std::string sCmdToken = "";
   bool CLSwitches_timelimit = false;
   bool CLSwitches_highpriority = false;
   bool CLSwitches_range = false;
@@ -557,9 +557,9 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
   bool CLSwitches_o = false;
   bool CLSwitches_lf = false;
 
-  string sArg = "";
-  string sArgTest = "";
-  string sTemp = "";
+  std::string sArg = "";
+  std::string sArgTest = "";
+  std::string sTemp = "";
   size_t arg_len = 0;
   for (int iArg = 1; iArg < argc; iArg++)
   {
@@ -815,9 +815,9 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
 }
 
 
-static void AppendSystemInfo(string &sLogBuffer, platform::GpuSensors &gpuinfo)
+static void AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpuinfo)
 {
-  string sOutBuf = "";
+  std::string sOutBuf = "";
 
   sLogBuffer += "\n[OS/Hardware info]\n";
   sOutBuf = utils.StrFormat("Operating system:           %s\n\n", sys.GetOSVersion().c_str());
@@ -849,10 +849,10 @@ static void AppendSystemInfo(string &sLogBuffer, platform::GpuSensors &gpuinfo)
 }
 
 
-static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo)
+static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo)
 {
-  string sOutBuf = "";
-  string sLogBuffer = "";
+  std::string sOutBuf = "";
+  std::string sLogBuffer = "";
 
   sOutBuf = utils.StrFormat("Log file created with:      AVSMeter %s\n", sAVSMVersion.c_str());
   sLogBuffer += sOutBuf;
@@ -897,7 +897,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
 
   if (AvisynthInfo.vPluginDirs.size() > 0)
   {
-    string sPluginDir = "";
+    std::string sPluginDir = "";
     for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
     {
       sPluginDir = AvisynthInfo.vPluginDirs[uiPlugDir];
@@ -920,10 +920,10 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
   if (AvisynthInfo.vPlugins.size() > 0)
   {
     unsigned int uiPlugin = 0;
-    string sPluginDLL = "";
-    string sPluginType = "";
-    string sOldPluginType = "";
-    string sPluginVersion = "";
+    std::string sPluginDLL = "";
+    std::string sPluginType = "";
+    std::string sOldPluginType = "";
+    std::string sPluginVersion = "";
     size_t spos = 0;
 
     for (uiPlugin = 0; uiPlugin < AvisynthInfo.vPlugins.size(); uiPlugin++)
@@ -982,7 +982,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
   if (AvisynthInfo.vPluginErrors.size() > 0)
   {
     unsigned int err = 0;
-    string sPluginError = "";
+    std::string sPluginError = "";
     unsigned int errmaxlen = 0;
     unsigned int cpos = 0;
 
@@ -990,7 +990,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
     {
       sPluginError = AvisynthInfo.vPluginErrors[err];
 
-      if ((Settings.bDisableFFTWDLLWarning) && (sPluginError.find("FFTW") != string::npos))
+      if ((Settings.bDisableFFTWDLLWarning) && (sPluginError.find("FFTW") != std::string::npos))
         AvisynthInfo.vPluginErrors[err] = "";
 
       for (cpos = 0; cpos < sPluginError.length(); cpos++)
@@ -1015,7 +1015,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
 
     if (bErrorsWarnings)
     {
-      string sLineSep(errmaxlen, '_');
+      std::string sLineSep(errmaxlen, '_');
       sOutBuf = "\n\n\n[Plugin errors/warnings]\n";
       sLogBuffer += sOutBuf;
       PrintConsole(true, COLOR_AVSM_VERSION, sOutBuf.c_str());
@@ -1034,7 +1034,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
     }
   }
 
-  string sFunction = "";
+  std::string sFunction = "";
   if ((cmd.bLogFunctions) && (Settings.bCreateLog))
   {
     //Internal Functions
@@ -1089,7 +1089,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
     if (Settings.sSystemDateTime == "")
       Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
 
-    string sAVSInfoFile = "";
+    std::string sAVSInfoFile = "";
     char szPath[MAX_PATH + 1];
     if (::GetCurrentDirectory(MAX_PATH, szPath) > 0)
     {
@@ -1118,7 +1118,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
           sAVSInfoFile = utils.StrFormat("%s\\avsinfo.log", Settings.sLogDirectory.c_str());
       }
 
-      ofstream hAVSInfoFile(sAVSInfoFile.c_str());
+      std::ofstream hAVSInfoFile(sAVSInfoFile.c_str());
       if (hAVSInfoFile.is_open())
      {
         hAVSInfoFile << sLogBuffer;
@@ -1133,9 +1133,9 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, plat
 }
 
 
-static void AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo)
+static void AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo)
 {
-  string sOutBuf = "";
+  std::string sOutBuf = "";
 
   sOutBuf = utils.StrFormat("Log file created with:      AVSMeter %s", sAVSMVersion.c_str());
   sLogBuffer += sOutBuf + "\n";
@@ -1183,7 +1183,7 @@ static void AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion
 
   for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
   {
-    string sTemp = AvisynthInfo.vPluginDirs[uiPlugDir];
+    std::string sTemp = AvisynthInfo.vPluginDirs[uiPlugDir];
     if (sTemp != "")
     {
       size_t spos = sTemp.find(":\t");
@@ -1196,9 +1196,9 @@ static void AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion
 }
 
 
-static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, string &sLogBuffer)
+static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, std::string &sLogBuffer)
 {
-  string sOutBuf = "";
+  std::string sOutBuf = "";
 
   PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s", Pad("").c_str());
 
@@ -1406,9 +1406,9 @@ static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_
 }
 
 
-static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs)
+static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, std::vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs)
 {
-  string sOutBuf = "";
+  std::string sOutBuf = "";
 
 
   CProcessInfo processinfo;
@@ -1654,9 +1654,9 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
 }
 
 
-static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, string &sLogBuffer, bool &bRuntimeTooShort)
+static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, std::string &sLogBuffer, bool &bRuntimeTooShort)
 {
-  string sOutBuf = "";
+  std::string sOutBuf = "";
 
   sLogBuffer += "\n\n[Runtime info]\n";
 
@@ -1805,12 +1805,12 @@ static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, u
 }
 
 
-string ParseINIFile()
+std::string ParseINIFile()
 {
-  string sRet = "";
-  string sProgramPath = "";
-  string sINIFile = "";
-  string sTemp = "";
+  std::string sRet = "";
+  std::string sProgramPath = "";
+  std::string sINIFile = "";
+  std::string sTemp = "";
 
   char szPath[MAX_PATH_LEN + 1];
   if (::GetModuleFileName(NULL, szPath, MAX_PATH_LEN) > 0)
@@ -1830,7 +1830,7 @@ string ParseINIFile()
       sINIFile = sProgramPath + "\\AVSMeter.ini";
   }
 
-  string sCurrentLine = "";
+  std::string sCurrentLine = "";
 
   if (!platform::FileExists(sINIFile)) //No ini file present, create the file with defaults
   {
@@ -1843,19 +1843,19 @@ string ParseINIFile()
     return "";
   }
 
-  ifstream hINIFile(sINIFile.c_str());
+  std::ifstream hINIFile(sINIFile.c_str());
   if (!hINIFile.is_open())
   {
     sRet = utils.StrFormat("\nError: Cannot open \"%s\"\n", sINIFile.c_str());
     return sRet;
   }
 
-  string sOrgLine = "";
+  std::string sOrgLine = "";
   sCurrentLine = "";
   size_t spos = 0;
   int iBoolValue = 0;
 
-  while (getline(hINIFile, sCurrentLine))
+  while (std::getline(hINIFile, sCurrentLine))
   {
     utils.StrTrim(sCurrentLine);
     sOrgLine = sCurrentLine;
@@ -1973,12 +1973,12 @@ string ParseINIFile()
 }
 
 
-bool WriteINIFile(string &s_inifile)
+bool WriteINIFile(std::string &s_inifile)
 {
-  string sSettings = "";
-  string sComment = "";
+  std::string sSettings = "";
+  std::string sComment = "";
 
-  ofstream hINIFile(s_inifile.c_str());
+  std::ofstream hINIFile(s_inifile.c_str());
   if (!hINIFile.is_open())
     return false;
 
@@ -2017,28 +2017,28 @@ bool WriteINIFile(string &s_inifile)
 }
 
 
-string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, vector<stPerfData> &cs_pdata, string &s_avserror, bool bNVVP, bool bOmitstPerfData)
+std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData)
 {
-  string sRet = "";
-  string sAVSBuffer = "";
-  string sCurrentLine = "";
+  std::string sRet = "";
+  std::string sAVSBuffer = "";
+  std::string sCurrentLine = "";
 
-  ifstream hAVSFile(s_avsfile.c_str());
+  std::ifstream hAVSFile(s_avsfile.c_str());
   if (!hAVSFile.is_open())
   {
     sRet = utils.StrFormat("\nCannot open \"%s\"\n", s_avsfile.c_str());
     return sRet;
   }
 
-  while (getline(hAVSFile, sCurrentLine))
+  while (std::getline(hAVSFile, sCurrentLine))
     sAVSBuffer += sCurrentLine + "\n";
 
   hAVSFile.close();
   utils.StrTrim(sAVSBuffer);
 
-  string sLogFile = "";
+  std::string sLogFile = "";
   size_t ilen = s_avsfile.length();
-  ofstream hLogFile;
+  std::ofstream hLogFile;
 
 
   Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
@@ -2078,7 +2078,7 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
   }
 
 
-  string sLog = "";
+  std::string sLog = "";
 
   sLog = s_logbuffer + "\n";
   hLogFile << sLog;
@@ -2106,14 +2106,14 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 
     hLogFile << sLog;
 
-    string stemp1 = "";
-    string stemp2 = "";
+    std::string stemp1 = "";
+    std::string stemp2 = "";
     unsigned int uiFrame = 0;
     for (unsigned int i = 0; i < cs_pdata.size(); i++)
     {
       uiFrame = cs_pdata[i].frame + 1;
       stemp1 = utils.StrFormat("%u", uiFrame);
-      string spad((12 - stemp1.length()), ' ');
+      std::string spad((12 - stemp1.length()), ' ');
       if (Settings.bGPUInfo)
       {
         if (bNVVP)
@@ -2135,13 +2135,13 @@ string CreateLogFile(string &s_avsfile, string &s_logbuffer, string &s_gpuinfo, 
 }
 
 
-string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, bool bNVVP)
+std::string CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP)
 {
-  string sRet = "";
+  std::string sRet = "";
 
-  string sCSVFile = "";
+  std::string sCSVFile = "";
   size_t ilen = s_avsfile.length();
-  ofstream hCSVFile;
+  std::ofstream hCSVFile;
 
   Settings.sSystemDateTime = sys.GetFormattedSystemDateTime();
   if (ilen > 4)
@@ -2180,7 +2180,7 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, bool bNVVP
   }
 
 
-  string sCSV = "";
+  std::string sCSV = "";
 
   if (cs_pdata.size() > 1)
   {
@@ -2196,7 +2196,7 @@ string CreateCSVFile(string &s_avsfile, vector<stPerfData> &cs_pdata, bool bNVVP
 
     hCSVFile << sCSV;
 
-    string stemp = "";
+    std::string stemp = "";
     unsigned int uiFrame = 0;
     for (unsigned int i = 0; i < cs_pdata.size(); i++)
     {
@@ -2247,7 +2247,7 @@ void PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
-  string buffer = StrVFormat(fmt, args);
+  std::string buffer = StrVFormat(fmt, args);
   va_end(args);
 
   platform::ConsoleToOutputCP(&buffer[0]);
@@ -2273,7 +2273,7 @@ void PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...)
 }
 
 
-string Pad(string s_line)
+std::string Pad(std::string s_line)
 {
   int iPadLen = platform::ConsoleWidth() - (int)s_line.length();
   if ((iPadLen > 0) && (iPadLen <= 1000))
@@ -2283,7 +2283,7 @@ string Pad(string s_line)
 }
 
 
-unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
+unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error)
 {
   s_error = "";
   unsigned int uiFrameInterval = 10;
@@ -2413,7 +2413,7 @@ unsigned int CalculateFrameInterval(string &s_avsfile, string &s_error)
     s_error = utils.StrFormat("%s", (PCSTR)err.msg);
     uiFrameInterval = 10;
   }
-  catch (exception& ex)
+  catch (std::exception& ex)
   {
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
     s_error = ex.what();

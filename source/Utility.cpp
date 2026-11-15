@@ -29,7 +29,7 @@ CUtils::~CUtils()
 }
 
 
-string CUtils::SysErrorMessage()
+std::string CUtils::SysErrorMessage()
 {
   DWORD dwLastError = GetLastError();
   if (dwLastError == ERROR_SUCCESS)
@@ -39,7 +39,7 @@ string CUtils::SysErrorMessage()
   memset(msgBuf, 0, sizeof(msgBuf));
   FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msgBuf, 2046, NULL);
 
-  string sRet(msgBuf);
+  std::string sRet(msgBuf);
   sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
   sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
 
@@ -47,7 +47,7 @@ string CUtils::SysErrorMessage()
 }
 
 
-string CUtils::GetFileTimeStamp(string s_file)
+std::string CUtils::GetFileTimeStamp(std::string s_file)
 {
   std::tm tmUtc;
   if (!platform::FileModifiedUtc(s_file, tmUtc))
@@ -57,7 +57,7 @@ string CUtils::GetFileTimeStamp(string s_file)
 }
 
 
-string CUtils::GetFileDateStamp(string s_file)
+std::string CUtils::GetFileDateStamp(std::string s_file)
 {
   std::tm tmUtc;
   if (!platform::FileModifiedUtc(s_file, tmUtc))
@@ -67,21 +67,21 @@ string CUtils::GetFileDateStamp(string s_file)
 }
 
 
-void CUtils::StrTrimLeft(string &s_string)
+void CUtils::StrTrimLeft(std::string &s_string)
 {
   s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
   return;
 }
 
 
-void CUtils::StrTrimRight(string &s_string)
+void CUtils::StrTrimRight(std::string &s_string)
 {
   s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
   return;
 }
 
 
-void CUtils::StrTrim(string &s_string)
+void CUtils::StrTrim(std::string &s_string)
 {
   s_string.erase(s_string.find_last_not_of(" \t\n\r") + 1);
   s_string.erase(0, s_string.find_first_not_of(" \t\n\r"));
@@ -89,23 +89,23 @@ void CUtils::StrTrim(string &s_string)
 }
 
 
-void CUtils::StrToUC(string &s_string)
+void CUtils::StrToUC(std::string &s_string)
 {
-  transform(s_string.begin(), s_string.end(), s_string.begin(), ::toupper);
+  std::transform(s_string.begin(), s_string.end(), s_string.begin(), ::toupper);
   return;
 }
 
 
-void CUtils::StrToLC(string &s_string)
+void CUtils::StrToLC(std::string &s_string)
 {
-  transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
+  std::transform(s_string.begin(), s_string.end(), s_string.begin(), ::tolower);
   return;
 }
 
 
-string CUtils::StrFormatFPS(double d_fps)
+std::string CUtils::StrFormatFPS(double d_fps)
 {
-  string sRet = "";
+  std::string sRet = "";
 
   if (d_fps < 9.999)      sRet = StrFormat("%.3f", d_fps);
   else if (d_fps < 99.99) sRet = StrFormat("%.2f", d_fps);
@@ -116,9 +116,9 @@ string CUtils::StrFormatFPS(double d_fps)
 }
 
 
-string CUtils::StrFormatTPF(double d_frametime)
+std::string CUtils::StrFormatTPF(double d_frametime)
 {
-  string sRet = "";
+  std::string sRet = "";
 
   if (d_frametime < 0.1)         sRet = StrFormat("%.5f", d_frametime);
   else if (d_frametime < 1.0)    sRet = StrFormat("%.4f", d_frametime);
@@ -131,7 +131,7 @@ string CUtils::StrFormatTPF(double d_frametime)
 }
 
 
-bool CUtils::IsNumeric(string s_string)
+bool CUtils::IsNumeric(std::string s_string)
 {
   if (s_string == "")
     return false;
@@ -161,12 +161,12 @@ bool CUtils::IsNumeric(string s_string)
 }
 
 
-void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delimiter, bool b_removedups)
+void CUtils::StrTokenize(std::string s_string, std::vector<std::string> &tokens, std::string s_delimiter, bool b_removedups)
 {
   StrTrim(s_string);
-  string sToken = "";
-  string sTokenLC = "";
-  set <string> mDuplicates;
+  std::string sToken = "";
+  std::string sTokenLC = "";
+  std::set<std::string> mDuplicates;
 
   size_t current = 0;
   size_t next = -1;
@@ -185,13 +185,13 @@ void CUtils::StrTokenize(string s_string, vector<string> &tokens, string s_delim
         mDuplicates.insert(sTokenLC);
     }
   }
-  while (next != string::npos);
+  while (next != std::string::npos);
 
   return;
 }
 
 
-string StrVFormat(char const *fmt, va_list args)
+std::string StrVFormat(char const *fmt, va_list args)
 {
   va_list args2;
   va_copy(args2, args);
@@ -200,17 +200,17 @@ string StrVFormat(char const *fmt, va_list args)
   if (len < 0)
     return "Buffer overflow";
 
-  string ret((size_t)len, '\0');
+  std::string ret((size_t)len, '\0');
   vsnprintf(&ret[0], (size_t)len + 1, fmt, args);
   return ret;
 }
 
 
-string CUtils::StrFormat(char const *fmt, ...)
+std::string CUtils::StrFormat(char const *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
-  string ret = StrVFormat(fmt, args);
+  std::string ret = StrVFormat(fmt, args);
   va_end(args);
 
   return ret;

@@ -39,23 +39,11 @@
 #include <map>
 #include <set>
 
-using std::string;
-using std::ifstream;
-using std::ofstream;
-using std::vector;
-using std::sort;
-using std::map;
-using std::set;
-using std::transform;
-using std::getline;
-using std::remove;
-using std::exception;
-
 #define MAX_PATH_LEN 32768
 #define DSE_DELAY 500
 const bool PROCESS_64 = (sizeof(void*) == 8);
 
-inline bool CompareNoCase(string first, string second)
+inline bool CompareNoCase(std::string first, std::string second)
 {
   size_t i = 0;
   while ((i < first.length()) && (i < second.length()))

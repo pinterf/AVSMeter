@@ -31,13 +31,13 @@ CSysInfo::~CSysInfo()
 }
 
 
-string CSysInfo::GetOSVersion()
+std::string CSysInfo::GetOSVersion()
 {
   return platform::OsVersion();
 }
 
 
-string CSysInfo::GetFormattedSystemDateTime()
+std::string CSysInfo::GetFormattedSystemDateTime()
 {
   std::time_t t = std::time(nullptr);
   std::tm tmLocal = {};
@@ -51,11 +51,11 @@ string CSysInfo::GetFormattedSystemDateTime()
 }
 
 
-string CSysInfo::RemoveMultipleWhiteSpaces(string s)
+std::string CSysInfo::RemoveMultipleWhiteSpaces(std::string s)
 {
-  string search = "  ";
+  std::string search = "  ";
   size_t index;
-  while((index = s.find(search)) != string::npos) s.erase(index,1);
+  while((index = s.find(search)) != std::string::npos) s.erase(index,1);
 
   return s;
 }
