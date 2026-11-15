@@ -8,9 +8,9 @@
 #   cmake -B build\vs32 -S . -G "Visual Studio 18 2026" -A Win32
 #   cmake -B build/a64 -S . -G Ninja --toolchain cmake/toolchains/aarch64-linux-gnu-gcc.cmake  (cross)
 #
-# libcpuid: MSVC links the prebuilt static libraries in source/cpuid. Elsewhere libcpuid 0.8.2 is
-# downloaded at configure time and built as a static library; -DAVSMETER_SYSTEM_LIBCPUID=ON uses
-# the system's libcpuid (pkg-config) instead.
+# libcpuid: MSVC links the prebuilt static libraries in source/cpuid. Elsewhere the libcpuid 0.8.2
+# release archive is downloaded at configure time and built as a static library;
+# -DAVSMETER_SYSTEM_LIBCPUID=ON uses the system's libcpuid (pkg-config) instead.
 cmake_minimum_required(VERSION 3.22...3.31)
 
 # Before project(): CMake's MSVC default for single-config generators would be Debug
@@ -166,12 +166,12 @@ elseif(AVSMETER_SYSTEM_LIBCPUID)
 else()
   # Only the sources are fetched (SOURCE_SUBDIR has no CMakeLists.txt): libcpuid's own CMake
   # would also build cpuid_tool and add its install rules.
+  # The release tarball, not git: the libcpuid repository keeps its test data in git-lfs.
   enable_language(C)
   include(FetchContent)
   FetchContent_Declare(libcpuid
-    GIT_REPOSITORY https://github.com/anrieff/libcpuid.git
-    GIT_TAG        v0.8.2
-    GIT_SHALLOW    TRUE
+    URL            https://github.com/anrieff/libcpuid/archive/refs/tags/v0.8.2.tar.gz
+    URL_HASH       SHA256=f23e212e22ca22942cca87b18decdbce8a76d2b004c344a0789d0d26d14930d6
     SOURCE_SUBDIR  no-cmake
   )
   FetchContent_MakeAvailable(libcpuid)

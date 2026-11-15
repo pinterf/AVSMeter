@@ -379,9 +379,9 @@ cmake --preset vs32 && cmake --build --preset vs32
 ```
 
 MSVC links the prebuilt libcpuid libraries from `source\cpuid`. Other compilers
-download libcpuid 0.8.2 at configure time (Git, network access) and build it as a
-static library; `-DAVSMETER_SYSTEM_LIBCPUID=ON` uses the system's libcpuid via
-pkg-config instead. Linux needs AviSynth+ (`libavisynth.so`) at run time.
+download the libcpuid 0.8.2 release archive at configure time (network access) and
+build it as a static library; `-DAVSMETER_SYSTEM_LIBCPUID=ON` uses the system's
+libcpuid via pkg-config instead. Linux needs AviSynth+ (`libavisynth.so`) at run time.
 
 On Linux the settings file is `avsmeter.ini`: next to the executable if one exists
 there (portable use), otherwise `$XDG_CONFIG_HOME/avsmeter/avsmeter.ini`
