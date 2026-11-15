@@ -239,6 +239,21 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
     AVS_linkage = AVS_env->GetAVSLinkage();
     AVSValue foo;
 
+    // Run the plugin autoload now, on our terms: a plugin that throws while autoloading (e.g. wrong
+    // calling convention or bitness) would otherwise abort the whole query from a later lookup.
+    // The autoload is marked done before it starts, so it throws only once.
+    try
+    {
+      AVS_env->FunctionExists("AVSMeter_TriggerAutoload");
+    }
+    catch (AvisynthError err)
+    {
+      std::string sAutoloadError = platform::ToUtf8(err.msg);
+      utils.StrTrim(sAutoloadError);
+      vPluginErrors.push_back("Plugin autoload stopped: " + sAutoloadError +
+        "\n\nNote: Plugins after this one were not autoloaded, their functions are missing from the lists");
+    }
+
     if (AVS_env->FunctionExists("AutoloadPlugins"))
       bIsAVSPlus = true;
     if ((AVS_env->FunctionExists("SetMTMode")) || (AVS_env->FunctionExists("Prefetch")))
@@ -783,6 +798,20 @@ void CAvisynthInfo::TestLoadPlugins()
       }
 
       AVS_linkage = AVS_env->GetAVSLinkage();
+
+      // Test each plugin on its own: a plugin calling a function while loading triggers the autoload,
+      // and a broken autoloaded plugin's error would be blamed on the plugin under test
+      if (bIsAVSPlus)
+      {
+        try
+        {
+          AVSValue foo;
+          AVS_env->Invoke("ClearAutoloadDirs", AVSValue(&foo, 0));
+        }
+        catch (...)
+        {
+        }
+      }
     }
 
     sPlugin = vPlugins[uiPlugin];
