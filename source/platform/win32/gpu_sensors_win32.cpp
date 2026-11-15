@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -101,6 +101,7 @@ void platform::GpuSensors::Init()
         sError += "\nMake sure that GPU-Z is running.\n\nGPU-Z can be downloaded here:\nhttps://www.techpowerup.com/download/gpu-z/";
     }
 
+    sError = "Cannot initialize GPU-Z shared memory interface:\n" + sError;
     return;
   }
 
@@ -109,6 +110,7 @@ void platform::GpuSensors::Init()
     sError = CUtils().SysErrorMessage();
     if (sError == "")
       sError = "Error initializing GPU-Z memory interface";
+    sError = "Cannot initialize GPU-Z shared memory interface:\n" + sError;
     if (hMapFile)
       CloseHandle((HANDLE)hMapFile);
     hMapFile = NULL;

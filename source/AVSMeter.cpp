@@ -255,7 +255,7 @@ int main(int argc, char* argv[])
     if (!gpuinfo.bInitialized)
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-      PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Cannot initialize GPU-Z shared memory interface:\n%s\n", gpuinfo.sError.c_str());
+      PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: %s\n", gpuinfo.sError.c_str());
       PollKeys();
       return -1;
     }

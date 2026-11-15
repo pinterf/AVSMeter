@@ -39,7 +39,7 @@ platform::GpuSensors::~GpuSensors()
 
 void platform::GpuSensors::Init()
 {
-  sError = "GPU sensors are not available on this platform";
+  sError = "GPU sensors (-gpu) are not available on this platform";
 }
 
 
