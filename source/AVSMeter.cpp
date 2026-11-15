@@ -93,7 +93,6 @@ struct stCmdLine
   bool      bOmitPreScan = false;
   bool      bLogFunctions = false;
   bool      bHighPriority = false;
-  bool      bCustomAVSDLLFromCL = false;
 };
 
 struct stRunStats
@@ -215,42 +214,6 @@ int main(int argc, char* argv[])
   if (cmd.bHighPriority)
     platform::SetHighPriority();
 
-  if (cmd.bCustomAVSDLLFromCL)
-  {
-    char szCustomAVSDLL[MAX_PATH + 1] = "";
-
-    OPENFILENAME ofn;
-    ofn.lStructSize       = sizeof(OPENFILENAME);
-    ofn.hwndOwner         = ConsoleHWND;
-    ofn.hInstance         = NULL;
-    ofn.lpstrFilter       = "*.dll";
-    ofn.lpstrCustomFilter = NULL;
-    ofn.nMaxCustFilter    = 0;
-    ofn.nFilterIndex      = 1;
-    ofn.lpstrFile         = szCustomAVSDLL;
-    ofn.nMaxFile          = MAX_PATH;
-    ofn.lpstrFileTitle    = NULL;
-    ofn.nMaxFileTitle     = NULL;
-    ofn.lpstrInitialDir   = ".";
-    ofn.lpstrTitle        = "Select Avisynth DLL";
-    ofn.nFileOffset       = 0;
-    ofn.nFileExtension    = 0;
-    ofn.lpstrDefExt       = NULL;
-    ofn.lCustData         = 0;
-    ofn.lpfnHook          = NULL;
-    ofn.lpTemplateName    = NULL;
-    ofn.Flags             = OFN_HIDEREADONLY | OFN_EXPLORER;
-
-    if (GetOpenFileName(&ofn) == 0)
-    {
-      PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-      PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nCannot open file or no avisynth.dll selected.\n");
-      PollKeys();
-      return -1;
-    }
-
-    Settings.sAVSDLL.assign(szCustomAVSDLL);
-  }
   PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("Query Avisynth info...").c_str());
 
   bool bRet = false;

@@ -120,7 +120,7 @@ if(WIN32)
   # prebuilt libcpuid 0.8.2 static libraries
   target_link_libraries(AVSMeter PRIVATE
     "${SRC}/cpuid/libcpuid${ArchBits}$<$<CONFIG:Debug>:d>.lib"
-    kernel32 user32 advapi32 shell32 comdlg32 psapi version
+    kernel32 user32 advapi32 shell32 psapi version
   )
 endif()
 

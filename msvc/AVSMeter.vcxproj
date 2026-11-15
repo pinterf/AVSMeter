@@ -78,7 +78,7 @@
       <SubSystem>Console</SubSystem>
       <MinimumRequiredVersion>6.01</MinimumRequiredVersion>
       <LargeAddressAware>true</LargeAddressAware>
-      <AdditionalDependencies>$(PrebuiltLibcpuidLibrary);Shell32.lib;comdlg32.lib;psapi.lib;version.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(PrebuiltLibcpuidLibrary);Shell32.lib;psapi.lib;version.lib;user32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>

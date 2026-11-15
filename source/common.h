@@ -26,7 +26,6 @@
 #include <windows.h>
 #include <cstdint>
 #include <shlobj.h>
-#include <commdlg.h>
 #include <process.h>
 #include <math.h>
 #include <string>
@@ -55,7 +54,6 @@ using std::exception;
 #define MAX_PATH_LEN 32768
 #define DSE_DELAY 500
 const bool PROCESS_64 = (sizeof(void*) == 8);
-inline const HWND ConsoleHWND = GetConsoleWindow();
 
 inline bool CompareNoCase(string first, string second)
 {
