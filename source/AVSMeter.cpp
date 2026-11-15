@@ -129,7 +129,7 @@ static CSysInfo sys;
 unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error);
 std::string  CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData);
 std::string  CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP);
-std::string  ParseINIFile();
+std::string  ParseINIFile(std::string &s_warning);
 bool         WriteINIFile(std::string &s_inifile);
 void         PrintUsage();
 void         PollKeys();
@@ -152,7 +152,8 @@ int main(int argc, char* argv[])
 
   SetDefaultSettings();
 
-  std::string sINIRet = ParseINIFile();
+  std::string sINIWarning;
+  std::string sINIRet = ParseINIFile(sINIWarning);
 
   AvisynthInfo.nLoadPlugInterval = Settings.nLoadPluginInterval;
 
@@ -173,6 +174,9 @@ int main(int argc, char* argv[])
     PollKeys();
     return -1;
   }
+
+  if (sINIWarning != "")
+    PrintConsole(true, COLOR_ERROR, sINIWarning.c_str());
 
   std::vector<stPerfData> perfdata;
   std::string sOutBuf = "";
@@ -1803,23 +1807,19 @@ static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, u
 }
 
 
-std::string ParseINIFile()
+// Returns a fatal error. An INI file that cannot be read or created is only a warning:
+// the defaults are used.
+std::string ParseINIFile(std::string &s_warning)
 {
   std::string sRet = "";
-  std::string sProgramPath = "";
-  std::string sINIFile = "";
   std::string sTemp = "";
+  s_warning = "";
 
-  sProgramPath = platform::ExecutablePath();
-  if (sProgramPath != "")
+  std::string sINIFile = platform::IniFilePath();
+  if (sINIFile == "")
   {
-    size_t nPos = sProgramPath.find_last_of(platform::kPathSeparators);
-    sProgramPath = sProgramPath.substr(0, (nPos == std::string::npos) ? 0 : nPos);
-
-    if (PROCESS_64)
-      sINIFile = sProgramPath + platform::kPathSep + "AVSMeter64.ini";
-    else
-      sINIFile = sProgramPath + platform::kPathSep + "AVSMeter.ini";
+    s_warning = "\nWarning: No location for the INI file, using defaults\n";
+    return "";
   }
 
   std::string sCurrentLine = "";
@@ -1827,10 +1827,7 @@ std::string ParseINIFile()
   if (!platform::FileExists(sINIFile)) //No ini file present, create the file with defaults
   {
     if (!WriteINIFile(sINIFile))
-   {
-      sRet = utils.StrFormat("\nError: Cannot create \"%s\"\n", sINIFile.c_str());
-      return sRet;
-    }
+      s_warning = utils.StrFormat("\nWarning: Cannot create \"%s\", using defaults\n", sINIFile.c_str());
 
     return "";
   }
@@ -1838,8 +1835,8 @@ std::string ParseINIFile()
   std::ifstream hINIFile(platform::PathFromUtf8(sINIFile));
   if (!hINIFile.is_open())
   {
-    sRet = utils.StrFormat("\nError: Cannot open \"%s\"\n", sINIFile.c_str());
-    return sRet;
+    s_warning = utils.StrFormat("\nWarning: Cannot open \"%s\", using defaults\n", sINIFile.c_str());
+    return "";
   }
 
   std::string sOrgLine = "";
@@ -1955,12 +1952,8 @@ std::string ParseINIFile()
 
   hINIFile.close();
 
-  //Write INI file with new settings
-  if (!WriteINIFile(sINIFile))
-  {
-    sRet = utils.StrFormat("\nError: Cannot create \"%s\"\n", sINIFile.c_str());
-    return sRet;
-  }
+  //Rewrite to add settings missing from the file; the settings were read, so a read-only file is fine
+  WriteINIFile(sINIFile);
 
   return "";
 }

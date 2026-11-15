@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -203,4 +203,17 @@ bool platform::LegacyPath(const std::string &s_path, std::string &s_legacy)
 std::string platform::ExecutablePath()
 {
   return win32::WideToUtf8(win32::ModuleFileNameW(NULL).c_str());
+}
+
+
+std::string platform::IniFilePath()
+{
+  std::string sPath = ExecutablePath();
+  if (sPath.empty())
+    return sPath;
+
+  size_t nPos = sPath.find_last_of(kPathSeparators);
+  sPath.erase((nPos == std::string::npos) ? 0 : nPos);
+
+  return sPath + kPathSep + ((sizeof(void *) == 8) ? "AVSMeter64.ini" : "AVSMeter.ini");
 }

@@ -338,6 +338,11 @@ download libcpuid 0.8.2 at configure time (Git, network access) and build it as 
 static library; `-DAVSMETER_SYSTEM_LIBCPUID=ON` uses the system's libcpuid via
 pkg-config instead. Linux needs AviSynth+ (`libavisynth.so`) at run time.
 
+On Linux the settings file is `avsmeter.ini`: next to the executable if one exists
+there (portable use), otherwise `$XDG_CONFIG_HOME/avsmeter/avsmeter.ini`
+(default `~/.config/avsmeter/`). If the INI file cannot be created, AVSMeter warns and
+uses the defaults.
+
 ## License
 
 AVSMeter's project sources are licensed under **GPL-3.0-or-later**. See

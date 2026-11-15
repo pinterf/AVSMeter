@@ -49,6 +49,12 @@ namespace platform
 
   std::string ExecutablePath(); // own executable, empty on error
 
+  // Settings file. Windows: "AVSMeter.ini" / "AVSMeter64.ini" next to the executable.
+  // POSIX: "avsmeter.ini" next to the executable if present (portable), otherwise in
+  // $XDG_CONFIG_HOME/avsmeter/ (default ~/.config/avsmeter/, created if missing).
+  // Empty if no location is available.
+  std::string IniFilePath();
+
   // UTF-8 path <-> std::filesystem::path, for streams and directory iterators.
   std::filesystem::path PathFromUtf8(const std::string &s_path);
   std::string           PathToUtf8(const std::filesystem::path &path);

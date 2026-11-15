@@ -93,6 +93,38 @@ std::string platform::ExecutablePath()
 }
 
 
+std::string platform::IniFilePath()
+{
+  const std::string sName = "avsmeter.ini";
+
+  std::string sExe = ExecutablePath();
+  size_t nPos = sExe.rfind('/');
+  if (nPos != std::string::npos)
+  {
+    std::string sPortable = sExe.substr(0, nPos + 1) + sName;
+    if (FileExists(sPortable))
+      return sPortable;
+  }
+
+  // XDG Base Directory spec: a relative $XDG_CONFIG_HOME is invalid and ignored
+  std::string sDir;
+  const char *pszXdg = getenv("XDG_CONFIG_HOME");
+  const char *pszHome = getenv("HOME");
+  if (pszXdg && pszXdg[0] == '/')
+    sDir = pszXdg;
+  else if (pszHome && pszHome[0] != '\0')
+    sDir = std::string(pszHome) + "/.config";
+  else
+    return std::string();
+
+  sDir += "/avsmeter";
+  std::error_code ec;
+  std::filesystem::create_directories(sDir, ec); // a failure shows up when the file is written
+
+  return sDir + "/" + sName;
+}
+
+
 std::filesystem::path platform::PathFromUtf8(const std::string &s_path)
 {
   return std::filesystem::path(s_path);
