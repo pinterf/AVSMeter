@@ -52,6 +52,15 @@
       "displayName": "Windows, Visual Studio 2026, Win32",
       "inherits": "windows-base",
       "architecture": "Win32"
+    },
+    {
+      "name": "windows-arm64-mingw",
+      "displayName": "Windows on ARM64 cross, llvm-mingw, Release (set LLVM_MINGW_ROOT)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "toolchainFile": "${sourceDir}/cmake/toolchains/llvm-mingw-aarch64.cmake",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     }
   ],
   "buildPresets": [
@@ -60,6 +69,7 @@
     { "name": "linux-aarch64-gcc", "configurePreset": "linux-aarch64-gcc" },
     { "name": "linux-aarch64-clang", "configurePreset": "linux-aarch64-clang" },
     { "name": "vs64", "configurePreset": "vs64", "configuration": "Release" },
-    { "name": "vs32", "configurePreset": "vs32", "configuration": "Release" }
+    { "name": "vs32", "configurePreset": "vs32", "configuration": "Release" },
+    { "name": "windows-arm64-mingw", "configurePreset": "windows-arm64-mingw" }
   ]
 }

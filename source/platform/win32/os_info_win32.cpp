@@ -24,6 +24,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <vector>
 
 
 namespace
@@ -183,4 +184,79 @@ bool platform::Is64BitOS()
   ::IsWow64Process(::GetCurrentProcess(), &bWoW64Process);
 
   return bWoW64Process != FALSE;
+}
+
+
+bool platform::GetOsCpuInfo(OsCpuInfo &info)
+{
+#if defined(_M_ARM64) || defined(__aarch64__)
+  wchar_t wszBrand[128] = L"";
+  DWORD dwSize = sizeof(wszBrand);
+  if (::RegGetValueW(HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", L"ProcessorNameString",
+                     RRF_RT_REG_SZ, NULL, wszBrand, &dwSize) == ERROR_SUCCESS)
+    info.brand = platform::win32::WideToUtf8(wszBrand);
+
+  DWORD dwLength = 0;
+  ::GetLogicalProcessorInformationEx(RelationProcessorCore, NULL, &dwLength);
+  std::vector<char> buf(dwLength);
+  if (dwLength > 0 && ::GetLogicalProcessorInformationEx(RelationProcessorCore, (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)buf.data(), &dwLength))
+  {
+    for (DWORD dwOffset = 0; dwOffset < dwLength; )
+    {
+      const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *p = (const SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)(buf.data() + dwOffset);
+      info.cores++;
+      for (WORD g = 0; g < p->Processor.GroupCount; g++)
+        for (KAFFINITY mask = p->Processor.GroupMask[g].Mask; mask != 0; mask &= mask - 1)
+          info.logical_cores++;
+      dwOffset += p->Size;
+    }
+  }
+
+  // NEON is part of the ARMv8-A baseline. The PF_ARM_* constants come with newer SDKs (SVE: 26100, Windows 11 24H2);
+  // an older Windows answers FALSE for unknown ones. A higher version implies the lower ones.
+  bool bSVE = false, bSVE2 = false, bSVE2P1 = false, bSME = false, bSME2 = false;
+  std::string s = "NEON, ";
+#if defined(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE)
+  if (::IsProcessorFeaturePresent(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE)) s += "FP16, ";
+#endif
+#if defined(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE)
+  if (::IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE)) s += "DOTPROD, ";
+#endif
+#if defined(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE)
+  if (::IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE)) s += "I8MM, ";
+#endif
+#if defined(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE)
+  if (::IsProcessorFeaturePresent(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE)) s += "BF16, ";
+#endif
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  bSVE = ::IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE) != FALSE;
+#endif
+#if defined(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE)
+  bSVE2 = ::IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE) != FALSE;
+#endif
+#if defined(PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE)
+  bSVE2P1 = ::IsProcessorFeaturePresent(PF_ARM_SVE2_1_INSTRUCTIONS_AVAILABLE) != FALSE;
+#endif
+#if defined(PF_ARM_SME_INSTRUCTIONS_AVAILABLE)
+  bSME = ::IsProcessorFeaturePresent(PF_ARM_SME_INSTRUCTIONS_AVAILABLE) != FALSE;
+#endif
+#if defined(PF_ARM_SME2_INSTRUCTIONS_AVAILABLE)
+  bSME2 = ::IsProcessorFeaturePresent(PF_ARM_SME2_INSTRUCTIONS_AVAILABLE) != FALSE;
+#endif
+  bSVE2 = bSVE2 || bSVE2P1;
+  bSVE = bSVE || bSVE2;
+  bSME = bSME || bSME2;
+  if (bSVE)    s += "SVE, ";
+  if (bSVE2)   s += "SVE2, ";
+  if (bSVE2P1) s += "SVE2.1, ";
+  if (bSME)    s += "SME, ";
+  if (bSME2)   s += "SME2, ";
+  s.erase(s.find_last_not_of(", ") + 1);
+  info.instruction_sets = s;
+
+  return !info.brand.empty() || info.cores > 0;
+#else
+  (void)info;
+  return false;
+#endif
 }

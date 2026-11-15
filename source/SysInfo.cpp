@@ -64,18 +64,21 @@ std::string CSysInfo::RemoveMultipleWhiteSpaces(std::string s)
 void CSysInfo::GetCPUID()
 {
   if (!cpuid_present())
+  {
+    GetOSCPUData();
     return;
+  }
 
   // Zeroed: on ARM cpuid_get_raw_data does not clear the x86 fields, and cpu_identify
   // takes any nonzero basic_cpuid[0] as an x86 CPU
   struct cpu_raw_data_t raw = {};
   struct cpu_id_t data = {};
 
-  if (cpuid_get_raw_data(&raw) < 0)
+  if ((cpuid_get_raw_data(&raw) < 0) || (cpu_identify(&raw, &data) < 0))
+  {
+    GetOSCPUData();
     return;
-
-  if (cpu_identify(&raw, &data) < 0)
-    return;
+  }
 
   if ((cpudata.CPUTotalLogicalCores > cpudata.CPULogicalCores) && (cpudata.CPULogicalCores > 0))
     cpudata.NumCPUs = data.total_logical_cpus / data.num_logical_cpus;
@@ -153,6 +156,22 @@ void CSysInfo::GetCPUID()
   bCPUIDSuccess = true;
 
   return;
+}
+
+
+// libcpuid cannot identify the CPU (e.g. Windows on ARM64): what the OS tells, no code name.
+void CSysInfo::GetOSCPUData()
+{
+  platform::OsCpuInfo info;
+  if (!platform::GetOsCpuInfo(info))
+    return;
+
+  cpudata.CPUBrandString = RemoveMultipleWhiteSpaces(info.brand);
+  cpudata.CPUCodeName = "";
+  cpudata.CPUCores = info.cores;
+  cpudata.CPULogicalCores = info.logical_cores;
+  cpudata.CPUSupportedInstructionSets = info.instruction_sets;
+  bCPUIDSuccess = true;
 }
 
 

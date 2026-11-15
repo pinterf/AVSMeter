@@ -95,3 +95,9 @@ bool platform::Is64BitOS()
 
   return (std::strstr(un.machine, "64") != nullptr);
 }
+
+
+bool platform::GetOsCpuInfo(OsCpuInfo &)
+{
+  return false;
+}

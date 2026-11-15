@@ -22,10 +22,12 @@
 
 #include <atomic>
 #include <cstdio>
-#include <exception>
+#include <stdexcept>
 #include <string>
 
+#if defined(_MSC_VER)
 #include <eh.h>
+#endif
 #include <psapi.h>
 
 
@@ -172,7 +174,7 @@ std::string GetExceptionModule(LPVOID address)
 }
 
 
-void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
+std::string DescribeException(EXCEPTION_POINTERS* pExcept)
 {
   char msg[2048];
   std::string sExceptionDescription = "UNKNOWN_EXCEPTION";
@@ -1954,15 +1956,34 @@ void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
   {
     std::string sOrigModule = GetExceptionModule(orig.pAddress);
     if (sOrigModule == "") sOrigModule = "Cannot determine module";
-    _snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p\nThread:   %lu (rethrown by %s)",
-      pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sOrigModule.c_str(), orig.pAddress,
-      orig.dwThreadId, sExceptionModule.c_str());
+    snprintf(msg, sizeof(msg), "Exception 0x%08lX [%s]\nModule:   %s\nAddress:  0x%p\nThread:   %lu (rethrown by %s)",
+      (unsigned long)pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sOrigModule.c_str(), orig.pAddress,
+      (unsigned long)orig.dwThreadId, sExceptionModule.c_str());
   }
   else
-    _snprintf(msg, sizeof(msg), "Exception 0x%08X [%s]\nModule:   %s\nAddress:  0x%08p", pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
+    snprintf(msg, sizeof(msg), "Exception 0x%08lX [%s]\nModule:   %s\nAddress:  0x%p", (unsigned long)pExcept->ExceptionRecord->ExceptionCode, sExceptionDescription.c_str(), sExceptionModule.c_str(), pExcept->ExceptionRecord->ExceptionAddress);
 
-  throw std::exception(msg);
+  return msg;
 }
+
+
+#if defined(_MSC_VER)
+// Needs /EHa: the fault becomes a C++ exception at the faulting instruction.
+void SE_Translator(unsigned int, EXCEPTION_POINTERS* pExcept)
+{
+  throw std::runtime_error(DescribeException(pExcept));
+}
+#else
+// MinGW (Clang, GCC) has no asynchronous exceptions, a fault cannot be thrown as a C++ exception.
+// As on POSIX: print a report and end the process, the exit code is the exception code.
+LONG CALLBACK ReportUnhandled(EXCEPTION_POINTERS* pExcept)
+{
+  std::string sReport = "\n\nFatal error: " + DescribeException(pExcept) + "\n";
+  fputs(sReport.c_str(), stderr);
+  fflush(stderr);
+  return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
 
 }
 
@@ -1976,6 +1997,11 @@ void platform::TranslateCrashes()
     if (g_hRaiseModule == nullptr)
       g_hRaiseModule = GetModuleHandleW(L"kernel32.dll");
     AddVectoredExceptionHandler(0, RecordFault);
+#if !defined(_MSC_VER)
+    SetUnhandledExceptionFilter(ReportUnhandled);
+#endif
   }
+#if defined(_MSC_VER)
   _set_se_translator(SE_Translator);
+#endif
 }

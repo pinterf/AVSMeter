@@ -1,4 +1,4 @@
-# AVSMeter CMake build: Windows (MSVC) and Linux (GCC, Clang).
+# AVSMeter CMake build: Windows (MSVC; llvm-mingw for ARM64) and Linux (GCC, Clang).
 # The hand-maintained Visual Studio 2026 project is msvc/AVSMeter.slnx; a CMake generated
 # solution lives in the (gitignored) build folder only.
 #
@@ -7,6 +7,7 @@
 #   cmake -B build\vs64 -S . -G "Visual Studio 18 2026" -A x64
 #   cmake -B build\vs32 -S . -G "Visual Studio 18 2026" -A Win32
 #   cmake -B build/a64 -S . -G Ninja --toolchain cmake/toolchains/aarch64-linux-gnu-gcc.cmake  (cross)
+#   cmake --preset windows-arm64-mingw  (Windows on ARM64 with llvm-mingw; MSVC ARM64 is refused)
 #
 # libcpuid: MSVC links the prebuilt static libraries in source/cpuid. Elsewhere the libcpuid 0.8.2
 # release archive is downloaded at configure time and built as a static library;
@@ -33,6 +34,12 @@ set(CMAKE_CXX_EXTENSIONS FALSE)
 option(AVSMETER_SYSTEM_LIBCPUID "Use the system's libcpuid (pkg-config) instead of downloading 0.8.2" OFF)
 
 if(MSVC)
+  # AviSynth+ for Windows on ARM64 is built with llvm-mingw; the C++ interface used here has the
+  # MinGW ABI there, an MSVC (or clang-cl) ARM64 build could not talk to it.
+  if(MSVC_CXX_ARCHITECTURE_ID MATCHES "^ARM")
+    message(FATAL_ERROR "Windows on ARM64: build with llvm-mingw (preset windows-arm64-mingw), not MSVC")
+  endif()
+
   # Static runtime (/MT, /MTd), same as msvc/AVSMeter.vcxproj
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -139,18 +146,27 @@ if(WIN32)
   # version resource and icon
   enable_language(RC)
   target_sources(AVSMeter PRIVATE "${SRC}/AVSMeter.rc")
-  set_source_files_properties("${SRC}/AVSMeter.rc" PROPERTIES COMPILE_OPTIONS "/l0x0809")
   source_group("Resource Files" FILES "${SRC}/AVSMeter.rc")
 
   # Windows 7 minimum
   target_compile_definitions(AVSMeter PRIVATE WIN32 _CONSOLE WINVER=0x0601 _WIN32_WINNT=0x0601)
-  target_link_options(AVSMeter PRIVATE "/SUBSYSTEM:CONSOLE,6.01")
-  if(ArchBits EQUAL 32)
-    target_link_options(AVSMeter PRIVATE "/LARGEADDRESSAWARE")
+  if(MSVC)
+    set_source_files_properties("${SRC}/AVSMeter.rc" PROPERTIES COMPILE_OPTIONS "/l0x0809")
+    target_link_options(AVSMeter PRIVATE "/SUBSYSTEM:CONSOLE,6.01")
+    if(ArchBits EQUAL 32)
+      target_link_options(AVSMeter PRIVATE "/LARGEADDRESSAWARE")
+    endif()
+  else()
+    # MinGW (llvm-mingw for Windows on ARM64): AVSMeter uses AviSynth's C++ interface, so it must
+    # share the MinGW C++ ABI of the AviSynth+ ARM64 build (llvm-mingw, not MSVC).
+    if(ArchBits EQUAL 32)
+      target_link_options(AVSMeter PRIVATE "-Wl,--large-address-aware")
+    endif()
   endif()
 
   target_link_libraries(AVSMeter PRIVATE kernel32 user32 advapi32 shell32 psapi version)
-else()
+endif()
+if(NOT MSVC)
   find_package(Threads REQUIRED)
   target_link_libraries(AVSMeter PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
 endif()
@@ -190,6 +206,10 @@ else()
     "${CPUID_SRC}/rdcpuid.c"
   )
   set_target_properties(cpuid PROPERTIES C_STANDARD 99 POSITION_INDEPENDENT_CODE ON)
+  if(WIN32)
+    # third-party: printf formats of the Windows-only MSR driver code, the missing HWCAP_CPUID on Windows ARM64
+    target_compile_options(cpuid PRIVATE -w)
+  endif()
   target_include_directories(cpuid SYSTEM PUBLIC "${CPUID_SRC}")
   target_compile_definitions(cpuid PRIVATE VERSION="0.8.2" _GNU_SOURCE)
   include(CheckSymbolExists)

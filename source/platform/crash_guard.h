@@ -25,6 +25,10 @@ namespace platform
   // on the calling thread throws a std::exception describing the fault and the
   // module it happened in. Per thread; no-op where unsupported.
   //
+  // Windows, MinGW (the llvm-mingw ARM64 build): no asynchronous C++ exceptions.
+  // A process-wide unhandled exception filter prints the same description to
+  // stderr; the process ends with the exception code.
+  //
   // POSIX: signals cannot be turned into exceptions. Process-wide handlers for
   // SIGSEGV/SIGBUS/SIGFPE/SIGILL/SIGABRT print a report (signal, module, file
   // offset for addr2line) to stderr and re-raise, so the process ends with the

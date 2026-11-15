@@ -49,6 +49,7 @@ private:
   CUtils         utils;
   std::string    RemoveMultipleWhiteSpaces(std::string s);
   void           GetARMCoreTypes();
+  void           GetOSCPUData();
 };
 
 

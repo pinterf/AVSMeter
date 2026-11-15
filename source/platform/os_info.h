@@ -25,6 +25,17 @@ namespace platform
 {
   std::string OsVersion(); // name, architecture and build, for the logs
   bool        Is64BitOS();
+
+  // CPU details from the OS, for when libcpuid cannot identify the CPU (libcpuid 0.8.2 reads the
+  // ARM ID registers on Linux and FreeBSD only). Implemented for Windows on ARM64, false elsewhere.
+  struct OsCpuInfo
+  {
+    std::string brand;
+    int         cores = 0;
+    int         logical_cores = 0;
+    std::string instruction_sets; // "NEON, DOTPROD, ...", the names of the libcpuid ARM list
+  };
+  bool        GetOsCpuInfo(OsCpuInfo &info);
 }
 
 

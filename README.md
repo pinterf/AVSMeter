@@ -5,7 +5,8 @@ diagnosing AviSynth installations and plugins. Originally developed by
 **Groucho2004** for Windows, it measures how quickly a script delivers video
 frames and/or audio samples without encoding them, helping identify slow
 filters, bottlenecks, and crashes. This continuation runs on Windows (x86, x64)
-and Linux (x86_64, aarch64).
+and Linux (x86_64, aarch64); a Windows on ARM64 build (llvm-mingw) is provided
+but untested.
 
 It reports clip information, minimum/maximum/average processing speed, audio
 speed relative to realtime, CPU and memory usage, and optional GPU/VPU sensor
@@ -382,6 +383,21 @@ MSVC links the prebuilt libcpuid libraries from `source\cpuid`. Other compilers
 download the libcpuid 0.8.2 release archive at configure time (network access) and
 build it as a static library; `-DAVSMETER_SYSTEM_LIBCPUID=ON` uses the system's
 libcpuid via pkg-config instead. Linux needs AviSynth+ (`libavisynth.so`) at run time.
+
+Windows on ARM64 is cross-compiled on x64 Windows with
+[llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (UCRT flavour, plus Ninja), not
+MSVC: the AviSynth+ ARM64 build uses llvm-mingw, and AVSMeter talks to it through
+the C++ interface, which needs the same C++ ABI. CMake stops if MSVC targets ARM64.
+This build is untested on real hardware. libcpuid cannot identify ARM CPUs on
+Windows, so the CPU name, core counts and instruction sets come from Windows
+instead (no code name). A hardware fault prints a crash report and ends AVSMeter,
+as on Linux, because MinGW cannot turn it into a C++ exception.
+
+```bat
+rem Windows on ARM64: build\windows-arm64-mingw\AVSMeter64.exe
+set LLVM_MINGW_ROOT=C:\llvm-mingw-20261020-ucrt-x86_64
+cmake --preset windows-arm64-mingw && cmake --build --preset windows-arm64-mingw
+```
 
 On Linux the settings file is `avsmeter.ini`: next to the executable if one exists
 there (portable use), otherwise `$XDG_CONFIG_HOME/avsmeter/avsmeter.ini`

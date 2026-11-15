@@ -916,7 +916,10 @@ static void AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpui
 
   if (sys.bCPUIDSuccess)
   {
-    sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
+    if (sys.cpudata.CPUCodeName.empty())
+      sOutBuf = utils.StrFormat("CPU:                        %s\n", sys.cpudata.CPUBrandString.c_str());
+    else
+      sOutBuf = utils.StrFormat("CPU:                        %s / %s\n", sys.cpudata.CPUBrandString.c_str(), sys.cpudata.CPUCodeName.c_str());
     sLogBuffer += sOutBuf;
     sOutBuf = utils.StrFormat("                            %s\n", sys.cpudata.CPUSupportedInstructionSets.c_str());
     sLogBuffer += sOutBuf;
