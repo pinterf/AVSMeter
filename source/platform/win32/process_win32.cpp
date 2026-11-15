@@ -30,6 +30,29 @@ bool platform::SetHighPriority()
 }
 
 
+void platform::SuppressErrorDialogs()
+{
+  ::SetErrorMode(SEM_FAILCRITICALERRORS);
+}
+
+
+std::string platform::LastErrorMessage()
+{
+  DWORD dwLastError = ::GetLastError();
+  if (dwLastError == ERROR_SUCCESS)
+    return "";
+
+  wchar_t wszBuf[2048] = {};
+  ::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), wszBuf, 2046, NULL);
+
+  std::string sRet = win32::WideToUtf8(wszBuf);
+  sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
+  sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
+
+  return sRet;
+}
+
+
 std::vector<std::string> platform::CommandLineArgs(int argc, char *argv[])
 {
   std::vector<std::string> vArgs;

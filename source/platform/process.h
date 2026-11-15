@@ -26,6 +26,12 @@ namespace platform
 {
   bool SetHighPriority();
 
+  // No system error dialogs (Windows: missing disk, failed DLL dependencies); errors go to the caller.
+  void SuppressErrorDialogs();
+
+  // Message for the last OS error of the calling thread, UTF-8; empty if there is none.
+  std::string LastErrorMessage();
+
   // Command line arguments as UTF-8, argv[0] included (Windows: from the wide command line).
   std::vector<std::string> CommandLineArgs(int argc, char *argv[]);
 }

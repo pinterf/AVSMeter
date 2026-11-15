@@ -33,6 +33,7 @@
 #include "platform/text.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <thread>
 
 
@@ -81,8 +82,8 @@ struct stPerfData
   float         cpu_usage;
   BYTE          gpu_usage;
   BYTE          vpu_usage;
-  DWORD         process_memory;
-  WORD          num_threads;
+  uint32_t      process_memory;
+  uint16_t      num_threads;
 };
 
 struct stCmdLine
@@ -106,8 +107,8 @@ struct stRunStats
   unsigned int  uiCursorOffset = 0;
   int64_t       iElapsedMS = 0;
   int64_t       iEstimatedMS = 0;
-  DWORD         dwMemPeakMB = 0;
-  WORD          wThreadCount = 0;
+  uint32_t      dwMemPeakMB = 0;
+  uint16_t      wThreadCount = 0;
   double        dCPUUsageAvg = 0;
   unsigned int  uiGPUUsageAvg = 0;
   unsigned int  uiVPUUsageAvg = 0;
@@ -147,7 +148,7 @@ static void  ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, 
 
 int main(int argc, char* argv[])
 {
-  UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
+  platform::SuppressErrorDialogs();
 
   SetDefaultSettings();
 
@@ -515,8 +516,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  SetErrorMode(nPrevErrorMode);
-
   PollKeys();
 
   return iRet;
@@ -660,8 +659,8 @@ static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cm
 
       if ((utils.IsNumeric(sTemp.substr(0, spos))) && (utils.IsNumeric(sTemp.substr(spos + 1))))
       {
-        Settings.iStartFrame = _atoi64(sTemp.substr(0, spos).c_str());
-        Settings.iStopFrame = _atoi64(sTemp.substr(spos + 1).c_str());
+        Settings.iStartFrame = std::strtoll(sTemp.substr(0, spos).c_str(), nullptr, 10);
+        Settings.iStopFrame = std::strtoll(sTemp.substr(spos + 1).c_str(), nullptr, 10);
       }
       else
       {
@@ -1412,7 +1411,7 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
 
   CProcessInfo processinfo;
 
-  DWORD dwMemCurrentMB = 0;
+  uint32_t dwMemCurrentMB = 0;
 
   double dCPUUsageCur = 0;
   double dCPUUsageAcc = 0;

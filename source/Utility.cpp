@@ -18,7 +18,7 @@
 
 #include "Utility.h"
 #include "platform/file_info.h"
-#include "platform/text.h"
+#include "platform/process.h"
 
 
 CUtils::CUtils()
@@ -32,19 +32,7 @@ CUtils::~CUtils()
 
 std::string CUtils::SysErrorMessage()
 {
-  DWORD dwLastError = GetLastError();
-  if (dwLastError == ERROR_SUCCESS)
-    return "";
-
-  char msgBuf[2048];
-  memset(msgBuf, 0, sizeof(msgBuf));
-  FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msgBuf, 2046, NULL);
-
-  std::string sRet = platform::ToUtf8(msgBuf); // ANSI
-  sRet.erase(sRet.find_last_not_of(" \t\n\r") + 1);
-  sRet.erase(0, sRet.find_first_not_of(" \t\n\r"));
-
-  return sRet;
+  return platform::LastErrorMessage();
 }
 
 

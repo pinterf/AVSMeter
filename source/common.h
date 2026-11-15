@@ -19,21 +19,10 @@
 #if !defined(_COMMON_H)
 #define _COMMON_H
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#include <windows.h>
 #include <cstdint>
-#include <shlobj.h>
-#include <process.h>
 #include <math.h>
 #include <string>
 #include <algorithm>
-#include <mmsystem.h>
-#include <psapi.h>
-#include <tlhelp32.h>
-#include <wintrust.h>
 #include <fstream>
 #include <vector>
 #include <map>
