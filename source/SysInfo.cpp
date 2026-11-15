@@ -91,6 +91,35 @@ void CSysInfo::GetCPUID()
 
   cpudata.CPUSupportedInstructionSets = "";
 
+  if (data.architecture == ARCHITECTURE_ARM)
+  {
+    GetARMCoreTypes();
+
+    // Gotcha: SVE and SME versions are not separate feature bits but version number fields
+    // (ID_AA64ZFR0_EL1.SVEver: 0 = SVE, 1 = SVE2, 2 = SVE2.1; ID_AA64PFR1_EL1.SME: 1 = SME,
+    // 2 = SME2; ID_AA64SMFR0_EL1.SMEver: 0 = SME, 1 = SME2, 2 = SME2.1). A higher version
+    // includes the lower ones, but libcpuid 0.8.2 matches each field with '==', so e.g. an
+    // SVE2.1 CPU reports SVE2P1 without SVE2 (seen with qemu -cpu max). Restore the implied flags.
+    if (data.flags[CPU_FEATURE_SVE2P1])      data.flags[CPU_FEATURE_SVE2] = 1;
+    if (data.flags[CPU_FEATURE_SME2P1])      data.flags[CPU_FEATURE_SME2] = 1;
+    if (data.flags[CPU_FEATURE_SME2])        data.flags[CPU_FEATURE_SME] = 1;
+
+    if (data.flags[CPU_FEATURE_ADVSIMD])     cpudata.CPUSupportedInstructionSets += "NEON, ";
+    if (data.flags[CPU_FEATURE_FP16])        cpudata.CPUSupportedInstructionSets += "FP16, ";
+    if (data.flags[CPU_FEATURE_DOTPROD])     cpudata.CPUSupportedInstructionSets += "DOTPROD, ";
+    if (data.flags[CPU_FEATURE_I8MM])        cpudata.CPUSupportedInstructionSets += "I8MM, ";
+    if (data.flags[CPU_FEATURE_BF16])        cpudata.CPUSupportedInstructionSets += "BF16, ";
+    if (data.flags[CPU_FEATURE_SVE])         cpudata.CPUSupportedInstructionSets += "SVE, ";
+    if (data.flags[CPU_FEATURE_SVE2])        cpudata.CPUSupportedInstructionSets += "SVE2, ";
+    if (data.flags[CPU_FEATURE_SVE2P1])      cpudata.CPUSupportedInstructionSets += "SVE2.1, ";
+    if (data.flags[CPU_FEATURE_SME])         cpudata.CPUSupportedInstructionSets += "SME, ";
+    if (data.flags[CPU_FEATURE_SME2])        cpudata.CPUSupportedInstructionSets += "SME2, ";
+
+    cpudata.CPUSupportedInstructionSets.erase(cpudata.CPUSupportedInstructionSets.find_last_not_of(", ") + 1);
+    bCPUIDSuccess = true;
+    return;
+  }
+
   if (data.flags[CPU_FEATURE_3DNOW])       cpudata.CPUSupportedInstructionSets += "3DNOW, ";
   if (data.flags[CPU_FEATURE_3DNOWEXT])    cpudata.CPUSupportedInstructionSets += "3DNOWEXT, ";
   if (data.flags[CPU_FEATURE_MMX])         cpudata.CPUSupportedInstructionSets += "MMX, ";
@@ -124,4 +153,44 @@ void CSysInfo::GetCPUID()
   bCPUIDSuccess = true;
 
   return;
+}
+
+
+// ARM: cpu_identify reports no core counts and only the type of the core it ran on.
+// Identify all cores, list each core type (big.LITTLE: "4x Cortex-A76 + 4x Cortex-A55").
+void CSysInfo::GetARMCoreTypes()
+{
+  struct cpu_raw_data_array_t raw_all = {};
+  struct system_id_t system = {};
+
+  if (cpuid_get_all_raw_data(&raw_all) < 0)
+    return;
+
+  if ((cpu_identify_all(&raw_all, &system) == 0) && (system.num_cpu_types > 0))
+  {
+    std::string sBrand, sCodeName;
+    int32_t iCores = 0, iLogical = 0;
+    for (uint8_t i = 0; i < system.num_cpu_types; i++)
+    {
+      const struct cpu_id_t &type = system.cpu_types[i];
+      iCores += type.num_cores;
+      iLogical += type.num_logical_cpus;
+      if (i > 0)
+      {
+        sBrand += " + ";
+        sCodeName += " + ";
+      }
+      if (system.num_cpu_types > 1)
+        sBrand += utils.StrFormat("%dx ", type.num_cores);
+      sBrand += RemoveMultipleWhiteSpaces(type.brand_str);
+      sCodeName += RemoveMultipleWhiteSpaces(type.cpu_codename);
+    }
+    cpudata.CPUBrandString = sBrand;
+    cpudata.CPUCodeName = sCodeName;
+    cpudata.CPUCores = iCores;
+    cpudata.CPULogicalCores = iLogical;
+  }
+
+  cpuid_free_system_id(&system);
+  cpuid_free_raw_data_array(&raw_all);
 }

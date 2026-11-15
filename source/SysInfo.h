@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -48,6 +48,7 @@ public:
 private:
   CUtils         utils;
   std::string    RemoveMultipleWhiteSpaces(std::string s);
+  void           GetARMCoreTypes();
 };
 
 
