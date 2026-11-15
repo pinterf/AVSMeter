@@ -127,6 +127,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   sVersionString = "Unknown Avisynth Version";
   bAutoloadDirsKnown = false;
   vAutoloadDirs.clear();
+  nAutoloadErrorIdx = SIZE_MAX;
   bool bAVSLinkage = false;
   bool bSuccess = true;
   s_ErrorMsg = "";
@@ -287,6 +288,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
     {
       std::string sAutoloadError = platform::ToUtf8(err.msg);
       utils.StrTrim(sAutoloadError);
+      nAutoloadErrorIdx = vPluginErrors.size();
       vPluginErrors.push_back("Plugin autoload stopped: " + sAutoloadError +
         "\n\nNote: Plugins after this one were not autoloaded, their functions are missing from the lists");
     }
@@ -433,6 +435,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   if (b_ExtPlugCheck)
   {
     EnumPluginDLLs();
+    ExplainAutoloadError();
     TestLoadPlugins();
   }
 
@@ -625,6 +628,38 @@ void CAvisynthInfo::EnumPluginDLLs()
   CheckFunctionDuplicates();
 
   return;
+}
+
+
+// The autoload stops at a DLL of another bitness or CPU, older AviSynth+ versions only with the OS
+// error ("Platform returned code 193: %1 is not a valid Win32 application"). Name the reason.
+void CAvisynthInfo::ExplainAutoloadError()
+{
+  if (nAutoloadErrorIdx >= vPluginErrors.size())
+    return;
+
+  const std::string sError = ComparableDir(vPluginErrors[nAutoloadErrorIdx]);
+  const std::string sOwnBits = PROCESS_64 ? "64 Bit" : "32 Bit";
+
+  for (const std::string &sEntry : vPlugins)
+  {
+    size_t posPath = sEntry.find("|");
+    size_t posBits = sEntry.rfind(" (", posPath);
+    if ((posPath == std::string::npos) || (posBits == std::string::npos))
+      continue;
+
+    std::string sBits = sEntry.substr(posBits + 2, posPath - posBits - 3); // "32 Bit" or "64 Bit, aarch64"
+    std::string sPath = sEntry.substr(posPath + 1);
+    if ((sBits.rfind("32 Bit", 0) != 0) && (sBits.rfind("64 Bit", 0) != 0))
+      continue;
+    if ((sBits == sOwnBits) || (sError.find(ComparableDir(sPath)) == std::string::npos))
+      continue;
+
+    std::string sReason = (sBits.length() > 6) ? "built for " + sBits.substr(8) : sBits;
+    vPluginErrors[nAutoloadErrorIdx] += utils.StrFormat("\n\nNote: \"%s\" is %s, AviSynth (%s) cannot load it. Move it out of the autoload directories.",
+      sPath.c_str(), sReason.c_str(), kArchName);
+    return;
+  }
 }
 
 

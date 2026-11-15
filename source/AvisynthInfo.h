@@ -60,9 +60,11 @@ private:
   std::string         sAVSDLL;
   std::vector<std::string> vAutoloadDirs;
   bool                bAutoloadDirsKnown;
+  size_t              nAutoloadErrorIdx; // in vPluginErrors, or SIZE_MAX
   bool                IsGruntFunc(std::string s_function);
   void                EnumPluginDirs();
   void                EnumPluginDLLs();
+  void                ExplainAutoloadError();
   bool                IsAutoloadable(const std::string &s_type, const std::string &s_machine);
   void                AddScriptFunctions(std::string s_avsi_file);
   void                CheckFunctionDuplicates();
