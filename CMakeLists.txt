@@ -6,6 +6,7 @@
 #   cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release   (Linux, or from a VS developer prompt)
 #   cmake -B build\vs64 -S . -G "Visual Studio 18 2026" -A x64
 #   cmake -B build\vs32 -S . -G "Visual Studio 18 2026" -A Win32
+#   cmake -B build/a64 -S . -G Ninja --toolchain cmake/toolchains/aarch64-linux-gnu-gcc.cmake  (cross)
 #
 # libcpuid: MSVC links the prebuilt static libraries in source/cpuid. Elsewhere libcpuid 0.8.2 is
 # downloaded at configure time and built as a static library; -DAVSMETER_SYSTEM_LIBCPUID=ON uses

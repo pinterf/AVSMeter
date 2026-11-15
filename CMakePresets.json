@@ -23,6 +23,18 @@
       "cacheVariables": { "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" }
     },
     {
+      "name": "linux-aarch64-gcc",
+      "displayName": "Linux aarch64 cross, GCC, Release",
+      "inherits": "linux-base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/aarch64-linux-gnu-gcc.cmake"
+    },
+    {
+      "name": "linux-aarch64-clang",
+      "displayName": "Linux aarch64 cross, Clang + lld, Release",
+      "inherits": "linux-base",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/aarch64-linux-gnu-clang.cmake"
+    },
+    {
       "name": "windows-base",
       "hidden": true,
       "generator": "Visual Studio 18 2026",
@@ -45,6 +57,8 @@
   "buildPresets": [
     { "name": "linux-gcc", "configurePreset": "linux-gcc" },
     { "name": "linux-clang", "configurePreset": "linux-clang" },
+    { "name": "linux-aarch64-gcc", "configurePreset": "linux-aarch64-gcc" },
+    { "name": "linux-aarch64-clang", "configurePreset": "linux-aarch64-clang" },
     { "name": "vs64", "configurePreset": "vs64", "configuration": "Release" },
     { "name": "vs32", "configurePreset": "vs32", "configuration": "Release" }
   ]

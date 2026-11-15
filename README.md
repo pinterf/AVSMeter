@@ -327,6 +327,17 @@ cmake --preset linux-gcc && cmake --build --preset linux-gcc
 cmake --preset linux-clang && cmake --build --preset linux-clang
 ```
 
+Cross builds for Linux aarch64 use the toolchain files in `cmake/toolchains`
+(Ubuntu: `sudo apt install g++-aarch64-linux-gnu qemu-user`, plus `clang lld` for
+the Clang variant):
+
+```sh
+cmake --preset linux-aarch64-gcc && cmake --build --preset linux-aarch64-gcc
+cmake --preset linux-aarch64-clang && cmake --build --preset linux-aarch64-clang
+# run on x86_64 with an aarch64 libavisynth.so:
+qemu-aarch64 -L /usr/aarch64-linux-gnu -E LD_LIBRARY_PATH=<dir of libavisynth.so> build/linux-aarch64-gcc/avsmeter -avsinfo
+```
+
 ```bat
 rem Windows (Visual Studio 2026): build\vs64\Release\AVSMeter64.exe, build\vs32\Release\AVSMeter.exe
 cmake --preset vs64 && cmake --build --preset vs64
