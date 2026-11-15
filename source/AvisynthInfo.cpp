@@ -487,6 +487,10 @@ void CAvisynthInfo::EnumPluginDLLs()
   std::string sMessage = "";
   bool bIs64BitPlugin = false;
   std::set<std::string> mDuplicates;
+  //Like Avisynth+: per base name only the first loaded plugin / imported script is autoloaded,
+  //in directory search order (known with ListAutoloadDirs)
+  std::map<std::string, std::string> mAutoloaded;
+  std::map<std::string, std::string> mImported;
 
   for (size_t uiPlugDir = 0; uiPlugDir < vPluginDirs.size(); uiPlugDir++)
   {
@@ -522,6 +526,11 @@ void CAvisynthInfo::EnumPluginDLLs()
 
         mDuplicates.insert(sCurrentFileKey);
 
+        std::string sBaseKey = platform::PathToUtf8(it->path().stem());
+#ifdef _WIN32
+        utils.StrToLC(sBaseKey);
+#endif
+
         if (sExt == platform::kPluginExt)
         {
           if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin))
@@ -530,12 +539,31 @@ void CAvisynthInfo::EnumPluginDLLs()
               vPluginErrors.push_back(sMessage);
           }
           else
+          {
             vPlugins.push_back(PluginCategory(sMessage) + (bIs64BitPlugin ? " (64 Bit)|" : " (32 Bit)|") + sCurrentFile);
+
+            if (bAutoloadDirsKnown)
+            {
+              auto itLoaded = mAutoloaded.find(sBaseKey);
+              if (itLoaded != mAutoloaded.end())
+                mShadowedBy[sCurrentFile] = itLoaded->second;
+              else if (IsAutoloadable(sMessage, bIs64BitPlugin))
+                mAutoloaded[sBaseKey] = sCurrentFile;
+            }
+          }
         }
         else if (sExt == ".avsi")
         {
           vPlugins.push_back("Scripts (AVSI)|" + sCurrentFile);
-          AddScriptFunctions(sCurrentFile);
+
+          auto itImported = mImported.find(sBaseKey);
+          if (bAutoloadDirsKnown && (itImported != mImported.end()))
+            mShadowedBy[sCurrentFile] = itImported->second;
+          else
+          {
+            mImported[sBaseKey] = sCurrentFile;
+            AddScriptFunctions(sCurrentFile);
+          }
         }
         else
           vPlugins.push_back("Uncategorized files|" + sCurrentFile);
@@ -545,9 +573,28 @@ void CAvisynthInfo::EnumPluginDLLs()
 
   std::sort(vPlugins.begin(), vPlugins.end(), CompareNoCase);
 
+  if (!mShadowedBy.empty())
+  {
+    std::string sShadowed = "Shadowed, not autoloaded (an earlier autoload directory has the same base name):\n";
+    for (const auto &shadowed : mShadowedBy)
+      sShadowed += utils.StrFormat("\n\"%s\"\n  shadowed by \"%s\"", shadowed.first.c_str(), shadowed.second.c_str());
+    vPluginErrors.push_back(sShadowed);
+  }
+
   CheckFunctionDuplicates();
 
   return;
+}
+
+
+//A plugin of this type and bitness is loaded by the Avisynth+ autoload (and shadows later ones)
+bool CAvisynthInfo::IsAutoloadable(const std::string &s_type, bool b_Is64BitDLL)
+{
+  if (b_Is64BitDLL != PROCESS_64)
+    return false;
+  if ((s_type == "AVSCPP26") || (s_type == "AVSCPP25") || (s_type == "AVSC") || (s_type == "AVSCINIT12"))
+    return true;
+  return (s_type == "AVSCINIT2") && (iInterfaceVersion >= 11);
 }
 
 

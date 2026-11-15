@@ -975,7 +975,17 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
       else
         sOutBuf = utils.StrFormat("  [%s]\n", utils.GetFileDateStamp(sPluginDLL).c_str());
 
-      PrintConsole(true, FG_HGREEN | BG_BLACK, sOutBuf.c_str());
+      auto itShadowed = AvisynthInfo.mShadowedBy.find(sPluginDLL);
+      if (itShadowed != AvisynthInfo.mShadowedBy.end())
+      {
+        sOutBuf.pop_back();
+        PrintConsole(true, FG_HGREEN | BG_BLACK, sOutBuf.c_str());
+        sLogBuffer += sOutBuf;
+        sOutBuf = utils.StrFormat("  (shadowed by %s, not autoloaded)\n", itShadowed->second.c_str());
+        PrintConsole(true, BG_BLACK | FG_HMAGENTA, sOutBuf.c_str());
+      }
+      else
+        PrintConsole(true, FG_HGREEN | BG_BLACK, sOutBuf.c_str());
 
       sLogBuffer += sOutBuf;
     }

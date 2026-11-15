@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -38,6 +38,7 @@ public:
   std::vector<std::string> vAllFunctions;
   std::vector<std::string> vPlugins;
   std::vector<std::string> vPluginErrors;
+  std::map<std::string, std::string> mShadowedBy; // file not autoloaded -> earlier file with its base name
   std::string              sDLLPath;
   std::string              sFileVersion;
   std::string              sProductVersion;
@@ -59,6 +60,7 @@ private:
   bool                IsGruntFunc(std::string s_function);
   void                EnumPluginDirs();
   void                EnumPluginDLLs();
+  bool                IsAutoloadable(const std::string &s_type, bool b_Is64BitDLL);
   void                AddScriptFunctions(std::string s_avsi_file);
   void                CheckFunctionDuplicates();
   bool                GetPluginType(std::string s_dll, std::string &s_Msg, bool &b_Is64BitDLL);
