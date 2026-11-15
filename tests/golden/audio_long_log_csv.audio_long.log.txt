@@ -1,0 +1,43 @@
+Log file created with:      AVSMeter <VERSION> (<ARCH>)
+Script file:                <WORK>\audio_long_log_csv\audio_long.avs
+Command line switches:      -audio -chunk=1 -log -csv
+
+[OS/Hardware info]
+Operating system:
+CPU:
+[Avisynth info]
+VersionString:
+Interface Version:
+Avisynth.dll location:
+[Clip info]
+Number of frames:                      n/a
+Length (hh:mm:ss.ms):                  n/a
+Frame width:                           n/a
+Frame height:                          n/a
+Framerate:                             n/a
+Colorspace:                                n/a
+Audio channels:                          1
+Audio channel layout:                  n/a
+Audio bits/sample:                       8
+Audio sample rate:                   48000
+Audio samples:                     9600000
+
+[Runtime info]
+Chunks processed:                   9600000 (0 - 9599999)
+Audio samples processed:            9600000 (0 - 9599999)
+CPS (min | max | average):          <V>
+Audio speed (realtime):             <V>
+Process memory usage (max):         <V>
+Thread count:                       <V>
+CPU usage (average):                <V>
+
+Time (elapsed):                     <V>
+
+[Script]
+BlankClip(length=5000, fps=25, audio_rate=48000, channels=1, sample_type="8bit").KillVideo()
+# 9.6M single-sample GetAudio calls (-chunk=1) keep the run above the 500 ms minimum runtime
+# without depending on SIMD.
+
+[Performance data]
+       Chunk    Chunks/sec   Time/chunk(ms)   CPU(%)   Threads   Memory(MiB)
+<ROWS>

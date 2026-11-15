@@ -46,6 +46,9 @@ $Cases = @(
     @{ Name = 'audio_chunk1';       Args = @('audio_ntsc.avs', '-o', '-audio', '-chunk=1'); Exit = 0; Artifacts = @() }
     @{ Name = 'audio_only_as_video'; Args = @('audio_only.avs', '-o');           Exit = -1; Artifacts = @() }
     @{ Name = 'chunk_without_audio'; Args = @('video.avs', '-chunk=10');         Exit = -1; Artifacts = @() }
+    @{ Name = 'audio_long_log_csv'; Args = @('audio_long.avs', '-audio', '-chunk=1', '-log', '-csv'); Exit = 0; Artifacts = @('audio_long.log', 'audio_long.csv'); VolatileRows = $true }
+    @{ Name = 'audio_8ch_chunk';    Args = @('audio_8ch.avs', '-o', '-audio', '-chunk=333'); Exit = 0; Artifacts = @() }
+    @{ Name = 'audio_prefetch_log'; Args = @('audio_prefetch.avs', '-o', '-av', '-log'); Exit = 0; Artifacts = @('audio_prefetch.log') }
     @{ Name = 'avsinfo';            Args = @('-avsinfo');                        Exit = 0;  Artifacts = @(); LabelsOnly = $true }
 )
 

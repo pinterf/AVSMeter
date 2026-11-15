@@ -1,0 +1,46 @@
+Log file created with:      AVSMeter <VERSION> (<ARCH>)
+Script file:                <WORK>\audio_prefetch_log\audio_prefetch.avs
+Command line switches:      -o -av -log
+
+[OS/Hardware info]
+Operating system:
+CPU:
+[Avisynth info]
+VersionString:
+Interface Version:
+Avisynth.dll location:
+[Clip info]
+Number of frames:                      100
+Length (hh:mm:ss.ms):         00:00:04.000
+Frame width:                           640
+Frame height:                          360
+Framerate:                          25.000 (25/1)
+Colorspace:                           YV12
+Audio channels:                          2
+Audio channel layout:                  n/a
+Audio bits/sample:                      16
+Audio sample rate:                   44100
+Audio samples:                      176400
+
+[Runtime info]
+Frames processed:                   100 (0 - 99)
+Audio samples processed:            176400 (0 - 176399)
+FPS (min | max | average):          <V>
+Audio speed (realtime):             <V>
+Process memory usage (max):         <V>
+Thread count:                       <V>
+CPU usage (average):                <V>
+
+Time (elapsed):                     <V>
+
+[Script]
+BlankClip(length=100, width=640, height=360, fps=25, pixel_type="YV12", audio_rate=44100, channels=2, sample_type="16bit")
+# Heavier per-frame load than video.avs: Prefetch runs it on several threads.
+ScriptClip("""n = 0
+for (i = 1, 150000) { n = n + i }
+last""")
+Prefetch(4)
+
+[Performance data]
+       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   Memory(MiB)
+<ROWS: 100>

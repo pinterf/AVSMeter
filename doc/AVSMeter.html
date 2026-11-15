@@ -182,7 +182,8 @@
     split into pieces of at most n samples; "-chunk=1" requests every
     sample separately, which is useful for stress-testing an audio
     filter. For clips without video it sets the chunk size, and progress,
-    rate (CPS) and time (TPC) are reported per chunk instead of per frame.
+        rate (CPS) and time (TPC) are reported per chunk instead of per frame,
+        also in the log and CSV performance data.
     The results include the number of audio samples processed and the
     audio speed relative to realtime. Audio is often read in less than
     the minimum runtime of 0.5 seconds; the realtime factor is then marked

@@ -1,0 +1,22 @@
+AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+<AVISYNTH VERSION>
+
+Number of frames:                      n/a
+Length (hh:mm:ss.ms):                  n/a
+Frame width:                           n/a
+Frame height:                          n/a
+Framerate:                             n/a
+Colorspace:                                n/a
+Audio channels:                          8
+Audio channel layout:                  7.1
+Audio bits/sample:                      32
+Audio sample rate:                   44100
+Audio samples:                      176400
+
+Script runtime is too short for meaningful measurements
+Use a longer clip (e.g. Loop) or a smaller "-chunk"
+
+Chunks processed:               530 (0 - 529)
+Audio samples processed:        176400 (0 - 176399)
+Audio speed (realtime):         <V>
+Time (elapsed):                 <V>

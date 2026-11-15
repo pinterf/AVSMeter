@@ -156,8 +156,8 @@ static CSysInfo sys;
 
 
 unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error);
-std::string  CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData);
-std::string  CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP);
+std::string  CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData, bool bChunkUnits);
+std::string  CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP, bool bChunkUnits);
 std::string  ParseINIFile(std::string &s_warning);
 bool         WriteINIFile(std::string &s_inifile);
 void         PrintUsage();
@@ -335,6 +335,7 @@ int main(int argc, char* argv[])
 
 
   IScriptEnvironment *AVS_env = 0;
+  bool bChunkUnits = false;
   try
   {
     platform::TranslateCrashes();
@@ -410,7 +411,7 @@ int main(int argc, char* argv[])
 
       if (Settings.bCreateLog)
       {
-        std::string sLogRet = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, false, bRuntimeTooShort);
+        std::string sLogRet = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, false, bRuntimeTooShort, false);
         if (sLogRet != "")
           PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sLogRet.c_str());
       }
@@ -426,6 +427,7 @@ int main(int argc, char* argv[])
 
     stBenchUnits bu;
     InitBenchUnits(AVS_vidinfo, AVS_env, cmd.sAVSFile, bu);
+    bChunkUnits = !bu.bFrameUnits;
 
     stRunStats rs;
     rs.uiLastFrame = bu.uiUnits - 1;
@@ -531,7 +533,7 @@ int main(int argc, char* argv[])
 
   if (Settings.bCreateLog)
   {
-    std::string sr = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, gpuinfo.data.NVVPU, bRuntimeTooShort);
+    std::string sr = CreateLogFile(cmd.sAVSFile, sLogBuffer, sGPUInfo, perfdata, sAVSError, gpuinfo.data.NVVPU, bRuntimeTooShort, bChunkUnits);
     if (sr != "")
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, sr.c_str());
@@ -542,7 +544,7 @@ int main(int argc, char* argv[])
 
   if (Settings.bCreateCSV && !bRuntimeTooShort && (sAVSError == ""))
   {
-    std::string cr = CreateCSVFile(cmd.sAVSFile, perfdata, gpuinfo.data.NVVPU);
+    std::string cr = CreateCSVFile(cmd.sAVSFile, perfdata, gpuinfo.data.NVVPU, bChunkUnits);
     if (cr != "")
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, cr.c_str());
@@ -2313,7 +2315,23 @@ bool WriteINIFile(std::string &s_inifile)
 }
 
 
-std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData)
+// Audio-only clips are measured in chunks; the column names keep their width.
+static std::string PerfHeader(std::string s, bool bChunkUnits)
+{
+  if (!bChunkUnits)
+    return s;
+  for (size_t nPos = 0; (nPos = s.find("rame", nPos)) != std::string::npos; nPos += 4)
+  {
+    if ((nPos > 0) && ((s[nPos - 1] == 'F') || (s[nPos - 1] == 'f')))
+    {
+      s.replace(nPos - 1, 5, (s[nPos - 1] == 'F') ? "Chunk" : "chunk");
+    }
+  }
+  return s;
+}
+
+
+std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData, bool bChunkUnits)
 {
   std::string sRet = "";
   std::string sAVSBuffer = "";
@@ -2394,6 +2412,7 @@ std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std:
     else
       sLog = "\n[Performance data]\n       Frame    Frames/sec   Time/frame(ms)   CPU(%)   Threads   Memory(MiB)\n";
 
+    sLog = PerfHeader(sLog, bChunkUnits);
 
     hLogFile << sLog;
 
@@ -2426,7 +2445,7 @@ std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std:
 }
 
 
-std::string CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP)
+std::string CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pdata, bool bNVVP, bool bChunkUnits)
 {
   std::string sRet = "";
 
@@ -2479,6 +2498,7 @@ std::string CreateCSVFile(std::string &s_avsfile, std::vector<stPerfData> &cs_pd
     else
       sCSV = "Frame,Frames/sec,Frames/sec(average),Time/frame(ms),Time/frame(average)(ms),CPU(%),Threads,Memory(MiB)\n";
 
+    sCSV = PerfHeader(sCSV, bChunkUnits);
     hCSVFile << sCSV;
 
     std::string stemp = "";
