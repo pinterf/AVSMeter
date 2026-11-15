@@ -244,5 +244,104 @@
     If set to "0", coloring of the console output is disabled.<br>
     <br>
     <br>
+    <b><u><big>Crash reports</big></u></b><br>
+    If a plugin (or AviSynth itself) crashes while the script is being
+    loaded or frames are being processed, AVSMeter names the fault and
+    the module it happened in. The module is usually the culprit, but
+    see the notes in the table below.<br>
+    <br>
+    <b>Windows:</b> The crash is caught and reported, and AVSMeter exits
+    with code -1:<br>
+    <font face="Courier New">Exception 0xC0000094
+      [STATUS_INTEGER_DIVIDE_BY_ZERO]<br>
+      Module:&nbsp;&nbsp; D:\plugins\SomeFilter.dll<br>
+      Address:&nbsp; 0x00007FFAADB67E67</font><br>
+    <br>
+    <b>Linux:</b> A crash cannot be recovered from. The report is printed
+    to the console (stderr), then the process ends with the usual signal
+    exit status (128 + signal number, e.g. 136 for SIGFPE, 139 for
+    SIGSEGV); no log file is written.<br>
+    <font face="Courier New">Fatal error: SIGSEGV [Access violation
+      (address not mapped)]<br>
+      Module:&nbsp;&nbsp; /usr/local/lib/avisynth/libsomefilter.so<br>
+      Address:&nbsp; 0x7942557baf62 (file offset 0x2f62)<br>
+      Accessed: 0x0<br>
+      Thread:&nbsp;&nbsp; 574</font><br>
+    "Accessed" is the memory address the faulting instruction tried to
+    use (0x0: null pointer). If the plugin was built with debug
+    information ("-g"), the file offset gives the source line:<br>
+    <font face="Courier New">addr2line -f -C -e libsomefilter.so 0x2f62</font><br>
+    <br>
+    <b>Typical plugin bugs and what they look like:</b><br>
+    <table border="1" cellpadding="3" cellspacing="0">
+      <tbody>
+        <tr>
+          <th>Bug</th>
+          <th>Windows</th>
+          <th>Linux</th>
+        </tr>
+        <tr>
+          <td>Integer division by zero</td>
+          <td>0xC0000094 STATUS_INTEGER_DIVIDE_BY_ZERO</td>
+          <td>SIGFPE [Integer divide by zero]</td>
+        </tr>
+        <tr>
+          <td>Floating point division by zero</td>
+          <td colspan="2">No crash; the result is infinity or NaN.</td>
+        </tr>
+        <tr>
+          <td>Null or wild pointer access</td>
+          <td>0xC0000005 STATUS_ACCESS_VIOLATION</td>
+          <td>SIGSEGV [Access violation (address not mapped)] or
+            [(no permission)]</td>
+        </tr>
+        <tr>
+          <td>Aligned SSE load/store (e.g. _mm_load_si128) on a
+            misaligned address</td>
+          <td>0xC0000005 STATUS_ACCESS_VIOLATION when built with
+            clang-cl. No crash with MSVC: it compiles
+            _mm_load_si128 into an unaligned load, so the bug stays
+            hidden until the plugin is built with another compiler.</td>
+          <td>SIGSEGV [General protection fault (e.g. misaligned
+            SSE/AVX access)]. No crash if the compiler folded the load
+            into an AVX instruction.</td>
+        </tr>
+        <tr>
+          <td>Instruction set not supported by the CPU (e.g. AVX2 code
+            on an older CPU)</td>
+          <td>0xC000001D STATUS_ILLEGAL_INSTRUCTION</td>
+          <td>SIGILL [Illegal instruction]</td>
+        </tr>
+        <tr>
+          <td>Heap corruption (writing past an allocated buffer, double
+            free)</td>
+          <td>No report; the process is terminated by Windows (exit code
+            0xC0000374, STATUS_HEAP_CORRUPTION).</td>
+          <td>SIGABRT, usually much later, in a different place. The
+            module is libc.so.6, not the plugin.</td>
+        </tr>
+        <tr>
+          <td>Stack overflow (e.g. endless recursion, huge local
+            arrays)</td>
+          <td>No report; the process is terminated (exit code
+            0xC0000005 or 0xC00000FD).</td>
+          <td>SIGSEGV [Access violation (address not mapped)] on the
+            main thread; in a worker thread the process ends without a
+            report.</td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <b><i>Note:</i></b> Heap corruption is detected only when memory is
+    released or allocated again, so the report does not point to the
+    faulty plugin. Tools such as AddressSanitizer or Valgrind (Linux) or
+    Application Verifier (Windows) find the real culprit.<br>
+    <b><i>Note:</i></b> With "Prefetch", frames are processed in worker
+    threads. On Windows, AviSynth passes the exception on to the main
+    thread, so the module is reported as "KERNELBASE.dll"; run the
+    script without "Prefetch" to find the actual module. On Linux the
+    report names the faulting module and thread.<br>
+    <br>
+    <br>
   </body>
 </html>
