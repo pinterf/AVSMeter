@@ -25,8 +25,12 @@ namespace platform
 
 #if defined(_WIN32)
   inline constexpr const char *kAvsLibName = "avisynth";
+  inline constexpr const char *kAvsLibFileName = "avisynth.dll"; // for messages
+  inline constexpr const char *kAvsLibLabel = "Avisynth.dll";    // for log labels
 #else
   inline constexpr const char *kAvsLibName = "libavisynth.so";
+  inline constexpr const char *kAvsLibFileName = "libavisynth.so";
+  inline constexpr const char *kAvsLibLabel = "libavisynth.so";
 #endif
 
   // psz_name is UTF-8 (Windows: ANSI is accepted if not valid UTF-8).

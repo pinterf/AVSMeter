@@ -300,7 +300,7 @@ int main(int argc, char* argv[])
 
   if (!hDLL)
   {
-    PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Cannot load avisynth.dll:\n%s\n", utils.SysErrorMessage().c_str());
+    PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Cannot load %s:\n%s\n", platform::kAvsLibFileName, utils.SysErrorMessage().c_str());
     PollKeys();
     return -1;
   }
@@ -891,11 +891,11 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
   sLogBuffer += sOutBuf;
   PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
 
-  sOutBuf = utils.StrFormat("Avisynth.dll location:      %s\n", AvisynthInfo.sDLLPath.c_str());
+  sOutBuf = utils.StrFormat("%-28s%s\n", (std::string(platform::kAvsLibLabel) + " location:").c_str(), AvisynthInfo.sDLLPath.c_str());
   sLogBuffer += sOutBuf;
   PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
 
-  sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s\n", AvisynthInfo.sTimeStamp.c_str());
+  sOutBuf = utils.StrFormat("%-28s%s\n", (std::string(platform::kAvsLibLabel) + " time stamp:").c_str(), AvisynthInfo.sTimeStamp.c_str());
   sLogBuffer += sOutBuf;
   PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -1180,10 +1180,10 @@ static void AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sA
   sOutBuf = utils.StrFormat("Multi-threading support:    %s", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
   sLogBuffer += sOutBuf + "\n";
 
-  sOutBuf = utils.StrFormat("Avisynth.dll location:      %s", AvisynthInfo.sDLLPath.c_str());
+  sOutBuf = utils.StrFormat("%-28s%s", (std::string(platform::kAvsLibLabel) + " location:").c_str(), AvisynthInfo.sDLLPath.c_str());
   sLogBuffer += sOutBuf + "\n";
 
-  sOutBuf = utils.StrFormat("Avisynth.dll time stamp:    %s", AvisynthInfo.sTimeStamp.c_str());
+  sOutBuf = utils.StrFormat("%-28s%s", (std::string(platform::kAvsLibLabel) + " time stamp:").c_str(), AvisynthInfo.sTimeStamp.c_str());
   sLogBuffer += sOutBuf + "\n";
 
   for (unsigned int uiPlugDir = 0; uiPlugDir < AvisynthInfo.vPluginDirs.size(); uiPlugDir++)
@@ -1865,7 +1865,7 @@ std::string ParseINIFile(std::string &s_warning)
       utils.StrTrim(Settings.sLogDirectory);
       if ((!platform::DirectoryExists(Settings.sLogDirectory)) && (Settings.sLogDirectory != ""))
       {
-        sRet = utils.StrFormat("\nError: Log directory specified in AVSMeter.ini does not exist:\n\"%s\"\n", Settings.sLogDirectory.c_str());
+        sRet = utils.StrFormat("\nError: Log directory specified in \"%s\" does not exist:\n\"%s\"\n", sINIFile.c_str(), Settings.sLogDirectory.c_str());
         return sRet;
       }
       continue;
@@ -1876,7 +1876,7 @@ std::string ParseINIFile(std::string &s_warning)
       utils.StrTrim(Settings.sAVSDLL);
       if ((!platform::FileExists(Settings.sAVSDLL)) && (Settings.sAVSDLL != ""))
       {
-        sRet = utils.StrFormat("\nThe file specified in AVSMeter.ini does not exist:\nAVSDLL=%s\n", Settings.sAVSDLL.c_str());
+        sRet = utils.StrFormat("\nThe file specified in \"%s\" does not exist:\nAVSDLL=%s\n", sINIFile.c_str(), Settings.sAVSDLL.c_str());
         return sRet;
       }
       continue;
@@ -2267,7 +2267,7 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
 
   if (!hDLL)
   {
-    s_error = "Cannot load avisynth.dll";
+    s_error = std::string("Cannot load ") + platform::kAvsLibFileName;
     return uiFrameInterval;
   }
 
@@ -2396,7 +2396,7 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
   if (!platform::FreeLib(hDLL))
   {
     PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
-    s_error = "Cannot unload avisynth.dll";
+    s_error = std::string("Cannot unload ") + platform::kAvsLibFileName;
     uiFrameInterval = 10;
   }
 

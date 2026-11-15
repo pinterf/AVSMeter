@@ -98,9 +98,9 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   {
     s_ErrorMsg = utils.SysErrorMessage();
     if (s_ErrorMsg != "")
-      s_ErrorMsg = utils.StrFormat("Error: Cannot load avisynth.dll.\nWindows returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", s_ErrorMsg.c_str(), PROCESS_64 ? "x64" : "x86");
+      s_ErrorMsg = utils.StrFormat("Error: Cannot load %s.\nThe system returned: \"%s\"\n\nAvisynth (%s) is probably not installed.", platform::kAvsLibFileName, s_ErrorMsg.c_str(), PROCESS_64 ? "x64" : "x86");
     else
-      s_ErrorMsg = "Error: Cannot load avisynth.dll";
+      s_ErrorMsg = std::string("Error: Cannot load ") + platform::kAvsLibFileName;
 
     return false;
   }
@@ -112,7 +112,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
     bIs64BitAVSDLL = true;
     if (!PROCESS_64) //trying to load 64 bit avisynth.dll with 32 bit AVSMeter
     {
-      s_ErrorMsg = "Error: AVSMeter (x86) cannot load a 64 Bit avisynth.dll.";
+      s_ErrorMsg = utils.StrFormat("Error: AVSMeter (x86) cannot load a 64 Bit %s.", platform::kAvsLibFileName);
       return false;
     }
   }
@@ -120,7 +120,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   {
     if (PROCESS_64) //trying to load 32 bit avisynth.dll with 64 bit AVSMeter
     {
-      s_ErrorMsg = "Error: AVSMeter (x64) cannot load a 32 Bit avisynth.dll.";
+      s_ErrorMsg = utils.StrFormat("Error: AVSMeter (x64) cannot load a 32 Bit %s.", platform::kAvsLibFileName);
       return false;
     }
   }
@@ -163,7 +163,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
 
   if (sFailedDeps != "")
   {
-    s_ErrorMsg = utils.StrFormat("Error: Cannot load avisynth.dll\n\nDependencies that could not be loaded:\n%s", sFailedDeps.c_str());
+    s_ErrorMsg = utils.StrFormat("Error: Cannot load %s\n\nDependencies that could not be loaded:\n%s", platform::kAvsLibFileName, sFailedDeps.c_str());
     if (sHint != "")
       s_ErrorMsg += utils.StrFormat("\n\nNote:\n  %s\n", sHint.c_str());
 
@@ -181,9 +181,9 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   {
     s_ErrorMsg = utils.SysErrorMessage();
     if (s_ErrorMsg != "")
-      s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
+      s_ErrorMsg = std::string("Error: Cannot load ") + platform::kAvsLibFileName + ":\n" + s_ErrorMsg;
     else
-      s_ErrorMsg = "Error: Cannot load avisynth.dll";
+      s_ErrorMsg = std::string("Error: Cannot load ") + platform::kAvsLibFileName;
 
     return false;
   }
@@ -333,9 +333,9 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
     bSuccess = false;
     s_ErrorMsg = utils.SysErrorMessage();
     if (s_ErrorMsg != "")
-      s_ErrorMsg = "Error: Cannot load avisynth.dll:\n" + s_ErrorMsg;
+      s_ErrorMsg = std::string("Error: Cannot load ") + platform::kAvsLibFileName + ":\n" + s_ErrorMsg;
     else
-      s_ErrorMsg = "Error: Cannot load avisynth.dll";
+      s_ErrorMsg = std::string("Error: Cannot load ") + platform::kAvsLibFileName;
   }
 
   platform::FreeLib(hDLL);
