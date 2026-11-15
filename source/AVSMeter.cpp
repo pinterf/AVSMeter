@@ -2250,21 +2250,10 @@ void PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...)
   std::string buffer = StrVFormat(fmt, args);
   va_end(args);
 
-  platform::ConsoleToOutputCP(&buffer[0]);
-
   if (wAttributes && Settings.bUseColor)
     platform::ConsoleSetColors(wAttributes);
 
-  if (bUseStdOut)
-  {
-    fputs(buffer.c_str(), stdout);
-    fflush(stdout);
-  }
-  else
-  {
-    fputs(buffer.c_str(), stderr);
-    fflush(stderr);
-  }
+  platform::ConsoleWrite(bUseStdOut, buffer);
 
   if (wAttributes && Settings.bUseColor)
     platform::ConsoleResetColors();

@@ -20,6 +20,7 @@
 #define _PLATFORM_CONSOLE_H
 
 #include <cstdint>
+#include <string>
 
 // Color attributes use the Windows console bit layout on every platform:
 // bits 0-3 foreground (blue, green, red, intensity), bits 4-7 background.
@@ -63,7 +64,9 @@ namespace platform
   void  ConsoleSetColors(uint16_t w_attributes);
   void  ConsoleResetColors();
   void  ConsoleCursorUp(unsigned int i_rows);
-  void  ConsoleToOutputCP(char *psz_buffer); // in-place ANSI -> console code page
+  // Writes UTF-8 text (invalid UTF-8 is read as ANSI) to stdout or stderr: full Unicode
+  // on a console, UTF-8 bytes when redirected.
+  void  ConsoleWrite(bool b_stdout, const std::string &s_text);
 
   bool  KeyPressed();
   int   ReadKey();

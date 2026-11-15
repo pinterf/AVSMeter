@@ -17,6 +17,10 @@
 
 
 #include "platform/console.h"
+#include "utf_win32.h"
+
+#include <algorithm>
+#include <cstdio>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -88,9 +92,34 @@ void platform::ConsoleCursorUp(unsigned int i_rows)
 }
 
 
-void platform::ConsoleToOutputCP(char *psz_buffer)
+void platform::ConsoleWrite(bool b_stdout, const std::string &s_text)
 {
-  CharToOem(psz_buffer, psz_buffer);
+  FILE *fp = b_stdout ? stdout : stderr;
+  HANDLE hOut = ::GetStdHandle(b_stdout ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
+  std::wstring wsText = win32::ToWide(s_text.c_str());
+
+  DWORD dwMode = 0;
+  if (::GetConsoleMode(hOut, &dwMode))
+  {
+    fflush(fp);
+    // Older consoles (Windows 7) fail on large writes: write in chunks, not splitting surrogate pairs.
+    const size_t chunk = 8192;
+    size_t pos = 0;
+    while (pos < wsText.size())
+    {
+      size_t len = (std::min)(chunk, wsText.size() - pos);
+      if ((pos + len < wsText.size()) && IS_HIGH_SURROGATE(wsText[pos + len - 1]))
+        len--;
+      DWORD dwWritten = 0;
+      ::WriteConsoleW(hOut, wsText.data() + pos, (DWORD)len, &dwWritten, NULL);
+      pos += len;
+    }
+    return;
+  }
+
+  std::string sUtf8 = win32::WideToUtf8(wsText.c_str());
+  fwrite(sUtf8.data(), 1, sUtf8.size(), fp);
+  fflush(fp);
 }
 
 
