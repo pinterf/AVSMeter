@@ -901,6 +901,17 @@ void CAvisynthInfo::TestLoadPlugins()
 
     sPlugin = sPlugin.substr(spos + 1);
 
+    // Foreign CPU, labelled "(64 Bit, aarch64)": a test load would only give a cryptic OS error (193 on Windows)
+    size_t posMachine = sPluginType.find(" Bit, ");
+    if (posMachine != std::string::npos)
+    {
+      std::string sMachine = sPluginType.substr(posMachine + 6);
+      if (!sMachine.empty() && (sMachine.back() == ')'))
+        sMachine.pop_back();
+      vPluginErrors.push_back(utils.StrFormat("\"%s\" is built for %s, AVSMeter (%s) cannot load it.", sPlugin.c_str(), sMachine.c_str(), kArchName));
+      continue;
+    }
+
     sDependencies = "";
     sFailedDependencies = "";
     sHint = "";
