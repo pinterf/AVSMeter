@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -29,6 +29,7 @@ namespace platform
   {
     std::string              path;    // resolved full path
     bool                     is64Bit = false;
+    std::string              machine; // target CPU, named like kArchName: "x64", "x86", "aarch64", "arm", ...
     std::vector<std::string> exports; // exported symbol names
     std::vector<std::string> imports; // names of the libraries it depends on
   };

@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <string>
 
 
 namespace
@@ -124,11 +125,24 @@ namespace
 
       pSections = At<IMAGE_SECTION_HEADER>(nOptOffset + pFileHeader->SizeOfOptionalHeader, pFileHeader->NumberOfSections);
       nSections = pSections ? pFileHeader->NumberOfSections : 0;
+      wMachine = pFileHeader->Machine;
 
       return true;
     }
 
     bool Is64Bit() const { return b64Bit; }
+
+    std::string MachineName() const
+    {
+      switch (wMachine)
+      {
+        case 0x8664: return "x64";     // IMAGE_FILE_MACHINE_AMD64, also ARM64X/ARM64EC hybrids
+        case 0x014c: return "x86";     // IMAGE_FILE_MACHINE_I386
+        case 0xAA64: return "aarch64"; // IMAGE_FILE_MACHINE_ARM64
+        case 0x01c4: return "arm";     // IMAGE_FILE_MACHINE_ARMNT
+        default:     return "machine " + std::to_string(wMachine);
+      }
+    }
 
     DWORD DirectoryRva(size_t n_dir) const
     {
@@ -183,6 +197,7 @@ namespace
     const BYTE                 *pData;
     size_t                      nSize;
     bool                        b64Bit = false;
+    WORD                        wMachine = 0;
     const IMAGE_DATA_DIRECTORY *pDirs = nullptr;
     size_t                      nDirs = 0;
     const IMAGE_SECTION_HEADER *pSections = nullptr;
@@ -266,6 +281,7 @@ bool platform::InspectBinary(const std::string &s_name, BinaryInfo &info)
 
   info.path = win32::WideToUtf8(wsPath.c_str());
   info.is64Bit = pe.Is64Bit();
+  info.machine = pe.MachineName();
   ReadExports(pe, info.exports);
   ReadImports(pe, info.imports);
 

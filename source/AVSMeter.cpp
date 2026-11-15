@@ -938,6 +938,8 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
           HColor = BG_BLACK | FG_HMAGENTA;
         else if ((sPluginType.find("64 Bit") != std::string::npos) && (!PROCESS_64))
           HColor = BG_BLACK | FG_HMAGENTA;
+        else if (sPluginType.find(" Bit, ") != std::string::npos) //built for another CPU
+          HColor = BG_BLACK | FG_HMAGENTA;
         else
           HColor = COLOR_AVSM_VERSION;
 

@@ -52,6 +52,22 @@ std::string PluginCategory(const std::string &s_type)
   if (s_type == "AVSCPP20") return "C++ 2.0 Plugins";
   return UNCATEGORIZED_LIBS;
 }
+
+// Our own CPU or its 32/64 bit counterpart (x86/x64, arm/aarch64): then the bitness alone tells
+// whether a binary is loadable, as before; other CPUs are named in the labels.
+bool IsSameCpuFamily(const std::string &s_machine)
+{
+  static const char *const families[][2] = { { "x86", "x64" }, { "arm", "aarch64" } };
+  if (s_machine == kArchName)
+    return true;
+  for (const auto &family : families)
+  {
+    bool bOwn = (std::string(kArchName) == family[0]) || (std::string(kArchName) == family[1]);
+    if (bOwn && ((s_machine == family[0]) || (s_machine == family[1])))
+      return true;
+  }
+  return false;
+}
 }
 
 
@@ -141,6 +157,12 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
       s_ErrorMsg = utils.StrFormat("Error: AVSMeter (%s) cannot load a 32 Bit %s.", kArchName, platform::kAvsLibFileName);
       return false;
     }
+  }
+
+  if (bi.machine != kArchName)
+  {
+    s_ErrorMsg = utils.StrFormat("Error: AVSMeter (%s) cannot load %s, it is built for %s.", kArchName, platform::kAvsLibFileName, bi.machine.c_str());
+    return false;
   }
 
   for (std::string sName : bi.exports)
@@ -486,6 +508,7 @@ void CAvisynthInfo::EnumPluginDLLs()
   std::string sDir = "";
   std::string sMessage = "";
   bool bIs64BitPlugin = false;
+  std::string sMachine;
   std::set<std::string> mDuplicates;
   //Like Avisynth+: per base name only the first loaded plugin / imported script is autoloaded,
   //in directory search order (known with ListAutoloadDirs)
@@ -533,21 +556,24 @@ void CAvisynthInfo::EnumPluginDLLs()
 
         if (sExt == platform::kPluginExt)
         {
-          if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin))
+          if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin, sMachine))
           {
             if (sMessage != "")
               vPluginErrors.push_back(sMessage);
           }
           else
           {
-            vPlugins.push_back(PluginCategory(sMessage) + (bIs64BitPlugin ? " (64 Bit)|" : " (32 Bit)|") + sCurrentFile);
+            std::string sBits = bIs64BitPlugin ? "64 Bit" : "32 Bit";
+            if (!IsSameCpuFamily(sMachine))
+              sBits += ", " + sMachine;
+            vPlugins.push_back(PluginCategory(sMessage) + " (" + sBits + ")|" + sCurrentFile);
 
             if (bAutoloadDirsKnown)
             {
               auto itLoaded = mAutoloaded.find(sBaseKey);
               if (itLoaded != mAutoloaded.end())
                 mShadowedBy[sCurrentFile] = itLoaded->second;
-              else if (IsAutoloadable(sMessage, bIs64BitPlugin))
+              else if (IsAutoloadable(sMessage, sMachine))
                 mAutoloaded[sBaseKey] = sCurrentFile;
             }
           }
@@ -587,10 +613,10 @@ void CAvisynthInfo::EnumPluginDLLs()
 }
 
 
-//A plugin of this type and bitness is loaded by the Avisynth+ autoload (and shadows later ones)
-bool CAvisynthInfo::IsAutoloadable(const std::string &s_type, bool b_Is64BitDLL)
+//A plugin of this type and CPU is loaded by the Avisynth+ autoload (and shadows later ones)
+bool CAvisynthInfo::IsAutoloadable(const std::string &s_type, const std::string &s_machine)
 {
-  if (b_Is64BitDLL != PROCESS_64)
+  if (s_machine != kArchName)
     return false;
   if ((s_type == "AVSCPP26") || (s_type == "AVSCPP25") || (s_type == "AVSC") || (s_type == "AVSCINIT12"))
     return true;
@@ -708,9 +734,10 @@ void CAvisynthInfo::CheckFunctionDuplicates()
 }
 
 
-bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b_Is64BitDLL)
+bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b_Is64BitDLL, std::string &s_machine)
 {
   b_Is64BitDLL = false;
+  s_machine = "";
   s_Msg = "UNCATEGORIZED";
 
   platform::BinaryInfo bi;
@@ -726,6 +753,7 @@ bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b
   }
 
   b_Is64BitDLL = bi.is64Bit;
+  s_machine = bi.machine;
   if (b_Is64BitDLL != PROCESS_64)
     return true;
 

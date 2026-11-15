@@ -60,10 +60,10 @@ private:
   bool                IsGruntFunc(std::string s_function);
   void                EnumPluginDirs();
   void                EnumPluginDLLs();
-  bool                IsAutoloadable(const std::string &s_type, bool b_Is64BitDLL);
+  bool                IsAutoloadable(const std::string &s_type, const std::string &s_machine);
   void                AddScriptFunctions(std::string s_avsi_file);
   void                CheckFunctionDuplicates();
-  bool                GetPluginType(std::string s_dll, std::string &s_Msg, bool &b_Is64BitDLL);
+  bool                GetPluginType(std::string s_dll, std::string &s_Msg, bool &b_Is64BitDLL, std::string &s_machine);
   void                TestLoadPlugins();
   void                GetDLLDependencies(std::string s_dll, std::string &s_dependencies, std::string &s_failed_dependencies, std::string &s_hint, bool &fftw_fail);
   bool                CheckFFTW(std::string s_dll, std::string &s_failed_deps);

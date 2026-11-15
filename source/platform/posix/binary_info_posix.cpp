@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <string>
 
 #include <elf.h>
 #include <fcntl.h>
@@ -139,6 +140,23 @@ namespace
 #else
     return id.data == ELFDATA2MSB;
 #endif
+  }
+
+
+  std::string MachineName(uint16_t machine)
+  {
+    switch (machine)
+    {
+      case EM_X86_64:  return "x64";
+      case EM_386:     return "x86";
+      case EM_AARCH64: return "aarch64";
+      case EM_ARM:     return "arm";
+      case EM_RISCV:   return "riscv";
+      case EM_PPC64:   return "ppc64";
+      case EM_PPC:     return "ppc";
+      case EM_S390:    return "s390";
+      default:         return "machine " + std::to_string(machine);
+    }
   }
 
 
@@ -361,6 +379,7 @@ bool platform::InspectBinary(const std::string &s_name, BinaryInfo &info)
 
   info.path = sPath;
   info.is64Bit = (id.cls == ELFCLASS64);
+  info.machine = MachineName(id.machine);
   return true;
 }
 
