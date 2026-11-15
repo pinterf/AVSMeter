@@ -134,7 +134,8 @@ void         PollKeys();
 void         PrintConsole(bool bUseStdOut, uint16_t wAttributes, const char *fmt, ...);
 std::string  Pad(std::string s_line);
 static void  SetDefaultSettings();
-static bool  ParseCommandLine(int argc, char* argv[], stCmdLine &cmd);
+static bool  ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cmd);
+static AVSValue ImportScript(IScriptEnvironment *AVS_env, const std::string &s_avsfile);
 static void  AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpuinfo);
 static int   RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
 static void  AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
@@ -196,7 +197,8 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (argc < 2)
+  std::vector<std::string> args = platform::CommandLineArgs(argc, argv);
+  if (args.size() < 2)
   {
     PrintUsage();
     PollKeys();
@@ -204,7 +206,7 @@ int main(int argc, char* argv[])
   }
 
   stCmdLine cmd;
-  if (!ParseCommandLine(argc, argv, cmd))
+  if (!ParseCommandLine(args, cmd))
   {
     PollKeys();
     return -1;
@@ -324,7 +326,7 @@ int main(int argc, char* argv[])
     PClip AVS_clip;
     VideoInfo   AVS_vidinfo;
 
-    AVS_main = AVS_env->Invoke("Import", cmd.sAVSFile.c_str());
+    AVS_main = ImportScript(AVS_env, cmd.sAVSFile);
 
     if (!AVS_main.IsClip())
       AVS_env->ThrowError("\"%s\":\nScript did not return a clip", cmd.sAVSFile.c_str());
@@ -546,7 +548,7 @@ static void SetDefaultSettings()
 }
 
 
-static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
+static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cmd)
 {
   std::string sCmdToken = "";
   bool CLSwitches_timelimit = false;
@@ -561,9 +563,9 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
   std::string sArgTest = "";
   std::string sTemp = "";
   size_t arg_len = 0;
-  for (int iArg = 1; iArg < argc; iArg++)
+  for (size_t iArg = 1; iArg < args.size(); iArg++)
   {
-    sArg = argv[iArg];
+    sArg = args[iArg];
     sArgTest = sArg;
     utils.StrTrim(sArgTest);
     sCmdToken = sArgTest;
@@ -705,11 +707,9 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
     {
       if (sArgTest.substr(sArgTest.length() - 4) == ".avs")
       {
-        LPTSTR lpPart;
-        char szOut[MAX_PATH_LEN + 1];
-        if (::GetFullPathName(argv[iArg], MAX_PATH_LEN, szOut, &lpPart))
+        cmd.sAVSFile = platform::AbsolutePath(sArg);
+        if (cmd.sAVSFile != "")
         {
-          cmd.sAVSFile = utils.StrFormat("%s", szOut);
           if (!platform::FileExists(cmd.sAVSFile))
           {
             PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: File not found: \"%s\"\n", cmd.sAVSFile.c_str());
@@ -726,11 +726,9 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
       if (arg_len > 0)
       {
         sTemp = sArg + ".avs";
-        LPTSTR lpPart;
-        char szOut[MAX_PATH_LEN + 1];
-        if (::GetFullPathName(sTemp.c_str(), MAX_PATH_LEN, szOut, &lpPart))
+        cmd.sAVSFile = platform::AbsolutePath(sTemp);
+        if (cmd.sAVSFile != "")
         {
-          cmd.sAVSFile = utils.StrFormat("%s", szOut);
           if (!platform::FileExists(cmd.sAVSFile))
           {
             PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: File not found: \"%s\"\n", sTemp.c_str());
@@ -2017,13 +2015,39 @@ bool WriteINIFile(std::string &s_inifile)
 }
 
 
+// Non-ASCII paths are UTF-8: Import(utf8=true) on AviSynth+ (r2487+), the ANSI path on
+// older versions (no utf8 parameter: NotFound).
+static AVSValue ImportScript(IScriptEnvironment *AVS_env, const std::string &s_avsfile)
+{
+  bool bAscii = std::all_of(s_avsfile.begin(), s_avsfile.end(), [](char c) { return (unsigned char)c < 0x80; });
+  if (bAscii)
+    return AVS_env->Invoke("Import", s_avsfile.c_str());
+
+  try
+  {
+    AVSValue avsArgs[2] = { s_avsfile.c_str(), true };
+    const char *pszNames[2] = { NULL, "utf8" };
+    return AVS_env->Invoke("Import", AVSValue(avsArgs, 2), pszNames);
+  }
+  catch (IScriptEnvironment::NotFound)
+  {
+  }
+
+  std::string sLegacy;
+  if (!platform::LegacyPath(s_avsfile, sLegacy))
+    AVS_env->ThrowError("\"%s\":\nPath not supported by this AviSynth version (not UTF-8 capable)", s_avsfile.c_str());
+
+  return AVS_env->Invoke("Import", sLegacy.c_str());
+}
+
+
 std::string CreateLogFile(std::string &s_avsfile, std::string &s_logbuffer, std::string &s_gpuinfo, std::vector<stPerfData> &cs_pdata, std::string &s_avserror, bool bNVVP, bool bOmitstPerfData)
 {
   std::string sRet = "";
   std::string sAVSBuffer = "";
   std::string sCurrentLine = "";
 
-  std::ifstream hAVSFile(s_avsfile.c_str());
+  std::ifstream hAVSFile(platform::PathFromUtf8(s_avsfile));
   if (!hAVSFile.is_open())
   {
     sRet = utils.StrFormat("\nCannot open \"%s\"\n", s_avsfile.c_str());
@@ -2323,7 +2347,7 @@ unsigned int CalculateFrameInterval(std::string &s_avsfile, std::string &s_error
     PClip AVS_clip;
     VideoInfo   AVS_vidinfo;
 
-    AVS_main = AVS_env->Invoke("Import", s_avsfile.c_str());
+    AVS_main = ImportScript(AVS_env, s_avsfile);
 
     if (!AVS_main.IsClip()) //not a clip
       AVS_env->ThrowError("Script did not return a video clip:\n%s", s_avsfile.c_str());

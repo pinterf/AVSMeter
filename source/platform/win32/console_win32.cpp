@@ -17,7 +17,7 @@
 
 
 #include "platform/console.h"
-#include "utf_win32.h"
+#include "platform/win32/utf_win32.h"
 
 #include <algorithm>
 #include <cstdio>

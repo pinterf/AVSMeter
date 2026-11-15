@@ -19,9 +19,15 @@
 #if !defined(_PLATFORM_PROCESS_H)
 #define _PLATFORM_PROCESS_H
 
+#include <string>
+#include <vector>
+
 namespace platform
 {
   bool SetHighPriority();
+
+  // Command line arguments as UTF-8, argv[0] included (Windows: from the wide command line).
+  std::vector<std::string> CommandLineArgs(int argc, char *argv[]);
 }
 
 

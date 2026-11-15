@@ -167,3 +167,35 @@ std::string platform::NativeSystemPath(const std::string &s_path)
 
   return std::string(szSysWOW64Dir) + "\\" + s_path.substr(sSystem32.length());
 }
+
+
+std::filesystem::path platform::PathFromUtf8(const std::string &s_path)
+{
+  return std::filesystem::path(win32::ToWide(s_path.c_str()));
+}
+
+
+std::string platform::PathToUtf8(const std::filesystem::path &path)
+{
+  return win32::WideToUtf8(path.c_str());
+}
+
+
+std::string platform::AbsolutePath(const std::string &s_path)
+{
+  std::error_code ec;
+  std::filesystem::path path = std::filesystem::absolute(PathFromUtf8(s_path), ec);
+  if (ec)
+    return std::string();
+
+  return PathToUtf8(path);
+}
+
+
+bool platform::LegacyPath(const std::string &s_path, std::string &s_legacy)
+{
+  std::wstring wsPath = win32::ToWide(s_path.c_str());
+  s_legacy = win32::WideToAnsi(wsPath.c_str());
+
+  return win32::AnsiToWide(s_legacy.c_str()) == wsPath;
+}

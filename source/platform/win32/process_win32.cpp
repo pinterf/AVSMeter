@@ -17,12 +17,35 @@
 
 
 #include "platform/process.h"
+#include "platform/win32/utf_win32.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shellapi.h>
 
 
 bool platform::SetHighPriority()
 {
   return ::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS) != FALSE;
+}
+
+
+std::vector<std::string> platform::CommandLineArgs(int argc, char *argv[])
+{
+  std::vector<std::string> vArgs;
+
+  int iArgs = 0;
+  LPWSTR *ppwszArgs = ::CommandLineToArgvW(::GetCommandLineW(), &iArgs);
+  if (ppwszArgs)
+  {
+    for (int i = 0; i < iArgs; i++)
+      vArgs.push_back(win32::WideToUtf8(ppwszArgs[i]));
+    ::LocalFree(ppwszArgs);
+    return vArgs;
+  }
+
+  for (int i = 0; i < argc; i++)
+    vArgs.push_back(win32::WideToUtf8(win32::AnsiToWide(argv[i]).c_str()));
+
+  return vArgs;
 }

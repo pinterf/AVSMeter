@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <ctime>
+#include <filesystem>
 #include <string>
 
 namespace platform
@@ -36,6 +37,15 @@ namespace platform
 
   // Path as seen by the OS: System32 maps to SysWOW64 for a 32 bit process on 64 bit Windows.
   std::string NativeSystemPath(const std::string &s_path);
+
+  // UTF-8 path <-> std::filesystem::path, for streams and directory iterators.
+  std::filesystem::path PathFromUtf8(const std::string &s_path);
+  std::string           PathToUtf8(const std::filesystem::path &path);
+  std::string           AbsolutePath(const std::string &s_path); // empty on error
+
+  // Path in the legacy 8 bit encoding (Windows: ANSI code page) for APIs without
+  // UTF-8 support. False if not representable.
+  bool                  LegacyPath(const std::string &s_path, std::string &s_legacy);
 }
 
 
