@@ -86,7 +86,6 @@
   <ItemGroup>
     <ClCompile Include="..\source\AVSMeter.cpp" />
     <ClCompile Include="..\source\AvisynthInfo.cpp" />
-    <ClCompile Include="..\source\GPUInfo.cpp" />
     <ClCompile Include="..\source\ProcessInfo.cpp" />
     <ClCompile Include="..\source\SysInfo.cpp" />
     <ClCompile Include="..\source\Timer.cpp" />
@@ -98,6 +97,7 @@
     <ClCompile Include="..\source\platform\win32\dynlib_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\os_info_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\file_info_win32.cpp" />
+    <ClCompile Include="..\source\platform\win32\gpu_sensors_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\process_stats_win32.cpp" />
     <ClCompile Include="..\source\platform\win32\single_instance_win32.cpp" />
@@ -105,7 +105,6 @@
     <Image Include="..\source\AVSMeter.ico" />
     <ClInclude Include="..\source\AvisynthInfo.h" />
     <ClInclude Include="..\source\common.h" />
-    <ClInclude Include="..\source\GPUInfo.h" />
     <ClInclude Include="..\source\ProcessInfo.h" />
     <ClInclude Include="..\source\SysInfo.h" />
     <ClInclude Include="..\source\Timer.h" />
@@ -118,6 +117,7 @@
     <ClInclude Include="..\source\platform\dynlib.h" />
     <ClInclude Include="..\source\platform\os_info.h" />
     <ClInclude Include="..\source\platform\file_info.h" />
+    <ClInclude Include="..\source\platform\gpu_sensors.h" />
     <ClInclude Include="..\source\platform\process.h" />
     <ClInclude Include="..\source\platform\win32\utf_win32.h" />
     <ClInclude Include="..\source\platform\process_stats.h" />

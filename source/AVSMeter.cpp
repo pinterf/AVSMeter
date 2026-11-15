@@ -21,13 +21,13 @@
 #include "Utility.h"
 #include "SysInfo.h"
 #include "ProcessInfo.h"
-#include "GPUInfo.h"
 #include "Timer.h"
 #include "version.h"
 #include "platform/console.h"
 #include "platform/crash_guard.h"
 #include "platform/dynlib.h"
 #include "platform/file_info.h"
+#include "platform/gpu_sensors.h"
 #include "platform/process.h"
 #include "platform/single_instance.h"
 
@@ -136,12 +136,12 @@ void         PrintConsole(bool bUseStdOut, WORD wAttributes, const char *fmt, ..
 string       Pad(string s_line);
 static void  SetDefaultSettings();
 static bool  ParseCommandLine(int argc, char* argv[], stCmdLine &cmd);
-static void  AppendSystemInfo(string &sLogBuffer, CGPUInfo &gpuinfo);
-static int   RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, CGPUInfo &gpuinfo);
-static void  AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion, const stCmdLine &cmd, CGPUInfo &gpuinfo);
+static void  AppendSystemInfo(string &sLogBuffer, platform::GpuSensors &gpuinfo);
+static int   RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
+static void  AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo);
 static void  ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_t iMilliSeconds, bool bIsSETMTVersion, int iMTMode, string &sLogBuffer);
-static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, CGPUInfo &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs);
-static void  ReportRuntime(const stRunStats &rs, CGPUInfo &gpuinfo, unsigned int uiFrameInterval, string &sLogBuffer, bool &bRuntimeTooShort);
+static void  RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs);
+static void  ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, string &sLogBuffer, bool &bRuntimeTooShort);
 
 
 
@@ -275,10 +275,10 @@ int main(int argc, char* argv[])
     PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, " (%s)\n", AvisynthInfo.sFileVersion.c_str());
   }
 
-  CGPUInfo gpuinfo;
+  platform::GpuSensors gpuinfo;
   if (Settings.bGPUInfo)
   {
-    gpuinfo.GPUZInit();
+    gpuinfo.Init();
     if (!gpuinfo.bInitialized)
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
@@ -852,7 +852,7 @@ static bool ParseCommandLine(int argc, char* argv[], stCmdLine &cmd)
 }
 
 
-static void AppendSystemInfo(string &sLogBuffer, CGPUInfo &gpuinfo)
+static void AppendSystemInfo(string &sLogBuffer, platform::GpuSensors &gpuinfo)
 {
   string sOutBuf = "";
 
@@ -886,7 +886,7 @@ static void AppendSystemInfo(string &sLogBuffer, CGPUInfo &gpuinfo)
 }
 
 
-static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, CGPUInfo &gpuinfo)
+static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo)
 {
   string sOutBuf = "";
   string sLogBuffer = "";
@@ -1170,7 +1170,7 @@ static int RunAVSInfoMode(const string &sAVSMVersion, const stCmdLine &cmd, CGPU
 }
 
 
-static void AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion, const stCmdLine &cmd, CGPUInfo &gpuinfo)
+static void AppendScriptLogHeader(string &sLogBuffer, const string &sAVSMVersion, const stCmdLine &cmd, platform::GpuSensors &gpuinfo)
 {
   string sOutBuf = "";
 
@@ -1443,7 +1443,7 @@ static void ReportClipInfo(const VideoInfo &AVS_vidinfo, bool bAudioOnly, int64_
 }
 
 
-static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, CGPUInfo &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs)
+static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, unsigned int uiLogFrameInterval, vector<stPerfData> &perfdata, bool &bEarlyExit, stRunStats &rs)
 {
   string sOutBuf = "";
 
@@ -1687,11 +1687,11 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, CGP
   rs.wThreadCount = processinfo.wThreadCount;
 
   if (Settings.bGPUInfo)
-    gpuinfo.GPUZRelease();
+    gpuinfo.Release();
 }
 
 
-static void ReportRuntime(const stRunStats &rs, CGPUInfo &gpuinfo, unsigned int uiFrameInterval, string &sLogBuffer, bool &bRuntimeTooShort)
+static void ReportRuntime(const stRunStats &rs, platform::GpuSensors &gpuinfo, unsigned int uiFrameInterval, string &sLogBuffer, bool &bRuntimeTooShort)
 {
   string sOutBuf = "";
 

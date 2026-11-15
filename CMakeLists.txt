@@ -52,7 +52,6 @@ set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/source")
 set(AVSMeter_Sources
   "${SRC}/AVSMeter.cpp"
   "${SRC}/AvisynthInfo.cpp"
-  "${SRC}/GPUInfo.cpp"
   "${SRC}/ProcessInfo.cpp"
   "${SRC}/SysInfo.cpp"
   "${SRC}/Timer.cpp"
@@ -61,7 +60,6 @@ set(AVSMeter_Sources
 set(AVSMeter_Headers
   "${SRC}/AvisynthInfo.h"
   "${SRC}/common.h"
-  "${SRC}/GPUInfo.h"
   "${SRC}/ProcessInfo.h"
   "${SRC}/SysInfo.h"
   "${SRC}/Timer.h"
@@ -72,6 +70,7 @@ set(AVSMeter_Headers
   "${SRC}/platform/os_info.h"
   "${SRC}/platform/avs_registry.h"
   "${SRC}/platform/crash_guard.h"
+  "${SRC}/platform/gpu_sensors.h"
   "${SRC}/platform/binary_info.h"
   "${SRC}/platform/file_info.h"
   "${SRC}/platform/process.h"
@@ -86,6 +85,7 @@ if(WIN32)
     "${SRC}/platform/win32/os_info_win32.cpp"
     "${SRC}/platform/win32/avs_registry_win32.cpp"
     "${SRC}/platform/win32/crash_guard_win32.cpp"
+    "${SRC}/platform/win32/gpu_sensors_win32.cpp"
     "${SRC}/platform/win32/binary_info_win32.cpp"
     "${SRC}/platform/win32/file_info_win32.cpp"
     "${SRC}/platform/win32/process_win32.cpp"

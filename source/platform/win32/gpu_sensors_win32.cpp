@@ -16,10 +16,54 @@
 */
 
 
-#include "GPUInfo.h"
+#include "platform/gpu_sensors.h"
+#include "Utility.h"
+
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <cwchar>
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 
-CGPUInfo::CGPUInfo()
+namespace
+{
+  // GPU-Z shared memory layout, version 1
+  const char *SHMEM_NAME = "GPUZShMem";
+  const int MAX_RECORDS = 128;
+
+  #pragma pack(push, 1)
+
+  typedef struct GPUZ_RECORD
+  {
+    WCHAR key[256];
+    WCHAR value[256];
+  } GPUZ_RECORD;
+
+  typedef struct GPUZ_SENSOR_RECORD
+  {
+    WCHAR name[256];
+    WCHAR unit[8];
+    UINT32 digits;
+    double value;
+  } GPUZ_SENSOR_RECORD;
+
+  typedef struct GPUZ_SH_MEM
+  {
+    UINT32 version;      // Version number, 1 for the struct here
+    volatile LONG busy;  // Is data being accessed?
+    UINT32 lastUpdate;   // GetTickCount() of last update
+    GPUZ_RECORD data[MAX_RECORDS];
+    GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
+  } GPUZ_SH_MEM, *LPGPUZ_SH_MEM;
+
+  #pragma pack(pop)
+}
+
+
+platform::GpuSensors::GpuSensors()
 {
   sensors.GPULoad = 0;
   sensors.VPULoad = 0;
@@ -34,20 +78,20 @@ CGPUInfo::CGPUInfo()
   hMapFile = NULL;
 }
 
-CGPUInfo::~CGPUInfo()
+platform::GpuSensors::~GpuSensors()
 {
+  Release();
 }
 
 
-void CGPUInfo::GPUZInit()
+void platform::GpuSensors::Init()
 {
   sError = "";
-  string sTemp = "";
   bInitialized = false;
-  if ((hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, false, SHMEM_NAME)) == 0)
+  if ((hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, false, SHMEM_NAME)) == 0)
   {
-    sError = utils.SysErrorMessage();
     DWORD dwLastError = GetLastError();
+    sError = CUtils().SysErrorMessage();
     if (sError == "")
       sError = "Error initializing GPU-Z memory interface";
     else
@@ -59,13 +103,13 @@ void CGPUInfo::GPUZInit()
     return;
   }
 
-  if ((pMapAddr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
+  if ((pMapAddr = MapViewOfFile((HANDLE)hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0)) == 0)
   {
-    sError = utils.SysErrorMessage();
+    sError = CUtils().SysErrorMessage();
     if (sError == "")
       sError = "Error initializing GPU-Z memory interface";
     if (hMapFile)
-      CloseHandle(hMapFile);
+      CloseHandle((HANDLE)hMapFile);
     hMapFile = NULL;
     return;
   }
@@ -77,7 +121,7 @@ void CGPUInfo::GPUZInit()
 }
 
 
-void CGPUInfo::GPUZRelease()
+void platform::GpuSensors::Release()
 {
   if (!bInitialized)
     return;
@@ -85,7 +129,7 @@ void CGPUInfo::GPUZRelease()
   if (pMapAddr)
     UnmapViewOfFile(pMapAddr);
   if (hMapFile)
-    CloseHandle(hMapFile);
+    CloseHandle((HANDLE)hMapFile);
 
   pMapAddr = NULL;
   hMapFile = NULL;
@@ -95,11 +139,11 @@ void CGPUInfo::GPUZRelease()
 }
 
 
-void CGPUInfo::ReadData()
+void platform::GpuSensors::ReadData()
 {
   LPGPUZ_SH_MEM lpMem = (LPGPUZ_SH_MEM)pMapAddr;
 
-  BYTE nCUDA = 0;
+  uint8_t nCUDA = 0;
   double dCUDACaps = 0.0;
   data.NVVPU = false;
   data.GeneralMem = false;
@@ -113,13 +157,13 @@ void CGPUInfo::ReadData()
     char szvalue[512];
     WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].key, -1, szkey, 511, &DefChar, NULL);
     WideCharToMultiByte(CP_ACP, 0, lpMem->data[i].value, -1, szvalue, 511, &DefChar, NULL);
-    string sKey(szkey);
-    string sValue(szvalue);
+    std::string sKey(szkey);
+    std::string sValue(szvalue);
     sKey.erase(sKey.find_last_not_of(" \t\n\r") + 1);
     sKey.erase(0, sKey.find_first_not_of(" \t\n\r"));
     sValue.erase(sValue.find_last_not_of(" \t\n\r") + 1);
     sValue.erase(0, sValue.find_first_not_of(" \t\n\r"));
-    transform(sKey.begin(), sKey.end(), sKey.begin(), ::toupper);
+    std::transform(sKey.begin(), sKey.end(), sKey.begin(), ::toupper);
 
     if ((sValue == "") || (sValue == "0"))
       sValue = "n/a";
@@ -129,7 +173,7 @@ void CGPUInfo::ReadData()
     if (sKey == "MEMSIZE")         data.MemSize = sValue;
     if (sKey == "DRIVERVERSION")   data.DriverVersion = sValue;
     if (sKey == "OPENCL_VERSION")  data.OpenCLVersion = sValue;
-    if (sKey == "CUDA")            nCUDA = (BYTE)atol(sValue.c_str());
+    if (sKey == "CUDA")            nCUDA = (uint8_t)atol(sValue.c_str());
     if (sKey == "CUDA_CAPABILITY") dCUDACaps = atof(sValue.c_str());
   }
 
@@ -140,7 +184,7 @@ void CGPUInfo::ReadData()
 }
 
 
-void CGPUInfo::ReadSensors()
+void platform::GpuSensors::ReadSensors()
 {
   sensors.GPULoad = 0;
   sensors.VPULoad = 0;
@@ -172,30 +216,30 @@ void CGPUInfo::ReadSensors()
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"GPU Load") == 0)
     {
-      sensors.GPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
+      sensors.GPULoad = (uint8_t)(lpMem->sensors[i].value + 0.5);
       continue;
     }
     if ((data.NVVPU) && (_wcsicmp(lpMem->sensors[i].name, L"Video Engine Load") == 0))
     {
-      sensors.VPULoad = (BYTE)(lpMem->sensors[i].value + 0.5);
+      sensors.VPULoad = (uint8_t)(lpMem->sensors[i].value + 0.5);
       continue;
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"Memory Used") == 0)
     {
       data.GeneralMem = true;
-      sensors.MemoryUsedGeneral = (DWORD)(lpMem->sensors[i].value + 0.5);
+      sensors.MemoryUsedGeneral = (uint32_t)(lpMem->sensors[i].value + 0.5);
       continue;
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dedicated)") == 0)
     {
       data.DedicatedMem = true;
-      sensors.MemoryUsedDedicated = (DWORD)(lpMem->sensors[i].value + 0.5);
+      sensors.MemoryUsedDedicated = (uint32_t)(lpMem->sensors[i].value + 0.5);
       continue;
     }
     if (_wcsicmp(lpMem->sensors[i].name, L"Memory Usage (Dynamic)") == 0)
     {
       data.DynamicMem = true;
-      sensors.MemoryUsedDynamic = (DWORD)(lpMem->sensors[i].value + 0.5);
+      sensors.MemoryUsedDynamic = (uint32_t)(lpMem->sensors[i].value + 0.5);
     }
   }
 
