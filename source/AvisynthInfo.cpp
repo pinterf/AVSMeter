@@ -1,5 +1,5 @@
 /*
-  This file is part of AVSMeter, (c) Groucho2004.
+  This file is part of AVSMeter, (c) Groucho2004, 2026 pinterf.
 
   AVSMeter is free software. You can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -39,6 +39,19 @@ const char *const UNCATEGORIZED_LIBS = "Uncategorized DLLs";
 #else
 const char *const UNCATEGORIZED_LIBS = "Uncategorized libraries";
 #endif
+
+// Category label for a GetPluginType() result.
+std::string PluginCategory(const std::string &s_type)
+{
+  if (s_type == "AVSC") return "C-Interface Plugins (classic)";
+  if (s_type == "AVSCINIT12") return "C-Interface Plugins (classic + V11+)";
+  if (s_type == "AVSCINIT2") return "C-Interface Plugins (V11+ only)";
+  if (s_type == "AVSC20") return "C-Interface Plugins (cdecl, obsolete)";
+  if (s_type == "AVSCPP26") return "C++ 2.6 Plugins";
+  if (s_type == "AVSCPP25") return "C++ 2.5 Plugins";
+  if (s_type == "AVSCPP20") return "C++ 2.0 Plugins";
+  return UNCATEGORIZED_LIBS;
+}
 }
 
 
@@ -502,38 +515,7 @@ void CAvisynthInfo::EnumPluginDLLs()
               vPluginErrors.push_back(sMessage);
           }
           else
-          {
-            if (bIs64BitPlugin)
-            {
-              if (sMessage == "AVSC25")
-                vPlugins.push_back("C 2.5 Plugins (64 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSC20")
-                vPlugins.push_back("C 2.0 Plugins (64 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSCPP26")
-                vPlugins.push_back("C++ 2.6 Plugins (64 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSCPP25")
-                vPlugins.push_back("C++ 2.5 Plugins (64 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSCPP20")
-                vPlugins.push_back("C++ 2.0 Plugins (64 Bit)|" + sCurrentFile);
-              if (sMessage == "UNCATEGORIZED")
-                vPlugins.push_back(std::string(UNCATEGORIZED_LIBS) + " (64 Bit)|" + sCurrentFile);
-            }
-            else
-            {
-              if (sMessage == "AVSC25")
-                vPlugins.push_back("C 2.5 Plugins (32 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSC20")
-                vPlugins.push_back("C 2.0 Plugins (32 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSCPP26")
-                vPlugins.push_back("C++ 2.6 Plugins (32 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSCPP25")
-                vPlugins.push_back("C++ 2.5 Plugins (32 Bit)|" + sCurrentFile);
-              if (sMessage == "AVSCPP20")
-                vPlugins.push_back("C++ 2.0 Plugins (32 Bit)|" + sCurrentFile);
-              if (sMessage == "UNCATEGORIZED")
-                vPlugins.push_back(std::string(UNCATEGORIZED_LIBS) + " (32 Bit)|" + sCurrentFile);
-            }
-          }
+            vPlugins.push_back(PluginCategory(sMessage) + (bIs64BitPlugin ? " (64 Bit)|" : " (32 Bit)|") + sCurrentFile);
         }
         else if (sExt == ".avsi")
         {
@@ -685,49 +667,59 @@ bool CAvisynthInfo::GetPluginType(std::string s_dll, std::string &s_Msg, bool &b
   if (b_Is64BitDLL != PROCESS_64)
     return true;
 
+  // C plugin entry points, by the names AviSynth+ looks up (PluginManager TryAsAvsC/TryAsAvsPreV11C).
+  // init2 (V11+): the plugin handles 64-bit AVS_Value types; AviSynth+ calls it first.
+  // init: classic C-Interface plugin (stdcall avisynth_c 0.20 API, built in since AviSynth 2.54).
+  // Undecorated on 32-bit Windows: a cdecl plugin for the external avisynth_c.dll of the
+  // AviSynth 2.53 era, unless it also has init2 (AviSynth+ accepts the undecorated name then).
+  bool bCppInit3 = false, bCppInit2 = false, bCppInit = false;
+  bool bCInit = false, bCInit2 = false, bCInitUndecorated = false;
+
   for (std::string sExportFunc : bi.exports)
   {
     utils.StrToLC(sExportFunc); //convert to lower case for comparison
 
     if (sExportFunc.find("avisynthplugininit3") != std::string::npos) //CPP 2.6, 32 or 64 bit
-    {
-      s_Msg = "AVSCPP26";
-      break;
-    }
-
-    if (sExportFunc.find("avisynthplugininit2") != std::string::npos) //CPP 2.5, 32 or 64 bit
-    {
-      s_Msg = "AVSCPP25";
-      break;
-    }
-
+      bCppInit3 = true;
+    else if (sExportFunc.find("avisynthplugininit2") != std::string::npos) //CPP 2.5, 32 or 64 bit
+      bCppInit2 = true;
 #ifdef _WIN32
-    if ((sExportFunc.find("avisynthplugininit") != std::string::npos) && !b_Is64BitDLL) //CPP 2.0
-      s_Msg = "AVSCPP20"; //don't break here, keep looping
+    else if ((sExportFunc.find("avisynthplugininit") != std::string::npos) && !b_Is64BitDLL) //CPP 2.0
+      bCppInit = true;
 
-    if ((sExportFunc.find("avisynth_c_plugin_init@4") != std::string::npos) && !b_Is64BitDLL) //32 bit C2.5
+    if ((sExportFunc == "_avisynth_c_plugin_init@4") || (sExportFunc == "avisynth_c_plugin_init@4"))
+      bCInit = true;
+    else if (sExportFunc == "avisynth_c_plugin_init")
     {
-      s_Msg = "AVSC25";
-      break;
+      if (b_Is64BitDLL)
+        bCInit = true;
+      else
+        bCInitUndecorated = true;
     }
 
-    if ((sExportFunc.find("avisynth_c_plugin_init") != std::string::npos) && b_Is64BitDLL) //64 bit C2.5
-    {
-      s_Msg = "AVSC25";
-      break;
-    }
-
-    if ((sExportFunc == "avisynth_c_plugin_init") && !b_Is64BitDLL) //C2.0
-      s_Msg = "AVSC20"; //don't break here, keep looping
+    if ((sExportFunc == "avisynth_c_plugin_init2") || (sExportFunc == "_avisynth_c_plugin_init2@4") || (sExportFunc == "avisynth_c_plugin_init2@4"))
+      bCInit2 = true;
 #else
     //No stdcall decoration and no 2.0 plugin interfaces on POSIX
     if (sExportFunc == "avisynth_c_plugin_init")
-    {
-      s_Msg = "AVSC25";
-      break;
-    }
+      bCInit = true;
+    else if (sExportFunc == "avisynth_c_plugin_init2")
+      bCInit2 = true;
 #endif
   }
+
+  if (bCppInit3)
+    s_Msg = "AVSCPP26";
+  else if (bCppInit2)
+    s_Msg = "AVSCPP25";
+  else if (bCInit2)
+    s_Msg = (bCInit || bCInitUndecorated) ? "AVSCINIT12" : "AVSCINIT2";
+  else if (bCInit)
+    s_Msg = "AVSC";
+  else if (bCInitUndecorated)
+    s_Msg = "AVSC20";
+  else if (bCppInit)
+    s_Msg = "AVSCPP20";
 
   return true;
 }
@@ -846,11 +838,14 @@ void CAvisynthInfo::TestLoadPlugins()
       if ((sPlugLoadErrorLC.find("proc not found") != std::string::npos) || (sPlugLoadErrorLC.find("the specified procedure could not be found") != std::string::npos))
         sNote += "\n\nNote: You may need a newer OS version in order to use this plugin";
 
-      if ((sPluginType.substr(0, 5) == "C 2.5") && (!bIsAVSPlus))
+      if ((sPluginType.rfind("C-Interface Plugins (classic", 0) == 0) && (!bIsAVSPlus))
         sNote += "\n\nNote: C-Plugins must be loaded explicitly with \"LoadCPlugin()\"";
 
-      if ((sPluginType.substr(0, 5) == "C 2.0") && (bIsAVSPlus))
-        sNote += "\n\nNote: C 2.0 Plugins are not supported by Avisynth+";
+      if ((sPluginType.rfind("C-Interface Plugins (V11+ only)", 0) == 0) && (!bIsAVSPlus || (iInterfaceVersion < 11)))
+        sNote += "\n\nNote: This plugin has only the \"avisynth_c_plugin_init2\" entry point, it requires Avisynth+ with interface version 11 or newer";
+
+      if ((sPluginType.rfind("C-Interface Plugins (cdecl", 0) == 0) && (bIsAVSPlus))
+        sNote += "\n\nNote: cdecl C-Interface plugins (external avisynth_c.dll, AviSynth 2.53) are not supported by Avisynth+";
 
       if ((sPluginType.substr(0, 7) == "CPP 2.0") && (bIsAVSPlus))
         sNote += "\n\nNote: CPP 2.0 Plugins are not supported by Avisynth+";
