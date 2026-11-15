@@ -18,10 +18,33 @@
 
 #include "platform/single_instance.h"
 
+#include <cstdlib>
+#include <string>
 
-// Phase 2 stub: flock on a lock file in $XDG_RUNTIME_DIR or /tmp
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+
+
+// Per-user lock, like the per-session Windows mutex: flock on a file in $XDG_RUNTIME_DIR
+// (or /tmp with the uid in the name). The kernel drops the lock when the process exits,
+// also after a crash. If the lock file is unusable the instance is allowed to run.
 bool platform::AcquireSingleInstance(const char *psz_name)
 {
-  (void)psz_name;
-  return true;
+  std::string sPath;
+  const char *pszRuntimeDir = getenv("XDG_RUNTIME_DIR");
+  if (pszRuntimeDir && pszRuntimeDir[0] == '/')
+    sPath = std::string(pszRuntimeDir) + "/" + psz_name + ".lock";
+  else
+    sPath = std::string("/tmp/") + psz_name + "." + std::to_string((unsigned long)getuid()) + ".lock";
+
+  int iFd = open(sPath.c_str(), O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0600);
+  if (iFd < 0)
+    return true;
+
+  if (flock(iFd, LOCK_EX | LOCK_NB) == 0)
+    return true; // the descriptor stays open for the process lifetime
+
+  close(iFd);
+  return false;
 }
