@@ -24,6 +24,14 @@
 #include "platform/file_info.h"
 #include "platform/os_info.h"
 
+#include <filesystem>
+#include <system_error>
+
+namespace
+{
+  const char PATH_SEP = (char)std::filesystem::path::preferred_separator;
+}
+
 
 const AVS_Linkage *AVS_linkage = 0;
 
@@ -409,82 +417,83 @@ void CAvisynthInfo::EnumPluginDLLs()
       size_t spos = sDir.find(":\t");
       sDir = sDir.substr(spos + 2);
 
-      WIN32_FIND_DATA fd;
-      HANDLE hFind;
-      string sFind =  sDir + "\\*.*";
-      bool bRet = true;
       string sCurrentFile = "";
       string sCurrentFileLC = "";
-      hFind = FindFirstFile (sFind.c_str(), &fd);
-      while (hFind != INVALID_HANDLE_VALUE && bRet)
+      std::error_code ec;
+      for (std::filesystem::directory_iterator it(sDir, ec), end; !ec && it != end; it.increment(ec))
       {
-        if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+        std::error_code ecType;
+        if (it->is_directory(ecType))
+          continue;
+
+        string sName;
+        try
         {
-          sCurrentFile = sDir + "\\" + fd.cFileName;
-          sCurrentFileLC = sCurrentFile;
-          utils.StrToLC(sCurrentFileLC);
+          sName = it->path().filename().string();
+        }
+        catch (const std::system_error &)
+        {
+          continue; // name not representable in the narrow (ANSI) encoding
+        }
 
-          if (mDuplicates.find(sCurrentFileLC) != mDuplicates.end())
+        sCurrentFile = sDir + PATH_SEP + sName;
+        sCurrentFileLC = sCurrentFile;
+        utils.StrToLC(sCurrentFileLC);
+
+        if (mDuplicates.find(sCurrentFileLC) != mDuplicates.end())
+          continue;
+
+        mDuplicates.insert(sCurrentFileLC);
+
+        if (sCurrentFileLC.substr(sCurrentFileLC.length() - 4) == ".dll")
+        {
+          if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin))
           {
-            bRet = FindNextFile(hFind, &fd);
-            continue;
+            if (sMessage != "")
+              vPluginErrors.push_back(sMessage);
           }
-
-          mDuplicates.insert(sCurrentFileLC);
-
-          if (sCurrentFileLC.substr(sCurrentFileLC.length() - 4) == ".dll")
+          else
           {
-            if (!GetPluginType(sCurrentFile, sMessage, bIs64BitPlugin))
+            if (bIs64BitPlugin)
             {
-              if (sMessage != "")
-                vPluginErrors.push_back(sMessage);
+              if (sMessage == "AVSC25")
+                vPlugins.push_back("C 2.5 Plugins (64 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSC20")
+                vPlugins.push_back("C 2.0 Plugins (64 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSCPP26")
+                vPlugins.push_back("C++ 2.6 Plugins (64 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSCPP25")
+                vPlugins.push_back("C++ 2.5 Plugins (64 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSCPP20")
+                vPlugins.push_back("C++ 2.0 Plugins (64 Bit)|" + sCurrentFile);
+              if (sMessage == "UNCATEGORIZED")
+                vPlugins.push_back("Uncategorized DLLs (64 Bit)|" + sCurrentFile);
             }
             else
             {
-              if (bIs64BitPlugin)
-              {
-                if (sMessage == "AVSC25")
-                  vPlugins.push_back("C 2.5 Plugins (64 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSC20")
-                  vPlugins.push_back("C 2.0 Plugins (64 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSCPP26")
-                  vPlugins.push_back("C++ 2.6 Plugins (64 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSCPP25")
-                  vPlugins.push_back("C++ 2.5 Plugins (64 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSCPP20")
-                  vPlugins.push_back("C++ 2.0 Plugins (64 Bit)|" + sCurrentFile);
-                if (sMessage == "UNCATEGORIZED")
-                  vPlugins.push_back("Uncategorized DLLs (64 Bit)|" + sCurrentFile);
-              }
-              else
-              {
-                if (sMessage == "AVSC25")
-                  vPlugins.push_back("C 2.5 Plugins (32 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSC20")
-                  vPlugins.push_back("C 2.0 Plugins (32 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSCPP26")
-                  vPlugins.push_back("C++ 2.6 Plugins (32 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSCPP25")
-                  vPlugins.push_back("C++ 2.5 Plugins (32 Bit)|" + sCurrentFile);
-                if (sMessage == "AVSCPP20")
-                  vPlugins.push_back("C++ 2.0 Plugins (32 Bit)|" + sCurrentFile);
-                if (sMessage == "UNCATEGORIZED")
-                  vPlugins.push_back("Uncategorized DLLs (32 Bit)|" + sCurrentFile);
-              }
+              if (sMessage == "AVSC25")
+                vPlugins.push_back("C 2.5 Plugins (32 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSC20")
+                vPlugins.push_back("C 2.0 Plugins (32 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSCPP26")
+                vPlugins.push_back("C++ 2.6 Plugins (32 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSCPP25")
+                vPlugins.push_back("C++ 2.5 Plugins (32 Bit)|" + sCurrentFile);
+              if (sMessage == "AVSCPP20")
+                vPlugins.push_back("C++ 2.0 Plugins (32 Bit)|" + sCurrentFile);
+              if (sMessage == "UNCATEGORIZED")
+                vPlugins.push_back("Uncategorized DLLs (32 Bit)|" + sCurrentFile);
             }
           }
-          else if (sCurrentFileLC.substr(sCurrentFileLC.length() - 5) == ".avsi")
-          {
-            vPlugins.push_back("Scripts (AVSI)|" + sCurrentFile);
-            AddScriptFunctions(sCurrentFile);
-          }
-          else
-            vPlugins.push_back("Uncategorized files|" + sCurrentFile);
         }
-        bRet = FindNextFile(hFind, &fd);
+        else if (sCurrentFileLC.substr(sCurrentFileLC.length() - 5) == ".avsi")
+        {
+          vPlugins.push_back("Scripts (AVSI)|" + sCurrentFile);
+          AddScriptFunctions(sCurrentFile);
+        }
+        else
+          vPlugins.push_back("Uncategorized files|" + sCurrentFile);
       }
-
-      FindClose (hFind);
     }
   }
 
