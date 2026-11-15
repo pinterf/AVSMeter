@@ -847,8 +847,8 @@ void CAvisynthInfo::TestLoadPlugins()
       if ((sPluginType.rfind("C-Interface Plugins (cdecl", 0) == 0) && (bIsAVSPlus))
         sNote += "\n\nNote: cdecl C-Interface plugins (external avisynth_c.dll, AviSynth 2.53) are not supported by Avisynth+";
 
-      if ((sPluginType.substr(0, 7) == "CPP 2.0") && (bIsAVSPlus))
-        sNote += "\n\nNote: CPP 2.0 Plugins are not supported by Avisynth+";
+      if ((sPluginType.rfind("C++ 2.0 Plugins", 0) == 0) && (bIsAVSPlus))
+        sNote += "\n\nNote: C++ 2.0 plugins are not supported by Avisynth+";
 
       sPlugLoadError += sNote;
 
