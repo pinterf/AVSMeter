@@ -161,7 +161,8 @@
     On Linux, AVSMeter reads NVIDIA GPUs through the NVIDIA Management
     Library (libnvidia-ml.so.1, installed with the NVIDIA driver, also
     available in WSL2); GPU-Z is not needed there. AMD and Intel GPUs are
-    not supported on Linux yet.<br>
+    not supported on Linux yet; AVSMeter detects and lists them
+    ("-gpu=intel", "-gpu=amd") with the note that they are not measured.<br>
     <br>
     <b>"-gpu=n"<br>
     </b>Linux: selects the NVIDIA GPU with index n (0, 1, ...; the order

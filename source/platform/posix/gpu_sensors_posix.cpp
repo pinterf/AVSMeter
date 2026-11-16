@@ -18,10 +18,16 @@
 
 #include "platform/gpu_sensors.h"
 
+#include <dirent.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 #include <algorithm>
+#include <climits>
 #include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <vector>
 
 
 // NVIDIA Management Library, loaded at run time: no build dependency, and AVSMeter runs without it.
@@ -45,6 +51,138 @@ namespace
   {
     static const char *const names[] = { nullptr, nullptr, "Kepler", "Maxwell", "Pascal", "Volta", "Turing", "Ampere", "Ada", "Hopper", "Blackwell" };
     return (arch < sizeof(names) / sizeof(names[0])) ? names[arch] : nullptr;
+  }
+
+
+  // GPUs seen by the kernel (DRM), any vendor: names the GPUs without sensor support yet
+  const unsigned int kVendorNvidia = 0x10de, kVendorAmd = 0x1002, kVendorIntel = 0x8086;
+
+  struct DrmGpu
+  {
+    unsigned int vendor = 0, device = 0;
+    std::string  pci, driver, name;
+
+    std::string Describe() const
+    {
+      return name + " (PCI " + pci + (driver.empty() ? "" : ", driver " + driver) + ")";
+    }
+  };
+
+  const char *VendorName(unsigned int vendor)
+  {
+    switch (vendor)
+    {
+      case kVendorNvidia: return "NVIDIA";
+      case kVendorAmd:    return "AMD";
+      case kVendorIntel:  return "Intel";
+    }
+    return nullptr;
+  }
+
+  bool ReadHex(const std::string &s_path, unsigned int &value)
+  {
+    std::ifstream f(s_path);
+    std::string s;
+    if (!(f >> s))
+      return false;
+    char *pEnd = nullptr;
+    unsigned long ul = std::strtoul(s.c_str(), &pEnd, 16);
+    value = (unsigned int)ul;
+    return pEnd && (*pEnd == '\0') && (pEnd != s.c_str());
+  }
+
+  std::string BaseName(const std::string &s)
+  {
+    size_t pos = s.find_last_of('/');
+    return (pos == std::string::npos) ? s : s.substr(pos + 1);
+  }
+
+  // Device name from the pci.ids database (pciutils/hwdata), "[...]" marketing name preferred
+  std::string PciIdsName(unsigned int vendor, unsigned int device)
+  {
+    const char *const pszFiles[] = { "/usr/share/hwdata/pci.ids", "/usr/share/misc/pci.ids", "/usr/share/pci.ids" };
+    char szVendor[8], szDevice[8];
+    std::snprintf(szVendor, sizeof(szVendor), "%04x", vendor);
+    std::snprintf(szDevice, sizeof(szDevice), "\t%04x", device);
+    for (const char *pszFile : pszFiles)
+    {
+      std::ifstream f(pszFile);
+      if (!f)
+        continue;
+      std::string sLine;
+      bool bVendor = false;
+      while (std::getline(f, sLine))
+      {
+        if (sLine.empty() || (sLine[0] == '#'))
+          continue;
+        if (sLine[0] != '\t')
+        {
+          if (bVendor)
+            break;
+          bVendor = (sLine.compare(0, 4, szVendor) == 0);
+        }
+        else if (bVendor && (sLine.compare(0, 5, szDevice) == 0) && (sLine.length() > 7))
+        {
+          std::string sName = sLine.substr(7);
+          size_t posOpen = sName.find('['), posClose = sName.rfind(']');
+          if ((posOpen != std::string::npos) && (posClose != std::string::npos) && (posClose > posOpen + 1))
+            sName = sName.substr(posOpen + 1, posClose - posOpen - 1);
+          return sName;
+        }
+      }
+      return "";
+    }
+    return "";
+  }
+
+  std::vector<DrmGpu> DrmGpus()
+  {
+    std::vector<DrmGpu> gpus;
+    const std::string sRoot = "/sys/class/drm/";
+    DIR *pDir = opendir(sRoot.c_str());
+    if (!pDir)
+      return gpus;
+    while (dirent *pEntry = readdir(pDir))
+    {
+      std::string sCard = pEntry->d_name; // "card0"; skip connectors ("card0-HDMI-A-1") and render nodes
+      if ((sCard.compare(0, 4, "card") != 0) || (sCard.length() == 4) || (sCard.find_first_not_of("0123456789", 4) != std::string::npos))
+        continue;
+
+      std::string sDevice = sRoot + sCard + "/device";
+      DrmGpu gpu;
+      if (!ReadHex(sDevice + "/vendor", gpu.vendor) || !ReadHex(sDevice + "/device", gpu.device))
+        continue; // not a PCI device (e.g. vgem in WSL2)
+
+      char szPath[PATH_MAX];
+      if (!realpath(sDevice.c_str(), szPath))
+        continue;
+      gpu.pci = BaseName(szPath);
+      ssize_t len = readlink((sDevice + "/driver").c_str(), szPath, sizeof(szPath) - 1);
+      if (len > 0)
+        gpu.driver = BaseName(std::string(szPath, (size_t)len));
+
+      const char *pszVendor = VendorName(gpu.vendor);
+      std::string sName = PciIdsName(gpu.vendor, gpu.device);
+      char sz[64];
+      std::snprintf(sz, sizeof(sz), "%s GPU [%04x:%04x]", pszVendor ? pszVendor : "Unknown", gpu.vendor, gpu.device);
+      gpu.name = sName.empty() ? sz : (pszVendor ? std::string(pszVendor) + " " : "") + sName;
+
+      if (std::none_of(gpus.begin(), gpus.end(), [&](const DrmGpu &g) { return g.pci == gpu.pci; }))
+        gpus.push_back(gpu);
+    }
+    closedir(pDir);
+    std::sort(gpus.begin(), gpus.end(), [](const DrmGpu &a, const DrmGpu &b) { return a.pci < b.pci; });
+    return gpus;
+  }
+
+  // "\n  Intel UHD Graphics 750 (PCI 0000:00:02.0, driver i915)" for each GPU of the vendor (0: non-NVIDIA)
+  std::string DrmGpuList(const std::vector<DrmGpu> &gpus, unsigned int vendor)
+  {
+    std::string s;
+    for (const DrmGpu &gpu : gpus)
+      if (vendor ? (gpu.vendor == vendor) : (gpu.vendor != kVendorNvidia))
+        s += "\n  " + gpu.Describe();
+    return s;
   }
 }
 
@@ -133,10 +271,17 @@ void platform::GpuSensors::Init(const std::string &s_select)
   sError = "";
   sNote = "";
 
+  const std::vector<DrmGpu> drmGpus = DrmGpus();
+  const std::string sOtherGpus = DrmGpuList(drmGpus, 0);
+  const std::string sNotSupported = "Sensors of Intel and AMD GPUs are not supported on Linux yet, only NVIDIA.";
+
   unsigned int uiIndex = 0;
   if ((s_select == "intel") || (s_select == "amd"))
   {
-    sError = "\"-gpu=" + s_select + "\": only NVIDIA GPUs are supported on this platform yet";
+    const char *pszVendor = (s_select == "intel") ? "Intel" : "AMD";
+    std::string sList = DrmGpuList(drmGpus, (s_select == "intel") ? kVendorIntel : kVendorAmd);
+    sError = sList.empty() ? std::string("No ") + pszVendor + " GPU found.\n" + sNotSupported
+      : std::string(pszVendor) + " GPU found:" + sList + "\n" + sNotSupported;
     return;
   }
   else if (!s_select.empty() && (s_select != "nvidia"))
@@ -157,8 +302,15 @@ void platform::GpuSensors::Init(const std::string &s_select)
 
   if (!hLib)
   {
-    sError = "Cannot load the NVIDIA Management Library (libnvidia-ml.so.1).\n"
-      "GPU sensors (-gpu) need an NVIDIA GPU and its proprietary driver.";
+    std::string sNvidia = DrmGpuList(drmGpus, kVendorNvidia);
+    if (!sNvidia.empty())
+      sError = "NVIDIA GPU found:" + sNvidia + "\n"
+        "but the NVIDIA Management Library (libnvidia-ml.so.1) is missing, GPU sensors need the proprietary NVIDIA driver.";
+    else if (!sOtherGpus.empty())
+      sError = "GPU found:" + sOtherGpus + "\n" + sNotSupported;
+    else
+      sError = "Cannot load the NVIDIA Management Library (libnvidia-ml.so.1).\n"
+        "GPU sensors (-gpu) need an NVIDIA GPU and its proprietary driver.";
     return;
   }
 
@@ -211,7 +363,7 @@ void platform::GpuSensors::Init(const std::string &s_select)
   }
 
   if ((ret == 0) && (uiCount == 0))
-    sError = "No NVIDIA GPU found";
+    sError = sOtherGpus.empty() ? "No NVIDIA GPU found" : "No NVIDIA GPU found, other GPU:" + sOtherGpus + "\n" + sNotSupported;
   else if ((ret == 0) && (uiIndex >= uiCount))
     sError = "No NVIDIA GPU with index " + std::to_string(uiIndex) + ", available:" + sList;
   else if (ret == 0)
@@ -227,6 +379,8 @@ void platform::GpuSensors::Init(const std::string &s_select)
 
   if ((uiCount > 1) && (s_select.empty() || (s_select == "nvidia")))
     sNote = "Several NVIDIA GPUs, measuring GPU 0 (select one with -gpu=n):" + sList;
+  if (s_select.empty() && !sOtherGpus.empty())
+    sNote += (sNote.empty() ? "" : "\n") + std::string("Not measured (Intel/AMD not supported on Linux yet):") + sOtherGpus;
 
   bInitialized = true;
   ReadData();

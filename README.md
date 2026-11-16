@@ -423,7 +423,8 @@ uses the defaults.
   "Video card" line shows the index and PCI bus ID to tell identical cards apart.
   "VPU usage" is the higher of the NVENC and NVDEC loads; there is no OpenCL
   version, the CUDA version of the driver is shown instead. AMD and Intel GPUs are
-  not supported yet. On Windows, `-gpu=n` is ignored with a warning: GPU-Z
+  not supported yet, but are detected (`/sys/class/drm`, names from `pci.ids`) and
+  named in the message; `-gpu=intel` or `-gpu=amd` lists them. On Windows, `-gpu=n` is ignored with a warning: GPU-Z
   reports the card selected in its window.
 - A crash in a plugin prints a short signal report and exits with a nonzero code.
 
