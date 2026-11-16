@@ -1978,6 +1978,15 @@ static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform
     if (!rs.bFirstScr)
       platform::ConsoleCursorUp(rs.uiCursorOffset);
 
+    // the summary overwrites the live display: every row, blank ones too, is
+    // padded to erase what was there
+    unsigned int uiRows = 0;
+    auto ConsoleLine = [&uiRows](uint16_t w_color, const std::string &s_text)
+    {
+      PrintConsole(Settings.bConUseStdOut, w_color, "\r%s\n", Pad(s_text).c_str());
+      ++uiRows;
+    };
+
     if (rs.uiFirstFrame == rs.uiLastFrame)
     {
       if (rs.uiFirstFrame == 0)
@@ -1988,13 +1997,13 @@ static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform
     else
       sOutBuf = utils.StrFormat("%ss processed:                   %u (%u - %u)", bu.UnitName(), rs.uiFramesRead, rs.uiFirstFrame, rs.uiLastFrame);
 
-    PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+    ConsoleLine(COLOR_EMPHASIS, sOutBuf);
     sLogBuffer += sOutBuf + "\n";
 
     if (bu.bGetAudio)
     {
       sOutBuf = "Audio samples processed:            " + AudioSamplesText(bu);
-      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      ConsoleLine(COLOR_EMPHASIS, sOutBuf);
       sLogBuffer += sOutBuf + "\n";
     }
 
@@ -2003,70 +2012,70 @@ static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform
       if (Settings.bDisplayFPS)
       {
         sOutBuf = utils.StrFormat("%s (min | max | average):          %s | %s | %s", bu.RateName(), utils.StrFormatFPS(rs.dFPSMin).c_str(), utils.StrFormatFPS(rs.dFPSMax).c_str(), utils.StrFormatFPS(rs.dFPSAverage).c_str());
-        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        ConsoleLine(COLOR_EMPHASIS, sOutBuf);
         sLogBuffer += sOutBuf + "\n";
       }
 
       if (Settings.bDisplayTPF)
       {
         sOutBuf = utils.StrFormat("%s (max | min | average):          %s | %s | %s ms", bu.TimeName(), utils.StrFormatTPF(1000.0 / rs.dFPSMin).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSMax).c_str(), utils.StrFormatTPF(1000.0 / rs.dFPSAverage).c_str());
-        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        ConsoleLine(COLOR_EMPHASIS, sOutBuf);
         sLogBuffer += sOutBuf + "\n";
       }
 
       if (bu.bGetAudio)
       {
         sOutBuf = utils.StrFormat("Audio speed (realtime):             %.2fx", AudioRealtimeFactor(bu, (double)rs.iElapsedMS / 1000.0));
-        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        ConsoleLine(COLOR_EMPHASIS, sOutBuf);
         sLogBuffer += sOutBuf + "\n";
       }
 
       sOutBuf = utils.StrFormat("Process memory usage (max):         %u MiB", rs.dwMemPeakMB);
-      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      ConsoleLine(COLOR_EMPHASIS, sOutBuf);
       sLogBuffer += sOutBuf + "\n";
 
       sOutBuf = utils.StrFormat("Thread count:                       %u", rs.wThreadCount);
-      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      ConsoleLine(COLOR_EMPHASIS, sOutBuf);
       sLogBuffer += sOutBuf + "\n";
 
       sOutBuf = utils.StrFormat("CPU usage (average):                %.1f%%", rs.dCPUUsageAvg);
-      PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+      ConsoleLine(COLOR_EMPHASIS, sOutBuf);
       sLogBuffer += sOutBuf + "\n";
 
       if (Settings.bGPUInfo)
       {
-        PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+        ConsoleLine(COLOR_DEFAULT, "");
         sLogBuffer += "\n";
 
         sOutBuf = utils.StrFormat("GPU usage (average):                %u%%", rs.uiGPUUsageAvg);
-        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        ConsoleLine(COLOR_EMPHASIS, sOutBuf);
         sLogBuffer += sOutBuf + "\n";
 
         if (gpuinfo.data.NVVPU)
         {
           sOutBuf = utils.StrFormat("VPU usage (average):                %u%%", rs.uiVPUUsageAvg);
-          PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+          ConsoleLine(COLOR_EMPHASIS, sOutBuf);
           sLogBuffer += sOutBuf + "\n";
         }
 
         if (gpuinfo.data.GeneralMem)
         {
           sOutBuf = utils.StrFormat("GPU memory usage:                   %u MiB", gpuinfo.sensors.MemoryUsedGeneral);
-          PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+          ConsoleLine(COLOR_EMPHASIS, sOutBuf);
           sLogBuffer += sOutBuf + "\n";
         }
 
         if (gpuinfo.data.DedicatedMem)
         {
           sOutBuf = utils.StrFormat("GPU memory usage (Dedicated):       %u MiB", gpuinfo.sensors.MemoryUsedDedicated);
-          PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+          ConsoleLine(COLOR_EMPHASIS, sOutBuf);
           sLogBuffer += sOutBuf + "\n";
         }
 
         if (gpuinfo.data.DynamicMem)
         {
           sOutBuf = utils.StrFormat("GPU memory usage (Dynamic):         %u MiB", gpuinfo.sensors.MemoryUsedDynamic);
-          PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+          ConsoleLine(COLOR_EMPHASIS, sOutBuf);
           sLogBuffer += sOutBuf + "\n";
         }
 
@@ -2074,11 +2083,11 @@ static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform
           sOutBuf = utils.StrFormat("GPU Power Consumption (average):    %.1f W", rs.dGPUPowerConsumptionAvg);
         else
           sOutBuf = "GPU Power Consumption (average):    n/a (no sensor data)";
-        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+        ConsoleLine(COLOR_EMPHASIS, sOutBuf);
         sLogBuffer += sOutBuf + "\n";
       }
 
-      PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\n");
+      ConsoleLine(COLOR_DEFAULT, "");
       sLogBuffer += "\n";
     }
 
@@ -2087,12 +2096,16 @@ static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform
     else
       sOutBuf = utils.StrFormat("Time (elapsed):                     %s", timer.FormatTimeString(rs.iElapsedMS, false).c_str());
 
-    PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
+    ConsoleLine(COLOR_EMPHASIS, sOutBuf);
     sLogBuffer += sOutBuf + "\n";
 
-    PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-    PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
-    platform::ConsoleCursorUp(2);
+    // erase the rest of the live display (at least the two rows below)
+    unsigned int uiClear = (rs.uiCursorOffset > uiRows) ? rs.uiCursorOffset - uiRows : 0;
+    if (uiClear < 2)
+      uiClear = 2;
+    for (unsigned int u = 0; u < uiClear; u++)
+      PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\n", Pad("").c_str());
+    platform::ConsoleCursorUp(uiClear);
   }
   else
   {
