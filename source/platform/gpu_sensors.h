@@ -24,7 +24,8 @@
 
 namespace platform
 {
-  // GPU information and sensor readings (Windows: GPU-Z shared memory interface).
+  // GPU information and sensor readings. Windows: GPU-Z shared memory interface.
+  // POSIX: NVIDIA Management Library (libnvidia-ml.so.1, loaded at run time), first NVIDIA GPU.
   class GpuSensors
   {
   public:
@@ -52,24 +53,30 @@ namespace platform
       std::string GPUName;
       std::string MemSize;
       std::string OpenCLVersion;
+      std::string CudaVersion;    // NVML: CUDA version of the driver (no OpenCL query there)
       std::string DriverVersion;
       bool        NVVPU;
       bool        GeneralMem;
       bool        DynamicMem;
       bool        DedicatedMem;
+      bool        Power;          // power reading available
     } data;
 
     // Init() sets bInitialized, or sError on failure; it reads data on success.
-    void Init();
+    // s_select (lower case): "" = default GPU; POSIX: "nvidia" or an NVML index ("0", "1", ...).
+    void Init(const std::string &s_select = "");
     void Release();
     void ReadSensors();
     void ReadData();
     bool bInitialized;
     std::string sError;
+    std::string sNote; // set by Init(): e.g. which of several GPUs is measured
 
   private:
     void *hMapFile;
     void *pMapAddr;
+    struct Nvml;
+    Nvml *pNvml = nullptr;
   };
 }
 

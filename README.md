@@ -415,7 +415,16 @@ uses the defaults.
 - Memory usage is the resident set size (RSS) from `/proc/self/statm`; CPU usage
   comes from `/proc/self/stat` and `/proc/stat` in clock ticks (typically 10 ms),
   so values differ from Windows.
-- `-gpu` is not available (GPU-Z is Windows only).
+- `-gpu` reads NVIDIA GPUs through the NVIDIA Management Library
+  (`libnvidia-ml.so.1`, part of the proprietary driver, also present in WSL2),
+  loaded at run time; there is no build dependency. `-gpu` uses the first NVIDIA
+  GPU; `-gpu=n` selects one by index (NVML/nvidia-smi order, which can differ from
+  the CUDA device order). With several GPUs, `-gpu` warns and lists them, and the
+  "Video card" line shows the index and PCI bus ID to tell identical cards apart.
+  "VPU usage" is the higher of the NVENC and NVDEC loads; there is no OpenCL
+  version, the CUDA version of the driver is shown instead. AMD and Intel GPUs are
+  not supported yet. On Windows, `-gpu=n` is ignored with a warning: GPU-Z
+  reports the card selected in its window.
 - A crash in a plugin prints a short signal report and exits with a nonzero code.
 
 ## Tests

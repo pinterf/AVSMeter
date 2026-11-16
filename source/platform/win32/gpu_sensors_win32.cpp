@@ -85,10 +85,13 @@ platform::GpuSensors::~GpuSensors()
 }
 
 
-void platform::GpuSensors::Init()
+void platform::GpuSensors::Init(const std::string &s_select)
 {
   sError = "";
+  sNote = "";
   bInitialized = false;
+  if (!s_select.empty())
+    sNote = "\"-gpu=" + s_select + "\" is ignored on Windows: AVSMeter measures the graphics card selected in GPU-Z";
   if ((hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, false, SHMEM_NAME)) == 0)
   {
     DWORD dwLastError = GetLastError();
@@ -152,6 +155,7 @@ void platform::GpuSensors::ReadData()
   data.GeneralMem = false;
   data.DedicatedMem = false;
   data.DynamicMem = false;
+  data.Power = true;
 
   for (int i = 0; i < MAX_RECORDS; i++)
   {

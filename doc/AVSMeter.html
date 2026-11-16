@@ -156,7 +156,18 @@
     <b><a href="http://www.techpowerup.com/downloads/SysInfo/GPU-Z/">GPU-Z</a></b>
     to access the graphics card sensors through a shared memory space.
     GPU-Z has to be running (the window can be minimized to the system
-    tray) before running AVSMeter.<br>
+    tray) before running AVSMeter. AVSMeter measures the graphics card
+    selected in GPU-Z.<br>
+    On Linux, AVSMeter reads NVIDIA GPUs through the NVIDIA Management
+    Library (libnvidia-ml.so.1, installed with the NVIDIA driver, also
+    available in WSL2); GPU-Z is not needed there. AMD and Intel GPUs are
+    not supported on Linux yet.<br>
+    <br>
+    <b>"-gpu=n"<br>
+    </b>Linux: selects the NVIDIA GPU with index n (0, 1, ...; the order
+    of nvidia-smi). Without it the first GPU is used; if there are
+    several, AVSMeter lists them. The "Video card" line shows the index
+    and the PCI bus ID. On Windows the value is ignored with a warning.<br>
     <br>
     <b>"-range=first,last"<br>
     </b>Specify the range of frames to be processed. For example,

@@ -70,6 +70,7 @@ struct stSettings
   bool      bAllowOnlyOneInstance;
   bool      bUseColor;
   bool      bGPUInfo;
+  std::string sGPUSelect;   // -gpu=<selector>, lower case; empty: default GPU
   bool      bConUseStdOut;
   std::string sSystemDateTime;
   bool      bLogEstimatedTime;
@@ -279,10 +280,12 @@ int main(int argc, char* argv[])
   platform::GpuSensors gpuinfo;
   if (Settings.bGPUInfo)
   {
-    gpuinfo.Init();
+    gpuinfo.Init(Settings.sGPUSelect);
     if (!gpuinfo.bInitialized)
     {
       PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
+      if (!gpuinfo.sNote.empty())
+        PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\nWarning: %s\n", gpuinfo.sNote.c_str());
       PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: %s\n", gpuinfo.sError.c_str());
       PollKeys();
       return -1;
@@ -290,6 +293,9 @@ int main(int argc, char* argv[])
   }
 
   PrintConsole(Settings.bConUseStdOut, COLOR_DEFAULT, "\r%s\r", Pad("").c_str());
+
+  if (Settings.bGPUInfo && !gpuinfo.sNote.empty())
+    PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\nWarning: %s\n", gpuinfo.sNote.c_str());
 
   if (cmd.bModeAVSInfo)
     return RunAVSInfoMode(sAVSMVersion, cmd, gpuinfo);
@@ -575,6 +581,7 @@ static void SetDefaultSettings()
   Settings.bAllowOnlyOneInstance = true;
   Settings.bUseColor = true;
   Settings.bGPUInfo = false;
+  Settings.sGPUSelect = "";
   Settings.bConUseStdOut = false;
   Settings.iTimeLimit = -1;
   Settings.bLogEstimatedTime = false;
@@ -667,10 +674,17 @@ static bool ParseCommandLine(const std::vector<std::string> &args, stCmdLine &cm
       continue;
     }
 
-    if (sArgTest == "-gpu")
+    if ((sArgTest == "-gpu") || (sArgTest.substr(0, 5) == "-gpu="))
     {
       cmd.sCommandLine += sCmdToken + " ";
+      if (sArgTest == "-gpu=")
+      {
+        PrintConsole(Settings.bConUseStdOut, COLOR_ERROR, "\nError: Invalid parameter format: \"%s\"\n", sArg.c_str());
+        PrintUsage();
+        return false;
+      }
       Settings.bGPUInfo = true;
+      Settings.sGPUSelect = (sArgTest.length() > 5) ? sArgTest.substr(5) : "";
       continue;
     }
 
@@ -935,8 +949,16 @@ static void AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpui
     sLogBuffer += sOutBuf + "\n";
     sOutBuf = utils.StrFormat("Video memory size:          %s MiB", gpuinfo.data.MemSize.c_str());
     sLogBuffer += sOutBuf + "\n";
-    sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
-    sLogBuffer += sOutBuf + "\n";
+    if (!gpuinfo.data.OpenCLVersion.empty())
+    {
+      sOutBuf = utils.StrFormat("OpenCL version:             %s", gpuinfo.data.OpenCLVersion.c_str());
+      sLogBuffer += sOutBuf + "\n";
+    }
+    if (!gpuinfo.data.CudaVersion.empty())
+    {
+      sOutBuf = utils.StrFormat("CUDA version:               %s", gpuinfo.data.CudaVersion.c_str());
+      sLogBuffer += sOutBuf + "\n";
+    }
     sOutBuf = utils.StrFormat("Graphics driver version:    %s\n", gpuinfo.data.DriverVersion.c_str());
     sLogBuffer += sOutBuf;
   }
@@ -1897,7 +1919,10 @@ static void RunBenchmark(const PClip &AVS_clip, IScriptEnvironment *AVS_env, pla
         ++rs.uiCursorOffset;
       }
 
-      sOutBuf = utils.StrFormat("GPU Power Consumption (cur | avg):  %.1f W | %.1f W", dGPUPowerConsumptionCur, rs.dGPUPowerConsumptionAvg);
+      if (gpuinfo.data.Power)
+        sOutBuf = utils.StrFormat("GPU Power Consumption (cur | avg):  %.1f W | %.1f W", dGPUPowerConsumptionCur, rs.dGPUPowerConsumptionAvg);
+      else
+        sOutBuf = "GPU Power Consumption (cur | avg):  n/a (no sensor data)";
       PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
       ++rs.uiCursorOffset;
     }
@@ -2043,7 +2068,10 @@ static void ReportRuntime(const stRunStats &rs, const stBenchUnits &bu, platform
           sLogBuffer += sOutBuf + "\n";
         }
 
-        sOutBuf = utils.StrFormat("GPU Power Consumption (average):    %.1f W", rs.dGPUPowerConsumptionAvg);
+        if (gpuinfo.data.Power)
+          sOutBuf = utils.StrFormat("GPU Power Consumption (average):    %.1f W", rs.dGPUPowerConsumptionAvg);
+        else
+          sOutBuf = "GPU Power Consumption (average):    n/a (no sensor data)";
         PrintConsole(Settings.bConUseStdOut, COLOR_EMPHASIS, "\r%s\n", Pad(sOutBuf).c_str());
         sLogBuffer += sOutBuf + "\n";
       }
@@ -2743,7 +2771,11 @@ void PrintUsage()
   PrintConsole(true, COLOR_EMPHASIS, "  -info   [-i]        Displays clip info\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -log    [-l]        Creates log file\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -csv                Creates csv file\n");
+#ifdef _WIN32
   PrintConsole(true, COLOR_EMPHASIS, "  -gpu                Displays GPU/VPU usage (requires GPU-Z)\n");
+#else
+  PrintConsole(true, COLOR_EMPHASIS, "  -gpu[=n|nvidia]     Displays GPU/VPU usage (NVIDIA, via NVML; n: GPU index)\n");
+#endif
   PrintConsole(true, COLOR_EMPHASIS, "  -range=first,last   Sets frame range\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -audio              Requests audio only (GetAudio)\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -av                 Requests video and the audio of each frame\n");
