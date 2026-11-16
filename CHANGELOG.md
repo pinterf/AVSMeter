@@ -36,6 +36,9 @@ First release of the continuation by Ferenc Pintér (pinterf), after 3.0.9.0
   - autoload directories in AviSynth+'s actual search order (`ListAutoloadDirs`);
   - plugins shadowed by an earlier one with the same name are marked;
   - a plugin that breaks autoloading no longer aborts the report;
+  - the autoload runs once and is reported on its own; each plugin is then
+    test-loaded alone (no autoload in the test environments), so a load error
+    is reported against the plugin that caused it, and the test is faster;
   - C-Interface plugins classified by `avisynth_c_plugin_init` / `init2`;
   - plugins built for another CPU (e.g. ARM64 DLLs) are named, not loaded;
   - on ARM64, C++ plugins built by MSVC are flagged (ABI mismatch).
