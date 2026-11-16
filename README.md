@@ -59,14 +59,16 @@ x86_64 and aarch64 against AviSynth+ (`libavisynth.so`); see
 [Building with CMake](#building-with-cmake-windows-linux) and
 [Linux notes](#linux-notes). Audio can be benchmarked with `-audio` / `-av`; see
 [Audio benchmarking](#audio-benchmarking). GPU sensors work on Linux too; see
-[GPU sensors on Linux](#gpu-sensors-on-linux). Not yet released: binaries, version
-number and changelog still show 3.0.9.0.
+[GPU sensors on Linux](#gpu-sensors-on-linux). The next release is **4.0**
+(two-part version numbers from now on); see [CHANGELOG.md](CHANGELOG.md).
+Not yet released: no 4.0 binaries yet.
 
 ## Links and documentation
 
 - [Original Doom9 announcement and discussion](https://forum.doom9.org/showthread.php?t=174797)
 - [Groucho2004's MediaFire download folder](https://www.mediafire.com/folder/x6f7yqjufdg7c/Groucho%27s_Avisynth_Stuff)
-- [Original manual](doc/AVSMeter.html) and [original changelog](doc/history.txt)
+- [Manual](doc/AVSMeter.html), [changelog](CHANGELOG.md) and
+  [original changelog up to 3.0.9.0](doc/history.txt)
 - [Source history](doc/SOURCE-HISTORY.md): imported releases, hashes, attribution
 - [AviSynth+](https://github.com/AviSynth/AviSynthPlus)
 - [GPU-Z](https://www.techpowerup.com/download/gpu-z/)

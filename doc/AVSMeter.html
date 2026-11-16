@@ -51,6 +51,23 @@
         installed, etc.<br>
       </li>
     </ul>
+    <b> New in 4.0</b> (after Groucho2004's 3.0.9.0, 2021; continued by Ferenc
+    Pint&eacute;r, pinterf; full list in <a href="../CHANGELOG.md">CHANGELOG.md</a>):<br>
+    <ul>
+      <li>Runs on Linux (x86_64, aarch64) with AviSynth+; Windows on ARM64
+        build.</li>
+      <li>Audio benchmarking ("-audio", "-av", "-chunk").</li>
+      <li>GPU sensors on Linux: NVIDIA, experimentally AMD and Intel.</li>
+      <li>Unicode throughout: non-ASCII command lines, script and plugin
+        paths work regardless of the system code page.</li>
+      <li>"-avsinfo" follows AviSynth+ plugin loading (autoload order,
+        shadowed plugins, plugins for another CPU); crash reports name the
+        module that actually faulted.</li>
+      <li>Current OS detection (Windows 11, Server 2016-2025) and libcpuid
+        0.8.2 for current CPUs.</li>
+      <li><b>Compatibility:</b> Windows 7 or later is required (no Windows
+        XP/Vista; use 3.0.9.0 there). INI, log and CSV files are UTF-8.</li>
+    </ul>
     <br>
     <b> <img alt="" src="avsmeter.png" width="812" height="439"><br>
       <br>

@@ -20,9 +20,11 @@
 #define _VERSION_H
 
 #define PRODUCTNAME_STR "AVSMeter\0"
-#define VERSION_NUM      3,0,9,0
-#define VERSION_STR     "3.0.9.0"
-#define COPYRIGHT_STR   "(c) Groucho2004, 2012-2021\0"
+#define VERSION_NUM      4,0,0,0
+#define VERSION_STR     "4.0"
+#define COPYRIGHT_STR   "(c) 2012-2021 Groucho2004, 2026 pinterf\0"
+// Version resource only: ASCII source with an escaped é, as llvm-rc rejects UTF-8 .rc files
+#define RC_COPYRIGHT_STR L"(c) 2012-2021 Groucho2004, 2026 Ferenc Pint\x00E9r (pinterf)"
 #define COMMENTS_STR    "AVSMeter - Avisynth Script Testing\0"
 
 #define IDI_MAINFRAME 101

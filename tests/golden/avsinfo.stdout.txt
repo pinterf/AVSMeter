@@ -1,4 +1,4 @@
-AVSMeter <VERSION> (<ARCH>), (c) Groucho2004, 2012-2021
+AVSMeter <VERSION> (<ARCH>), (c) 2012-2021 Groucho2004, 2026 pinterf
 VersionString:
 Interface Version:
 Avisynth.dll location:

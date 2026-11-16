@@ -16,6 +16,8 @@
 */
 
 
+#pragma code_page(1252)
+
 #include <winres.h>
 #include "version.h"
 
@@ -36,7 +38,7 @@ BEGIN
       VALUE "FileVersion", VERSION_STR
       VALUE "ProductName", PRODUCTNAME_STR
       VALUE "ProductVersion", VERSION_STR
-      VALUE "LegalCopyright", COPYRIGHT_STR
+      VALUE "LegalCopyright", RC_COPYRIGHT_STR
     END
   END
   BLOCK "VarFileInfo"
