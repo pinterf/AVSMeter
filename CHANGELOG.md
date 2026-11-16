@@ -3,7 +3,7 @@
 Versions now have two parts (4.0, 4.1, ...). Releases up to 3.0.9.0 by
 Groucho2004 are listed in the original [doc/history.txt](doc/history.txt).
 
-## 4.0 (unreleased)
+## v4.0 (20261116)
 
 First release of the continuation by Ferenc Pintér (pinterf), after 3.0.9.0
 (2021).
@@ -68,3 +68,7 @@ First release of the continuation by Ferenc Pintér (pinterf), after 3.0.9.0
   llvm-mingw, aarch64 cross); characterization tests.
 - Source history of all public releases since 1.21 imported to Git; see
   [doc/SOURCE-HISTORY.md](doc/SOURCE-HISTORY.md).
+
+This version was developed with heavy AI assistance (Anthropic Claude Opus 5.5,
+OpenAI GPT models, GitHub Copilot), directed, reviewed and tested by Ferenc
+Pintér (pinterf).

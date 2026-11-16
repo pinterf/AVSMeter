@@ -5,3 +5,6 @@
 /AVSMeter.png -text -filter -ident !working-tree-encoding
 /history.txt -text -filter -ident !working-tree-encoding
 /AVSMeter.ini -text -filter -ident !working-tree-encoding
+
+# cmd.exe needs CRLF line endings
+*.bat text eol=crlf

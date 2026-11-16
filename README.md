@@ -59,9 +59,9 @@ x86_64 and aarch64 against AviSynth+ (`libavisynth.so`); see
 [Building with CMake](#building-with-cmake-windows-linux) and
 [Linux notes](#linux-notes). Audio can be benchmarked with `-audio` / `-av`; see
 [Audio benchmarking](#audio-benchmarking). GPU sensors work on Linux too; see
-[GPU sensors on Linux](#gpu-sensors-on-linux). The next release is **4.0**
-(two-part version numbers from now on); see [CHANGELOG.md](CHANGELOG.md).
-Not yet released: no 4.0 binaries yet.
+[GPU sensors on Linux](#gpu-sensors-on-linux). The current release is **v4.0
+(20261116)** (two-part version numbers from now on); see
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Links and documentation
 
@@ -81,8 +81,9 @@ file alone is not the complete historical record.
 ## Running AVSMeter
 
 Historical Windows builds were distributed through Groucho2004's MediaFire
-folder linked above. This continuation does not yet publish binary releases;
-local builds are described below.
+folder linked above. From v4.0, Windows binaries (x86, x64, ARM64) are published
+on the [GitHub Releases](https://github.com/pinterf/AVSMeter/releases) page; the
+archives contain no source. Linux users build from source, see below.
 
 ```text
 AVSMeter.exe script.avs -log
@@ -232,6 +233,29 @@ ZIPs contain no PDB files. This limits
 libcpuid source-level debugging, not executable linking or operation.
 The supplied x86 Debug library also requests Edit and Continue; LNK4075 notes
 that this is ignored because incremental linking is disabled.
+
+### Release package
+
+`build_release.bat` (repository root) does the following:
+
+- rebuilds Release x86 and x64 with MSBuild;
+- cross-builds Windows ARM64 with llvm-mingw (`LLVM_MINGW_ROOT`, CMake, Ninja);
+- runs the characterization tests on the x86 and x64 exes;
+- writes `build\release\<version>\` and `build\release\AVSMeter-<version>-<YYYYMMDD>.7z`.
+
+The version comes from `VERSION_STR` in `source\version.h`. The archive contains
+no source:
+
+```text
+x86\AVSMeter.exe
+x64\AVSMeter64.exe
+ARM64\AVSMeter64.exe      (llvm-mingw; for llvm-mingw built AviSynth+)
+doc\AVSMeter.html, *.png, history.txt
+CHANGELOG.md, LICENSE
+```
+
+`BUILD_MSVC=0`, `BUILD_ARM64=0` and `RUN_TESTS=0` skip a step; `VER`, `BUILD_DATE`
+and `DEST_ROOT` can be overridden.
 
 ### Windows targeting
 
