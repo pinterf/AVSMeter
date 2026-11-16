@@ -947,7 +947,9 @@ static void AppendSystemInfo(std::string &sLogBuffer, platform::GpuSensors &gpui
     sLogBuffer += sOutBuf + "\n";
     sOutBuf = utils.StrFormat("GPU version:                %s", gpuinfo.data.GPUName.c_str());
     sLogBuffer += sOutBuf + "\n";
-    sOutBuf = utils.StrFormat("Video memory size:          %s MiB", gpuinfo.data.MemSize.c_str());
+    const std::string &sMem = gpuinfo.data.MemSize;
+    bool bMiB = !sMem.empty() && (sMem[0] >= '0') && (sMem[0] <= '9');
+    sOutBuf = utils.StrFormat("Video memory size:          %s%s", sMem.c_str(), bMiB ? " MiB" : "");
     sLogBuffer += sOutBuf + "\n";
     if (!gpuinfo.data.OpenCLVersion.empty())
     {
@@ -2774,7 +2776,8 @@ void PrintUsage()
 #ifdef _WIN32
   PrintConsole(true, COLOR_EMPHASIS, "  -gpu                Displays GPU/VPU usage (requires GPU-Z)\n");
 #else
-  PrintConsole(true, COLOR_EMPHASIS, "  -gpu[=n|nvidia]     Displays GPU/VPU usage (NVIDIA, via NVML; n: GPU index)\n");
+  PrintConsole(true, COLOR_EMPHASIS, "  -gpu[=sel]          Displays GPU/VPU usage (sel: nvidia, amd, intel,\n");
+  PrintConsole(true, COLOR_EMPHASIS, "                      or n: NVIDIA GPU index)\n");
 #endif
   PrintConsole(true, COLOR_EMPHASIS, "  -range=first,last   Sets frame range\n");
   PrintConsole(true, COLOR_EMPHASIS, "  -audio              Requests audio only (GetAudio)\n");

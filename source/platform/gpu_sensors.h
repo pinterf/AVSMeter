@@ -25,7 +25,8 @@
 namespace platform
 {
   // GPU information and sensor readings. Windows: GPU-Z shared memory interface.
-  // POSIX: NVIDIA Management Library (libnvidia-ml.so.1, loaded at run time), first NVIDIA GPU.
+  // POSIX: NVIDIA Management Library (libnvidia-ml.so.1, loaded at run time), or for AMD (amdgpu)
+  // and Intel (i915, xe) sysfs, hwmon and the DRM fdinfo of this process.
   class GpuSensors
   {
   public:
@@ -63,7 +64,7 @@ namespace platform
     } data;
 
     // Init() sets bInitialized, or sError on failure; it reads data on success.
-    // s_select (lower case): "" = default GPU; POSIX: "nvidia" or an NVML index ("0", "1", ...).
+    // s_select (lower case): "" = default GPU; POSIX: "nvidia", an NVML index ("0", "1", ...), "amd" or "intel".
     void Init(const std::string &s_select = "");
     void Release();
     void ReadSensors();
@@ -77,6 +78,10 @@ namespace platform
     void *pMapAddr;
     struct Nvml;
     Nvml *pNvml = nullptr;
+    struct Drm;
+    Drm *pDrm = nullptr;
+    bool InitNvml(unsigned int ui_index, const std::string &s_select);
+    bool InitDrm(unsigned int ui_vendor);
   };
 }
 

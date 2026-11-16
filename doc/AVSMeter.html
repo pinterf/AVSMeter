@@ -160,9 +160,22 @@
     selected in GPU-Z.<br>
     On Linux, AVSMeter reads NVIDIA GPUs through the NVIDIA Management
     Library (libnvidia-ml.so.1, installed with the NVIDIA driver, also
-    available in WSL2); GPU-Z is not needed there. AMD and Intel GPUs are
-    not supported on Linux yet; AVSMeter detects and lists them
-    ("-gpu=intel", "-gpu=amd") with the note that they are not measured.<br>
+    available in WSL2); GPU-Z is not needed there. AMD (amdgpu) and Intel
+    (i915, xe) GPUs are read from sysfs, hwmon and the DRM client
+    statistics of the AVSMeter process (experimental):<br>
+    <table border="1" cellspacing="0" cellpadding="3">
+      <tr><th></th><th>NVIDIA</th><th>AMD (amdgpu)</th><th>Intel (i915, xe)</th></tr>
+      <tr><td>GPU usage</td><td>whole GPU</td><td>whole GPU</td><td>AVSMeter's own process only</td></tr>
+      <tr><td>VPU usage</td><td>whole GPU (NVENC/NVDEC)</td><td>own process</td><td>own process</td></tr>
+      <tr><td>Memory</td><td>VRAM size and used</td><td>VRAM size and used</td><td>iGPU: shared (system memory); used: own process</td></tr>
+      <tr><td>Power</td><td>yes</td><td>yes (hwmon)</td><td>discrete cards (hwmon); iGPU: root only (RAPL), otherwise "n/a"</td></tr>
+      <tr><td>Status</td><td>tested</td><td>experimental</td><td>experimental</td></tr>
+    </table>
+    In WSL2 only NVIDIA GPUs can be measured.<br>
+    <br>
+    <b>"-gpu=nvidia", "-gpu=amd", "-gpu=intel"<br>
+    </b>Linux: selects the GPU vendor. Without it AVSMeter uses NVIDIA,
+    then AMD, then Intel, and lists the other GPUs.<br>
     <br>
     <b>"-gpu=n"<br>
     </b>Linux: selects the NVIDIA GPU with index n (0, 1, ...; the order

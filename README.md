@@ -415,18 +415,32 @@ uses the defaults.
 - Memory usage is the resident set size (RSS) from `/proc/self/statm`; CPU usage
   comes from `/proc/self/stat` and `/proc/stat` in clock ticks (typically 10 ms),
   so values differ from Windows.
-- `-gpu` reads NVIDIA GPUs through the NVIDIA Management Library
-  (`libnvidia-ml.so.1`, part of the proprietary driver, also present in WSL2),
-  loaded at run time; there is no build dependency. `-gpu` uses the first NVIDIA
-  GPU; `-gpu=n` selects one by index (NVML/nvidia-smi order, which can differ from
-  the CUDA device order). With several GPUs, `-gpu` warns and lists them, and the
-  "Video card" line shows the index and PCI bus ID to tell identical cards apart.
-  "VPU usage" is the higher of the NVENC and NVDEC loads; there is no OpenCL
-  version, the CUDA version of the driver is shown instead. AMD and Intel GPUs are
-  not supported yet, but are detected (`/sys/class/drm`, names from `pci.ids`) and
-  named in the message; `-gpu=intel` or `-gpu=amd` lists them. On Windows, `-gpu=n` is ignored with a warning: GPU-Z
-  reports the card selected in its window.
+- `-gpu` on Linux: see [GPU sensors on Linux](#gpu-sensors-on-linux). On Windows,
+  `-gpu=...` is ignored with a warning: GPU-Z reports the card selected in its window.
 - A crash in a plugin prints a short signal report and exits with a nonzero code.
+
+### GPU sensors on Linux
+
+`-gpu` uses NVIDIA if usable, then AMD, then Intel; `-gpu=nvidia`, `-gpu=amd` and
+`-gpu=intel` select the vendor, `-gpu=n` an NVIDIA GPU by index (NVML/nvidia-smi
+order, which can differ from the CUDA device order). The libraries and files are
+read at run time; there is no build dependency. GPUs are found in `/sys/class/drm`,
+names come from `pci.ids`. The "Video card" line shows the PCI bus ID (and the
+index for NVIDIA) to tell identical cards apart. With several GPUs a warning lists
+the ones not measured; unsupported drivers (e.g. `radeon`, `nouveau`) are marked.
+
+| | NVIDIA | AMD (`amdgpu`) | Intel (`i915`, `xe`) |
+|---|---|---|---|
+| Interface | NVML (`libnvidia-ml.so.1`, proprietary driver; also in WSL2) | sysfs, hwmon, DRM fdinfo | DRM fdinfo, hwmon, RAPL |
+| GPU usage | whole GPU | whole GPU (`gpu_busy_percent`) | AVSMeter's own process only (`/proc/self/fdinfo`, kernel 5.19+); the system-wide i915/xe PMU needs `perf_event_paranoid` <= 0 |
+| VPU usage | whole GPU, higher of NVENC and NVDEC | own process's decoder/encoder engines | own process's video engines |
+| Memory | VRAM size and used | VRAM size and used (`mem_info_vram_*`) | iGPU: "shared (system memory)"; used: own process |
+| Power | NVML | hwmon `power1_average` or `power1_input` | hwmon energy counter (discrete cards); iGPU: RAPL `uncore`, usually root-only, otherwise "n/a" |
+| Versions | driver, CUDA (no OpenCL) | kernel driver/release | kernel driver/release |
+| Status | tested (GTX 1660 Ti, WSL2) | experimental, untested on hardware | experimental, untested on hardware |
+
+WSL2 passes all GPUs through `/dev/dxg` without DRM devices: only NVIDIA (NVML)
+works there.
 
 ## Tests
 
