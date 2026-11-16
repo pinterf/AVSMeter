@@ -10,13 +10,14 @@ but untested.
 
 It reports clip information, minimum/maximum/average processing speed, audio
 speed relative to realtime, CPU and memory usage, and optional GPU/VPU sensor
-data (Windows). It can inspect the installed AviSynth environment and plugin
-dependencies, and export logs and CSV data.
+data (Windows: through GPU-Z; Linux: NVIDIA, and experimentally AMD and Intel).
+It can inspect the installed AviSynth environment and plugin dependencies, and
+export logs and CSV data.
 
 ## History and resurrection
 
 The preserved releases span **2012 to 2021**, from version 1.21 to
-**3.0.9.0**. The author's Doom9 announcement for the latest release was last
+**3.0.9.0**. Groucho2004's Doom9 announcement for the latest release was last
 updated on **2021-03-31**. This release history does not establish the project's
 exact start or final development date.
 
@@ -24,10 +25,10 @@ The original project had **no Git or SVN repository**. Groucho2004 packaged the
 executables and sources into release archives, uploaded them to his MediaFire
 folder, and announced releases on Doom9.
 
-This continuation by [pinterf](https://github.com/pinterf) began on
+This continuation by Ferenc Pintér ([pinterf](https://github.com/pinterf)) began on
 **2026-11-13**. This repository's historical sequence was **rebuilt from the
 public releases' sources**, replaying the packaged snapshots in release order.
-It is a reconstruction of release history, not the author's development history.
+It is a reconstruction of release history, not Groucho2004's development history.
 
 Of 125 collected archives, 123 contain source. Each source-bearing release has
 an import commit and an annotated release tag containing release notes
@@ -37,9 +38,9 @@ headers, and notices; distributed `.exe`, `.lib`, and `.exp` files are deliberat
 excluded.
 
 Historical commits credit Groucho2004 as Author and the actual importer as
-Committer. The author's email is unknown; `groucho2004@users.invalid` is an
+Committer. Groucho2004's email is unknown; `groucho2004@users.invalid` is an
 explicit, reserved-domain placeholder, not a verified contact or GitHub account.
-See [SOURCE-HISTORY.md](SOURCE-HISTORY.md) for the release manifest, hashes,
+See [doc/SOURCE-HISTORY.md](doc/SOURCE-HISTORY.md) for the release manifest, hashes,
 attribution policy, and known gaps.
 
 **Current status:** historical imports are complete. The working tree now has a
@@ -50,21 +51,23 @@ Windows 7 or later since 0.6.0 (September 2022), which introduced the processor
 group APIs (`GetActiveProcessorCount`, `GetActiveProcessorGroupCount`,
 `SetThreadGroupAffinity`); the bundled version is 0.8.2. libcpuid 0.5.1 did not
 use them. In addition, the prebuilt libcpuid 0.8.2 libraries could not be linked
-with the `v141_xp` linker (IL mismatch), and the maintainer (pinterf) did not
+with the `v141_xp` linker (IL mismatch), and the maintainer, Ferenc Pintér (pinterf), did not
 want to build libcpuid from source.
 
 Since then, AVSMeter builds with CMake as well and runs natively on Linux
 x86_64 and aarch64 against AviSynth+ (`libavisynth.so`); see
 [Building with CMake](#building-with-cmake-windows-linux) and
 [Linux notes](#linux-notes). Audio can be benchmarked with `-audio` / `-av`; see
-[Audio benchmarking](#audio-benchmarking). Not yet released: binaries, version
+[Audio benchmarking](#audio-benchmarking). GPU sensors work on Linux too; see
+[GPU sensors on Linux](#gpu-sensors-on-linux). Not yet released: binaries, version
 number and changelog still show 3.0.9.0.
 
 ## Links and documentation
 
 - [Original Doom9 announcement and discussion](https://forum.doom9.org/showthread.php?t=174797)
-- [Author's MediaFire download folder](https://www.mediafire.com/folder/x6f7yqjufdg7c/Groucho%27s_Avisynth_Stuff)
+- [Groucho2004's MediaFire download folder](https://www.mediafire.com/folder/x6f7yqjufdg7c/Groucho%27s_Avisynth_Stuff)
 - [Original manual](doc/AVSMeter.html) and [original changelog](doc/history.txt)
+- [Source history](doc/SOURCE-HISTORY.md): imported releases, hashes, attribution
 - [AviSynth+](https://github.com/AviSynth/AviSynthPlus)
 - [GPU-Z](https://www.techpowerup.com/download/gpu-z/)
 - [libcpuid](https://github.com/anrieff/libcpuid)
@@ -75,7 +78,7 @@ file alone is not the complete historical record.
 
 ## Running AVSMeter
 
-Historical Windows builds were distributed through the author's MediaFire
+Historical Windows builds were distributed through Groucho2004's MediaFire
 folder linked above. This continuation does not yet publish binary releases;
 local builds are described below.
 
@@ -94,17 +97,18 @@ can run the x86 executable, but that process still needs x86 AviSynth/plugins.
 `-avsinfo` names plugins built for another CPU (e.g. ARM64 DLLs next to x64
 ones) instead of trying to load them. On Linux the executable is `avsmeter`.
 
-The original author specifies AviSynth 2.6.x or AviSynth+. By default AVSMeter
+Groucho2004 specified AviSynth 2.6.x or AviSynth+. By default AVSMeter
 loads `avisynth.dll` through Windows DLL search rules. The `AVSDLL` entry in
 `AVSMeter.ini` / `AVSMeter64.ini` can select a fully qualified DLL path. AviSynth
 and individual script plugins may require additional runtime DLLs of their own.
 
-GPU monitoring is optional: start GPU-Z before using `-gpu`. AVSMeter reads
+GPU monitoring is optional. On Windows, start GPU-Z before using `-gpu`. AVSMeter reads
 GPU-Z's `GPUZShMem` shared-memory interface. **There is no GPU library to copy
 or link**, and AVSMeter itself does not require a CUDA/OpenCL SDK. Filters used
-by a script can have separate GPU requirements.
+by a script can have separate GPU requirements. On Linux GPU-Z is not needed; see
+[GPU sensors on Linux](#gpu-sensors-on-linux).
 
-The author's Doom9 announcement recommends administrative rights for full diagnostic
+Groucho2004's Doom9 announcement recommends administrative rights for full diagnostic
 functionality. Be aware that script/plugin checks load third-party DLLs; use
 trusted scripts and plugins, and elevate only when necessary.
 

@@ -16,14 +16,14 @@ or SVN, so there are no original commits.
 - Publication dates below are VideoHelp mirror metadata, not original development timestamps.
 - Import commits and tag objects use actual import timestamps.
 - Author: `Groucho2004 <groucho2004@users.invalid>`.
-- The author email is a transparent, non-deliverable placeholder. `.invalid` is
+- Groucho2004's email is replaced by a transparent, non-deliverable placeholder. `.invalid` is
   reserved for invalid names by [RFC 2606](https://www.rfc-editor.org/rfc/rfc2606.html#section-2).
   No email or GitHub account for Groucho2004 was verified.
 
 ## Sources and licensing
 
-- [Author's announcement](https://forum.doom9.org/showthread.php?t=174797)
-- [Author-linked download folder](https://www.mediafire.com/folder/x6f7yqjufdg7c/Groucho%27s_Avisynth_Stuff)
+- [Groucho2004's announcement](https://forum.doom9.org/showthread.php?t=174797)
+- [Groucho2004's download folder](https://www.mediafire.com/folder/x6f7yqjufdg7c/Groucho%27s_Avisynth_Stuff)
 - [Mirror release list](https://www.videohelp.com/software/AVSMeter/old-versions)
 
 The continuation preserves the project's GPL-3.0-or-later notices and the GPLv3

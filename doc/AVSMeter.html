@@ -33,7 +33,8 @@
     <hr width="100%" size="2">AVSMeter is a CLI (command line interface)
     tool which measures the speed/efficiency of Avisynth scripts and
     checks if Avisynth and its plugin sub-system are set up and working
-    correctly.<br>
+    correctly. It runs on Windows (x86, x64, ARM64) and Linux (x86_64,
+    aarch64, with AviSynth+).<br>
     <br>
     <b> Features:</b><br>
     <ul>
@@ -43,6 +44,8 @@
         can serve frames to a client application (x264, VirtualDub) and
         establishing CPU/GPU/memory usage helps with optimizing scripts
         and tracking down crashes, slowdowns and bottlenecks.</li>
+      <li>Benchmarking the audio of a script ("-audio", "-av"), with the
+        speed relative to realtime.</li>
       <li>Performing a thorough test of the Avisynth installation and
         associated plugins, checking if external dependencies are
         installed, etc.<br>
@@ -83,7 +86,9 @@
 
 
 
-      Displays GPU/VPU usage (requires GPU-Z)<br>
+      Displays GPU/VPU usage (Windows: requires GPU-Z)<br>
+      &nbsp; -gpu=sel&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      Linux: selects the GPU (nvidia, amd, intel, NVIDIA index)<br>
       &nbsp; -range=first,last&nbsp;&nbsp; Sets frame range<br>
       &nbsp; -audio&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       Requests audio only (GetAudio)<br>
@@ -98,7 +103,7 @@
 
 
 
-      Sets process priority to high<br>
+      Sets process priority to high (Linux: nice -10, needs root or CAP_SYS_NICE)<br>
       &nbsp;
       -o&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -127,7 +132,8 @@
     command can be combined with "-log" in order to save the info to a
     log file. The log file contains additional info about OS/hardware, a
     list of DLL dependencies for avisynth.dll and all auto-load plugins
-    and optionally ("-lf") a list of internal/external Avisynth
+    (Linux: shared library dependencies of libavisynth.so and the
+    plugins) and optionally ("-lf") a list of internal/external Avisynth
     functions.<br>
     <br>
     <b><b><b><b>"-lf"</b><br>
@@ -237,8 +243,10 @@
         <br>
       </u></b><b><u><big>INI file settings</big></u></b><br>
     AVSMeter checks if a settings file ("AVSMeter.ini" /
-    "AVSMeter64.ini") exists in the directory from where it is started.
-    If not, it will be created with the default settings.<br>
+    "AVSMeter64.ini") exists in the directory of the executable.
+    If not, it will be created with the default settings. Linux:
+    "avsmeter.ini" next to the executable if present (portable),
+    otherwise in $XDG_CONFIG_HOME/avsmeter/ (default ~/.config/avsmeter/).<br>
     <b><font color="#3333ff" size="-1"><b><i>Note:</i></b> If
         applicable, command line switches override INI settings.</font></b><br>
     <br>
@@ -262,7 +270,8 @@
     "AVSDLL=d:\apps\avisynth\avisynth.dll" (without the quotes). The <font
       color="#ff0000">default is an empty string </font>which means
     that AVSMeter will attempt to load avisynth.dll through the standard
-    Windows search hierarchy.<br>
+    Windows search hierarchy. Linux: the path of libavisynth.so; by
+    default it is loaded through the dynamic linker's search path.<br>
     <b><b><br>
         "LogDirectory"</b><br>
     </b> The user can specify a directory in which all log files are
@@ -282,7 +291,8 @@
     </b><b><b>"</b></b><b><b><b>DisableFFTWDLLWarning</b>" (<font
           color="#ff0000">0</font> or 1):</b><br>
     </b>If set to "1", warnings about missing FFTW DLLs
-    ("libfftw3f-3.dll" / "fftw3.dll") will be <span>suppressed.</span><span></span><br>
+    ("libfftw3f-3.dll" / "fftw3.dll"; Linux: "libfftw3f.so.3" /
+    "libfftw3f_threads.so.3") will be <span>suppressed.</span><span></span><br>
     <b> <br>
       "AllowOnlyOneInstance" (0 or <font color="#ff0000">1</font>):</b><br>
     If set to "1", only one instance of AVSMeter can be started.<br>
