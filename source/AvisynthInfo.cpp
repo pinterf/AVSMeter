@@ -113,6 +113,15 @@ CAvisynthInfo::~CAvisynthInfo()
 }
 
 
+std::string CAvisynthInfo::InterfaceVersionString() const
+{
+  std::string sVersion = std::to_string(iInterfaceVersion);
+  if (iInterfaceBugfix > 0)
+    sVersion += "." + std::to_string(iInterfaceBugfix);
+  return sVersion;
+}
+
+
 bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool b_ExtPlugCheck)
 {
   sDLLPath = "";
@@ -122,6 +131,7 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
   bImportUtf8 = false;
   bLoadPluginUtf8 = false;
   iInterfaceVersion = 0;
+  iInterfaceBugfix = 0;
   sFileVersion = "";
   sProductVersion = "";
   sVersionString = "Unknown Avisynth Version";
@@ -258,7 +268,10 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
       return false;
     }
 
-    iInterfaceVersion = 16;
+    // For C++ hosts the requested version selects nothing (only <= 3 gives an AviSynth 2.5
+    // environment), it just fails when newer than the DLL. So probe down only to find
+    // pre-V9 versions; from V9 AviSynth+ reports the exact version and bugfix level (14.1: 3.7.7).
+    iInterfaceVersion = 10;
     while (!AVS_env)
     {
       iInterfaceVersion--;
@@ -271,6 +284,12 @@ bool CAvisynthInfo::GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool 
       }
 
       AVS_env = CreateEnvironment(iInterfaceVersion);
+    }
+
+    if (iInterfaceVersion >= 9)
+    {
+      iInterfaceVersion = (int)AVS_env->GetEnvProperty(AEP_INTERFACE_VERSION);
+      iInterfaceBugfix = (int)AVS_env->GetEnvProperty(AEP_INTERFACE_BUGFIX);
     }
 
 

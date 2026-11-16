@@ -33,6 +33,8 @@ public:
 
   bool                     GetInfo(std::string s_AVSDLL, std::string &s_ErrorMsg, bool b_ExtPlugCheck);
   int                      iInterfaceVersion;
+  int                      iInterfaceBugfix; // AviSynth+ V9+, e.g. 14.1 is 3.7.7
+  std::string              InterfaceVersionString() const;
   std::vector<std::string> vPluginDirs;
   std::vector<std::string> vInternalFunctions;
   std::vector<std::string> vPluginFunctions;

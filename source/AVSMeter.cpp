@@ -997,7 +997,7 @@ static int RunAVSInfoMode(const std::string &sAVSMVersion, const stCmdLine &cmd,
   sLogBuffer += sOutBuf;
   PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
 
-  sOutBuf = utils.StrFormat("Interface Version:          %d\n", AvisynthInfo.iInterfaceVersion);
+  sOutBuf = utils.StrFormat("Interface Version:          %s\n", AvisynthInfo.InterfaceVersionString().c_str());
   sLogBuffer += sOutBuf;
   PrintConsole(true, COLOR_EMPHASIS, sOutBuf.c_str());
 
@@ -1287,7 +1287,7 @@ static void AppendScriptLogHeader(std::string &sLogBuffer, const std::string &sA
   sOutBuf = utils.StrFormat("File / Product version:     %s / %s", AvisynthInfo.sFileVersion.c_str(), AvisynthInfo.sProductVersion.c_str());
   sLogBuffer += sOutBuf + "\n";
 
-  sOutBuf = utils.StrFormat("Interface Version:          %d", AvisynthInfo.iInterfaceVersion);
+  sOutBuf = utils.StrFormat("Interface Version:          %s", AvisynthInfo.InterfaceVersionString().c_str());
   sLogBuffer += sOutBuf + "\n";
 
   sOutBuf = utils.StrFormat("Multi-threading support:    %s", AvisynthInfo.bIsMTVersion ? ("Yes") : ("No"));
